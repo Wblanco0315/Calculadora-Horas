@@ -13,7 +13,7 @@
     "windows": [
       {
         "title": "Calculadora de horas",
-        "width": 625,
+        "width": 425,
         "height": 700,
         "decorations": false,
         "transparent": true
