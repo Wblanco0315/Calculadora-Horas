@@ -37,13 +37,10 @@
 
       <div class="flex items-center gap-3 shrink-0">
         <div class="flex items-center gap-1.5">
-          <span class="text-xs font-medium text-slate-400 dark:text-slate-500">
-            {{ formatDecimal(activity.minutes) }}h
-          </span>
           <div
             class="text-sm font-semibold font-mono text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded"
           >
-            {{ formatTime(activity.minutes) }}
+            {{ formatDecimal(activity.minutes) }}h
           </div>
         </div>
 
@@ -51,6 +48,43 @@
         <div
           class="flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200 -ml-1"
         >
+          <button
+            @click="copyTaskName"
+            class="cursor-pointer p-1.5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500 transition-colors"
+            aria-label="Copiar nombre de la tarea"
+            :title="isCopied ? '¡Copiado!' : 'Copiar nombre'"
+          >
+            <svg
+              v-if="isCopied"
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-4 h-4 text-green-500 dark:text-green-400"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <svg
+              v-else
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-4 h-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path
+                d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+              ></path>
+            </svg>
+          </button>
+
           <button
             @click="startEdit"
             class="cursor-pointer p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -201,11 +235,24 @@ const emit = defineEmits<{
 }>();
 
 const isEditing = ref(false);
+const isCopied = ref(false);
 const editName = ref("");
 const editHours = ref<number | "">("");
 const editMinutes = ref<number | "">("");
 const editProjectId = ref("");
 const editTicket = ref("");
+
+async function copyTaskName() {
+  try {
+    await navigator.clipboard.writeText(props.activity.name);
+    isCopied.value = true;
+    setTimeout(() => {
+      isCopied.value = false;
+    }, 2000);
+  } catch (err) {
+    console.error("Error al copiar el nombre de la tarea: ", err);
+  }
+}
 
 function startEdit() {
   editName.value = props.activity.name;
@@ -247,14 +294,6 @@ const projectName = computed(() => {
   const p = props.projects.find((pr) => pr.id === props.activity.projectId);
   return p ? p.name : "";
 });
-
-function formatTime(totalMinutes: number) {
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  const h = hours.toString().padStart(2, "0");
-  const m = minutes.toString().padStart(2, "0");
-  return `${h}h ${m}m`;
-}
 
 function formatDecimal(totalMinutes: number) {
   // Convertimos a base 10 y limpiamos ceros arrastrados (e.g. 1.50 -> 1.5)
