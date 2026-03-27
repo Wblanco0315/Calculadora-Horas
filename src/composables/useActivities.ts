@@ -1,9 +1,5 @@
-import { ref, computed, watch, onMounted } from "vue";
-import {
-  isPermissionGranted,
-  requestPermission,
-  sendNotification,
-} from "@tauri-apps/plugin-notification";
+import { ref, computed } from "vue";
+import { useUserConfig } from "./useUserConfig";
 
 export interface Project {
   id: string;
@@ -18,88 +14,12 @@ export interface Activity {
   ticket?: string;
 }
 
-export interface UserConfig {
-  isConfigured: boolean;
-  entryTime: string;
-  exitTime: string;
-  lunchMinutes: number;
-  lastNotifiedDate?: string;
-}
-
-const STORAGE_KEY = "calculadora_horas_data";
-const THEME_KEY = "calculadora_horas_theme";
-
-const defaultUserConfig: UserConfig = {
-  isConfigured: false,
-  entryTime: "08:00",
-  exitTime: "17:00",
-  lunchMinutes: 60,
-};
+// Global state outside the composable to act as a singleton
+const activities = ref<Activity[]>([]);
+const projects = ref<Project[]>([]);
 
 export function useActivities() {
-  const activities = ref<Activity[]>([]);
-  const projects = ref<Project[]>([]);
-  const userConfig = ref<UserConfig>({ ...defaultUserConfig });
-  const maxDailyMinutes = ref<number>(480); // Default to 8 hours
-  const isDark = ref<boolean>(false);
-
-  // Load from local storage
-  onMounted(() => {
-    // Load Activities & Projects
-    const storedData = localStorage.getItem(STORAGE_KEY);
-    if (storedData) {
-      try {
-        const parsed = JSON.parse(storedData);
-        activities.value = parsed.activities || [];
-        projects.value = parsed.projects || [];
-        if (parsed.userConfig) {
-          userConfig.value = parsed.userConfig;
-        }
-        maxDailyMinutes.value = parsed.maxDailyMinutes || 480;
-      } catch (e) {
-        console.error("Failed to parse stored activities", e);
-      }
-    }
-
-    // Load Theme
-    const storedTheme = localStorage.getItem(THEME_KEY);
-    if (
-      storedTheme === "dark" ||
-      (!storedTheme &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches)
-    ) {
-      isDark.value = true;
-      document.documentElement.classList.add("dark");
-    } else {
-      isDark.value = false;
-      document.documentElement.classList.remove("dark");
-    }
-
-    // Set up continuous notification check
-    setInterval(() => {
-      checkWorkdayEnd();
-    }, 60000); // every minute
-
-    // Optional: run once immediately on load
-    checkWorkdayEnd();
-  });
-
-  // Watch for changes and save to local storage
-  watch(
-    [activities, projects, maxDailyMinutes, userConfig],
-    () => {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-          activities: activities.value,
-          projects: projects.value,
-          maxDailyMinutes: maxDailyMinutes.value,
-          userConfig: userConfig.value,
-        }),
-      );
-    },
-    { deep: true },
-  );
+  const { maxDailyMinutes } = useUserConfig();
 
   const totalMinutes = computed(() => {
     return activities.value.reduce((total, act) => total + act.minutes, 0);
@@ -143,91 +63,6 @@ export function useActivities() {
     }
   }
 
-  function toggleDarkMode() {
-    isDark.value = !isDark.value;
-    if (isDark.value) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem(THEME_KEY, "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem(THEME_KEY, "light");
-    }
-  }
-
-  function setMaxDailyMinutes(minutes: number) {
-    maxDailyMinutes.value = minutes;
-  }
-
-  function updateUserConfig(config: Partial<UserConfig>) {
-    userConfig.value = { ...userConfig.value, ...config };
-
-    // Auto calculate daily minutes based on entry/exit and lunch
-    if (userConfig.value.entryTime && userConfig.value.exitTime) {
-      const [entryH, entryM] = userConfig.value.entryTime
-        .split(":")
-        .map(Number);
-      const [exitH, exitM] = userConfig.value.exitTime.split(":").map(Number);
-
-      let entryTotal = entryH * 60 + entryM;
-      let exitTotal = exitH * 60 + exitM;
-
-      let diffMins = exitTotal - entryTotal;
-      if (diffMins < 0) {
-        diffMins += 24 * 60; // Handle overnight shifts
-      }
-
-      diffMins -= userConfig.value.lunchMinutes || 0;
-      maxDailyMinutes.value = Math.max(0, diffMins);
-    }
-  }
-
-  async function checkWorkdayEnd() {
-    if (!userConfig.value.isConfigured || !userConfig.value.exitTime) return;
-
-    const now = new Date();
-    const todayStr = now.toISOString().split("T")[0]; // "YYYY-MM-DD"
-
-    if (userConfig.value.lastNotifiedDate === todayStr) {
-      return; // Already notified today
-    }
-
-    const currentH = now.getHours();
-    const currentM = now.getMinutes();
-    const currentTotalMins = currentH * 60 + currentM;
-
-    const [exitH, exitM] = userConfig.value.exitTime.split(":").map(Number);
-    let exitTotalMins = exitH * 60 + exitM;
-
-    // Handle overnight shifts logic for notification checking
-    if (exitTotalMins < currentTotalMins && exitTotalMins < 12 * 60) {
-      exitTotalMins += 24 * 60;
-    }
-
-    const diffMins = exitTotalMins - currentTotalMins;
-
-    // If within the last 15 minutes of the shift
-    if (diffMins <= 15 && diffMins >= 0) {
-      try {
-        let permissionGranted = await isPermissionGranted();
-        if (!permissionGranted) {
-          const permission = await requestPermission();
-          permissionGranted = permission === "granted";
-        }
-
-        if (permissionGranted) {
-          sendNotification({
-            title: "Calculadora de Horas",
-            body: "¡Atención! Faltan 15 minutos o menos para finalizar tu jornada laboral.",
-          });
-
-          userConfig.value.lastNotifiedDate = todayStr;
-        }
-      } catch (err) {
-        console.error("Error sending notification", err);
-      }
-    }
-  }
-
   function editActivity(id: string, updates: Partial<Activity>) {
     const act = activities.value.find((a) => a.id === id);
     if (act) {
@@ -238,18 +73,12 @@ export function useActivities() {
   return {
     activities,
     projects,
-    maxDailyMinutes,
-    userConfig,
-    isDark,
     totalMinutes,
     remainingMinutes,
     progressPercentage,
     addActivity,
     editActivity,
-    addProject,
     removeActivity,
-    toggleDarkMode,
-    setMaxDailyMinutes,
-    updateUserConfig,
+    addProject,
   };
 }

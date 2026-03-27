@@ -100,7 +100,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import type { UserConfig } from "../composables/useActivities";
+import type { UserConfig } from "../composables/useUserConfig";
 
 const props = defineProps<{
   userConfig: UserConfig;

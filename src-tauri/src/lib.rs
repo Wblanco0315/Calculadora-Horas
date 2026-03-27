@@ -5,11 +5,16 @@ use tauri::{
 };
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_autostart::ManagerExt;
+use tauri_plugin_notification::NotificationExt;
 
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+fn notify_custom(app: tauri::AppHandle, title: String, message: String) {
+    app.notification()
+        .builder()
+        .title(title)
+        .body(message)
+        .show()
+        .unwrap();
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -66,13 +71,12 @@ pub fn run() {
         })
         .on_window_event(|window, event| match event {
             tauri::WindowEvent::CloseRequested { api, .. } => {
-                // Al cerrar, sólo ocultamos la ventana
                 window.hide().unwrap();
                 api.prevent_close();
             }
             _ => {}
         })
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![notify_custom])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
