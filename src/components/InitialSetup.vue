@@ -86,6 +86,18 @@
           />
         </div>
 
+        <div>
+           <label
+             class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
+             >Token OpenProject (Opcional)</label
+           >
+           <input
+             type="password"
+             v-model="openProjectToken"
+             class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none dark:text-slate-100 transition-colors"
+           />
+        </div>
+
         <button
           @click="save"
           :disabled="!isValid"
@@ -115,6 +127,7 @@ const emit = defineEmits<{
 const entryTime = ref(props.userConfig.entryTime || "08:00");
 const exitTime = ref(props.userConfig.exitTime || "17:00");
 const lunchMinutes = ref(props.userConfig.lunchMinutes ?? 60);
+const openProjectToken = ref(props.userConfig.openProjectToken || "");
 
 const isValid = computed(() => {
   return entryTime.value && exitTime.value && lunchMinutes.value >= 0;
@@ -126,6 +139,7 @@ function save() {
     entryTime: entryTime.value,
     exitTime: exitTime.value,
     lunchMinutes: lunchMinutes.value,
+    openProjectToken: openProjectToken.value.trim(),
     isConfigured: true,
   });
 }

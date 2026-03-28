@@ -54,6 +54,7 @@
                 </option>
               </select>
               <button
+                v-if="!hasProjectToken"
                 type="button"
                 @click="isCreatingProject = true"
                 class="cursor-pointer p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors shrink-0"
@@ -122,13 +123,34 @@
             </div>
 
             <!-- Ticket Input -->
-            <input
-              type="text"
-              v-model="ticket"
-              placeholder="Ticket ej. #123"
-              class="w-28 px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none dark:text-slate-100 placeholder-slate-400 transition-colors"
-            />
+            <div class="flex flex-col gap-1">
+              <div class="relative">
+                <input
+                  type="text"
+                  v-model="ticket"
+                  @blur="onTicketBlur"
+                  placeholder="Ticket ej. #123"
+                  :class="[
+                    'w-28 px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none dark:text-slate-100 placeholder-slate-400 transition-colors',
+                    isLoadingTicket ? 'opacity-50' : '',
+                  ]"
+                />
+                <span
+                  v-if="isLoadingTicket"
+                  class="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"
+                />
+              </div>
+            </div>
           </div>
+
+          <!-- Fetched ticket title badge -->
+          <span
+            v-if="ticketTitle"
+            class="inline-flex items-center w-max px-1.5 py-0.5 rounded text-[10px] font-medium bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300 truncate"
+            :title="ticketTitle"
+          >
+            {{ ticketTitle }}
+          </span>
 
           <div class="flex items-center gap-2">
             <input
@@ -203,6 +225,8 @@ import type { Project } from "../composables/useActivities";
 const props = defineProps<{
   projects: Project[];
   addProject: (name: string) => string;
+  hasProjectToken?: boolean;
+  fetchTicketSubject?: (id: string) => Promise<{ subject: string; projectId: string } | null>;
 }>();
 
 const emit = defineEmits<{
@@ -212,6 +236,7 @@ const emit = defineEmits<{
     minutes: number,
     projectId?: string,
     ticket?: string,
+    ticketTitle?: string,
   ): void;
 }>();
 
@@ -224,6 +249,26 @@ const ticket = ref("");
 const isFormOpen = ref(false);
 const isCreatingProject = ref(false);
 const newProjectName = ref("");
+const isLoadingTicket = ref(false);
+const ticketTitle = ref("");
+
+async function onTicketBlur() {
+  const raw = ticket.value.trim().replace(/^#/, "");
+  if (!raw || !props.fetchTicketSubject) return;
+  isLoadingTicket.value = true;
+  ticketTitle.value = "";
+  try {
+    const result = await props.fetchTicketSubject(raw);
+    if (result) {
+      ticketTitle.value = result.subject;
+      if (result.projectId) {
+        projectId.value = result.projectId;
+      }
+    }
+  } finally {
+    isLoadingTicket.value = false;
+  }
+}
 
 const isValid = computed(() => {
   if (!name.value.trim()) return false;
@@ -245,6 +290,7 @@ function submitForm() {
     totalMins,
     projectId.value || undefined,
     ticket.value.trim() || undefined,
+    ticketTitle.value.trim() || undefined,
   );
 
   // reset
@@ -252,6 +298,7 @@ function submitForm() {
   hours.value = "";
   minutes.value = "";
   ticket.value = "";
+  ticketTitle.value = "";
   isFormOpen.value = false;
 }
 

@@ -78,6 +78,8 @@
           <HoursForm
             :projects="projects"
             :addProject="addProject"
+            :hasProjectToken="!!userConfig.openProjectToken"
+            :fetchTicketSubject="fetchTicketSubject"
             @add="addActivity"
             @open-settings="showSetupModal = true"
           />
@@ -159,6 +161,7 @@ const {
   addProject,
   removeActivity,
   updateUserConfig,
+  fetchTicketSubject,
 } = useActivities();
 
 function formatTime(totalMins: number) {

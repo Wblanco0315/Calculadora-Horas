@@ -31,6 +31,13 @@
             >
               {{ activity.ticket }}
             </span>
+            <span
+              v-if="activity.ticketTitle"
+              class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300 truncate max-w-[150px]"
+              :title="activity.ticketTitle"
+            >
+              {{ activity.ticketTitle }}
+            </span>
           </div>
         </div>
       </div>

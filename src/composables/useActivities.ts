@@ -4,6 +4,7 @@ import {
   requestPermission,
   sendNotification,
 } from "@tauri-apps/plugin-notification";
+import { fetch } from "@tauri-apps/plugin-http";
 
 export interface Project {
   id: string;
@@ -16,6 +17,7 @@ export interface Activity {
   minutes: number;
   projectId?: string;
   ticket?: string;
+  ticketTitle?: string;
 }
 
 export interface UserConfig {
@@ -24,6 +26,7 @@ export interface UserConfig {
   exitTime: string;
   lunchMinutes: number;
   lastNotifiedDate?: string;
+  openProjectToken?: string;
 }
 
 const STORAGE_KEY = "calculadora_horas_data";
@@ -34,6 +37,7 @@ const defaultUserConfig: UserConfig = {
   entryTime: "08:00",
   exitTime: "17:00",
   lunchMinutes: 60,
+  openProjectToken: "",
 };
 
 export function useActivities() {
@@ -82,6 +86,7 @@ export function useActivities() {
 
     // Optional: run once immediately on load
     checkWorkdayEnd();
+    fetchOpenProjectProjects();
   });
 
   // Watch for changes and save to local storage
@@ -120,6 +125,7 @@ export function useActivities() {
     minutes: number,
     projectId?: string,
     ticket?: string,
+    ticketTitle?: string,
   ) {
     activities.value.push({
       id: crypto.randomUUID(),
@@ -127,6 +133,7 @@ export function useActivities() {
       minutes,
       projectId,
       ticket,
+      ticketTitle,
     });
   }
 
@@ -178,6 +185,61 @@ export function useActivities() {
 
       diffMins -= userConfig.value.lunchMinutes || 0;
       maxDailyMinutes.value = Math.max(0, diffMins);
+    }
+
+    if (config.openProjectToken !== undefined) {
+      fetchOpenProjectProjects();
+    }
+  }
+
+  async function fetchOpenProjectProjects() {
+    if (!userConfig.value.openProjectToken) return;
+    try {
+      const response = await fetch(
+        "https://openproject.wposs.com/openproject/api/v3/projects",
+        {
+          headers: {
+            Authorization: `Bearer ${userConfig.value.openProjectToken}`,
+          },
+        },
+      );
+      if (!response.ok) throw new Error("Failed to fetch projects");
+      const data = await response.json();
+      if (data && data._embedded && data._embedded.elements) {
+        projects.value = data._embedded.elements.map((p: any) => ({
+          id: String(p.id),
+          name: p.name,
+        }));
+      }
+    } catch (error) {
+      console.error("OpenProject error:", error);
+    }
+  }
+
+  async function fetchTicketSubject(
+    ticketId: string,
+  ): Promise<{ subject: string; projectId: string } | null> {
+    if (!userConfig.value.openProjectToken || !ticketId) return null;
+    try {
+      const response = await fetch(
+        `https://openproject.wposs.com/openproject/api/v3/work_packages/${ticketId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${userConfig.value.openProjectToken}`,
+          },
+        },
+      );
+      if (!response.ok) return null;
+      const data = await response.json();
+      const subject = data.subject || null;
+      const projectId = data._embedded?.project?.id
+        ? String(data._embedded.project.id)
+        : null;
+      if (!subject) return null;
+      return { subject, projectId: projectId ?? "" };
+    } catch (error) {
+      console.error("OpenProject ticket error:", error);
+      return null;
     }
   }
 
@@ -251,5 +313,7 @@ export function useActivities() {
     toggleDarkMode,
     setMaxDailyMinutes,
     updateUserConfig,
+    fetchOpenProjectProjects,
+    fetchTicketSubject,
   };
 }
