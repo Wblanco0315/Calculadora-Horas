@@ -8,7 +8,7 @@
       class="w-full h-full bg-slate-50 dark:bg-slate-900 rounded-[12px] md:rounded-[18px] border border-slate-300 dark:border-slate-700/60 overflow-hidden flex flex-col shadow-2xl relative transition-colors duration-300"
     >
       <Titlebar @open-settings="showSetupModal = true" />
-      
+
       <InitialSetup
         v-if="!userConfig.isConfigured || showSetupModal"
         :user-config="userConfig"
@@ -140,6 +140,10 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useActivities } from "../composables/useActivities";
+import { useUserConfig } from "../composables/useUserConfig";
+import { useAppStorage } from "../composables/useAppStorage";
+import { useTheme } from "../composables/useTheme";
+import { useSystemNotifications } from "../composables/useSystemNotifications";
 import HoursForm from "./hoursForm.vue";
 import Row from "./row.vue";
 import Titlebar from "./Titlebar.vue";
@@ -152,8 +156,6 @@ const showSetupModal = ref(false);
 const {
   activities,
   projects,
-  maxDailyMinutes,
-  userConfig,
   totalMinutes,
   progressPercentage,
   addActivity,
@@ -163,6 +165,16 @@ const {
   updateUserConfig,
   fetchTicketSubject,
 } = useActivities();
+
+const { maxDailyMinutes, userConfig, updateUserConfig } = useUserConfig();
+
+const { initStorage } = useAppStorage();
+const { initTheme } = useTheme();
+const { startNotificationWatcher } = useSystemNotifications();
+
+initStorage();
+initTheme();
+startNotificationWatcher();
 
 function formatTime(totalMins: number) {
   if (totalMins <= 0) return "00h 00m";

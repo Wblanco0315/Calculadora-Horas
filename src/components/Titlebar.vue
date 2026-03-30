@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useActivities } from "../composables/useActivities";
+import { useTheme } from "../composables/useTheme";
 
-const { isDark, toggleDarkMode } = useActivities();
+const { isDark, toggleDarkMode } = useTheme();
 
 const minimize = () => getCurrentWindow().minimize();
 const close = () => getCurrentWindow().close();
