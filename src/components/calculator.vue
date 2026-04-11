@@ -162,7 +162,6 @@ const {
   editActivity,
   addProject,
   removeActivity,
-  updateUserConfig,
   fetchTicketSubject,
 } = useActivities();
 

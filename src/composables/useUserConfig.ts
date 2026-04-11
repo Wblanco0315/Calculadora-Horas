@@ -1,4 +1,5 @@
 import { ref } from "vue";
+import { useActivities } from "./useActivities";
 
 export interface UserConfig {
   isConfigured: boolean;
@@ -6,6 +7,7 @@ export interface UserConfig {
   exitTime: string;
   lunchMinutes: number;
   lastNotifiedDate?: string;
+  openProjectToken?: string;
 }
 
 export const defaultUserConfig: UserConfig = {
@@ -13,6 +15,7 @@ export const defaultUserConfig: UserConfig = {
   entryTime: "08:00",
   exitTime: "17:00",
   lunchMinutes: 60,
+  openProjectToken: "",
 };
 
 // Global state outside the composable to act as a singleton
@@ -41,6 +44,11 @@ export function useUserConfig() {
 
       diffMins -= userConfig.value.lunchMinutes || 0;
       maxDailyMinutes.value = Math.max(0, diffMins);
+    }
+
+    if (config.openProjectToken !== undefined) {
+      const { fetchOpenProjectProjects } = useActivities();
+      fetchOpenProjectProjects();
     }
   }
 

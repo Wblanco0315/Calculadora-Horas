@@ -5,7 +5,7 @@ import { useUserConfig } from "./useUserConfig";
 const STORAGE_KEY = "calculadora_horas_data";
 
 export function useAppStorage() {
-  const { activities, projects } = useActivities();
+  const { activities, projects, fetchOpenProjectProjects } = useActivities();
   const { userConfig, maxDailyMinutes } = useUserConfig();
 
   function initStorage() {
@@ -20,6 +20,11 @@ export function useAppStorage() {
       } catch (e) {
         console.error("Failed to parse stored activities", e);
       }
+    }
+
+    // If there is a saved token, fetch fresh projects from OpenProject
+    if (userConfig.value.openProjectToken) {
+      fetchOpenProjectProjects();
     }
 
     // Set up global watcher to save anything that changes
