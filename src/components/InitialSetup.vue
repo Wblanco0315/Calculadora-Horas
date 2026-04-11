@@ -43,7 +43,9 @@
             <polyline points="12 6 12 12 16 14" />
           </svg>
         </div>
-        <h2 class="text-xl font-bold text-slate-800 dark:text-slate-100">
+        <h2
+          class="text-xl font-display font-bold text-slate-800 dark:text-slate-100"
+        >
           Configura tu jornada laboral
         </h2>
       </div>
@@ -87,24 +89,24 @@
         </div>
 
         <div>
-           <label
-             class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
-             >Token OpenProject (Opcional)</label
-           >
-           <input
-             type="password"
-             v-model="openProjectToken"
-             class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 transition-colors"
-           />
+          <label
+            class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
+            >Token OpenProject (Opcional)</label
+          >
+          <input
+            type="password"
+            v-model="openProjectToken"
+            class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 transition-colors"
+          />
         </div>
 
-        <button
+        <BaseButton
           @click="save"
           :disabled="!isValid"
-          class="cursor-pointer w-full flex justify-center items-center gap-2 mt-2 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white font-medium rounded-lg transition-colors"
-        >
-          Guardar
-        </button>
+          label="Guardar"
+          class="w-full mt-2"
+          size="md"
+        />
       </div>
     </div>
   </div>
@@ -113,6 +115,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import type { UserConfig } from "../composables/useUserConfig";
+import BaseButton from "./shared/baseButton.vue";
 
 const props = defineProps<{
   userConfig: UserConfig;

@@ -48,18 +48,18 @@
         <div
           class="bg-slate-50 dark:bg-slate-800/60 px-4 py-3 border-t border-slate-100 dark:border-slate-700 w-full flex justify-between gap-3 items-center"
         >
-          <button
+          <BaseButton
             @click="$emit('cancel')"
-            class="cursor-pointer flex-1 py-1.5 px-3 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
-          >
-            {{ cancelText }}
-          </button>
-          <button
+            variant="secondary"
+            class="flex-1"
+            :label="cancelText"
+          />
+          <BaseButton
             @click="$emit('confirm')"
-            class="cursor-pointer flex-1 py-1.5 px-3 text-sm font-medium text-white bg-rose-600 border border-transparent rounded-lg hover:bg-rose-700 focus:ring-2 focus:outline-none focus:ring-rose-500/50 transition-colors shadow-sm"
-          >
-            {{ confirmText }}
-          </button>
+            variant="danger"
+            class="flex-1"
+            :label="confirmText"
+          />
         </div>
       </div>
     </div>
@@ -67,6 +67,8 @@
 </template>
 
 <script setup lang="ts">
+import BaseButton from "./shared/baseButton.vue";
+
 defineProps({
   show: {
     type: Boolean,
