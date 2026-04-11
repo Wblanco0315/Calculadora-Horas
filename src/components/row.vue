@@ -93,6 +93,38 @@
           </button>
 
           <button
+            v-if="activity.ticket && hasToken && logTimeEntry"
+            @click="syncTimeEntry"
+            :disabled="isSyncing"
+            :class="[
+              'cursor-pointer p-1.5 rounded-md focus:outline-none focus:ring-2 transition-colors',
+              syncSuccess ? 'text-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 focus:ring-green-500' :
+              syncError   ? 'text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 focus:ring-red-500' :
+                            'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 focus:ring-slate-500',
+              isSyncing ? 'opacity-50 cursor-not-allowed' : '',
+            ]"
+            aria-label="Enviar tiempo a OpenProject"
+            :title="syncSuccess ? '¡Enviado!' : syncError ? 'Error al enviar' : 'Enviar a OpenProject'"
+          >
+            <!-- Spinner -->
+            <span v-if="isSyncing" class="block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            <!-- Success check -->
+            <svg v-else-if="syncSuccess" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <!-- Error X -->
+            <svg v-else-if="syncError" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+            <!-- Cloud upload -->
+            <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="16 16 12 12 8 16" />
+              <line x1="12" y1="12" x2="12" y2="21" />
+              <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+            </svg>
+          </button>
+
+          <button
             @click="startEdit"
             class="cursor-pointer p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             aria-label="Edit activity"
@@ -224,16 +256,29 @@
         </div>
       </div>
     </template>
+
+    <!-- Time Entry Modal -->
+    <TimeEntryModal
+      :show="showTimeEntryModal"
+      :initialComment="activity.name"
+      :timeEntryActivities="timeEntryActivities ?? []"
+      @confirm="onTimeEntryConfirm"
+      @cancel="showTimeEntryModal = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import type { Activity, Project } from "../composables/useActivities";
+import type { Activity, Project, TimeEntryActivity } from "../composables/useActivities";
+import TimeEntryModal from "./TimeEntryModal.vue";
 
 const props = defineProps<{
   activity: Activity;
   projects?: Project[];
+  hasToken?: boolean;
+  timeEntryActivities?: TimeEntryActivity[];
+  logTimeEntry?: (activityId: string, comment: string, spentOn: string, activityTypeId: string) => Promise<{ ok: boolean; error?: string }>;
 }>();
 
 const emit = defineEmits<{
@@ -243,6 +288,32 @@ const emit = defineEmits<{
 
 const isEditing = ref(false);
 const isCopied = ref(false);
+const isSyncing = ref(false);
+const syncSuccess = ref(false);
+const syncError = ref(false);
+const showTimeEntryModal = ref(false);
+
+function syncTimeEntry() {
+  if (!props.logTimeEntry || isSyncing.value) return;
+  showTimeEntryModal.value = true;
+}
+
+async function onTimeEntryConfirm(comment: string, spentOn: string, activityTypeId: string) {
+  showTimeEntryModal.value = false;
+  if (!props.logTimeEntry) return;
+  isSyncing.value = true;
+  syncSuccess.value = false;
+  syncError.value = false;
+  const result = await props.logTimeEntry(props.activity.id, comment, spentOn, activityTypeId);
+  isSyncing.value = false;
+  if (result.ok) {
+    syncSuccess.value = true;
+    setTimeout(() => { syncSuccess.value = false; }, 2000);
+  } else {
+    syncError.value = true;
+    setTimeout(() => { syncError.value = false; }, 2000);
+  }
+}
 const editName = ref("");
 const editHours = ref<number | "">("");
 const editMinutes = ref<number | "">("");

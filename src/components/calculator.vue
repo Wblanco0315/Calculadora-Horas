@@ -116,6 +116,9 @@
               :key="activity.id"
               :activity="activity"
               :projects="projects"
+              :hasToken="!!userConfig.openProjectToken"
+              :logTimeEntry="logTimeEntry"
+              :timeEntryActivities="timeEntryActivities"
               @delete="removeActivity"
               @update="editActivity"
             />
@@ -163,6 +166,9 @@ const {
   addProject,
   removeActivity,
   fetchTicketSubject,
+  logTimeEntry,
+  timeEntryActivities,
+  fetchTimeEntryActivities,
 } = useActivities();
 
 const { maxDailyMinutes, userConfig, updateUserConfig } = useUserConfig();
@@ -174,6 +180,7 @@ const { startNotificationWatcher } = useSystemNotifications();
 initStorage();
 initTheme();
 startNotificationWatcher();
+fetchTimeEntryActivities();
 
 function formatTime(totalMins: number) {
   if (totalMins <= 0) return "00h 00m";

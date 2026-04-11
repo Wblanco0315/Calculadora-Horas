@@ -1,4 +1,4 @@
-import { ref, computed } from "vue";
+import { ref, computed, readonly } from "vue";
 import { fetch } from "@tauri-apps/plugin-http";
 import { useUserConfig } from "./useUserConfig";
 
@@ -16,9 +16,16 @@ export interface Activity {
   ticketTitle?: string;
 }
 
+export interface TimeEntryActivity {
+  id: string;
+  name: string;
+}
+
 // Singletons shared across all calls to useActivities()
 const activities = ref<Activity[]>([]);
 const projects = ref<Project[]>([]);
+const timeEntryActivities = ref<TimeEntryActivity[]>([]);
+const BASE_URL = "https://openproject.wposs.com/openproject/api/v3";
 
 export function useActivities() {
   const { userConfig, maxDailyMinutes } = useUserConfig();
@@ -73,14 +80,11 @@ export function useActivities() {
   async function fetchOpenProjectProjects() {
     if (!userConfig.value.openProjectToken) return;
     try {
-      const response = await fetch(
-        "https://openproject.wposs.com/openproject/api/v3/projects",
-        {
-          headers: {
-            Authorization: `Bearer ${userConfig.value.openProjectToken}`,
-          },
+      const response = await fetch(`${BASE_URL}/projects`, {
+        headers: {
+          Authorization: `Bearer ${userConfig.value.openProjectToken}`,
         },
-      );
+      });
       if (!response.ok) throw new Error("Failed to fetch projects");
       const data = await response.json();
       if (data && data._embedded && data._embedded.elements) {
@@ -94,19 +98,93 @@ export function useActivities() {
     }
   }
 
+  async function fetchTimeEntryActivities() {
+    if (!userConfig.value.openProjectToken) return;
+    try {
+      const response = await fetch(`${BASE_URL}/time_entries/activities`, {
+        headers: {
+          Authorization: `Bearer ${userConfig.value.openProjectToken}`,
+        },
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      if (data?._embedded?.elements) {
+        timeEntryActivities.value = data._embedded.elements.map((a: any) => ({
+          id: String(a.id),
+          name: a.name,
+        }));
+      }
+    } catch (error) {
+      console.error("OpenProject activities error:", error);
+    }
+  }
+
+  function minutesToISO(minutes: number): string {
+    const hours = parseFloat((minutes / 60).toFixed(2));
+    return `PT${hours}H`;
+  }
+
+  async function logTimeEntry(
+    activityId: string,
+    comment: string,
+    spentOn: string,
+    activityTypeId: string,
+  ): Promise<{ ok: boolean; error?: string }> {
+    const act = activities.value.find((a) => a.id === activityId);
+    if (!act?.ticket) return { ok: false, error: "No ticket ID" };
+    if (!userConfig.value.openProjectToken)
+      return { ok: false, error: "No token" };
+
+    const links: Record<string, { href: string }> = {
+      entity: { href: `/api/v3/work_packages/${act.ticket}` },
+      user: { href: `/api/v3/users/me` },
+    };
+    if (act.projectId) {
+      links.project = { href: `/api/v3/projects/${act.projectId}` };
+    }
+    if (activityTypeId) {
+      links.activity = { href: `/api/v3/time_entries/activities/${activityTypeId}` };
+    }
+
+    const body = {
+      comment: { format: "plain", raw: comment },
+      spentOn,
+      hours: minutesToISO(act.minutes),
+      _links: links,
+    };
+
+    try {
+      const response = await fetch(`${BASE_URL}/time_entries`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${userConfig.value.openProjectToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        return {
+          ok: false,
+          error: errData?.message ?? `HTTP ${response.status}`,
+        };
+      }
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: String(error) };
+    }
+  }
+
   async function fetchTicketSubject(
     ticketId: string,
   ): Promise<{ subject: string; projectId: string } | null> {
     if (!userConfig.value.openProjectToken || !ticketId) return null;
     try {
-      const response = await fetch(
-        `https://openproject.wposs.com/openproject/api/v3/work_packages/${ticketId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${userConfig.value.openProjectToken}`,
-          },
+      const response = await fetch(`${BASE_URL}/work_packages/${ticketId}`, {
+        headers: {
+          Authorization: `Bearer ${userConfig.value.openProjectToken}`,
         },
-      );
+      });
       if (!response.ok) return null;
       const data = await response.json();
       const subject = data.subject || null;
@@ -130,7 +208,10 @@ export function useActivities() {
     editActivity,
     addProject,
     removeActivity,
+    timeEntryActivities,
     fetchOpenProjectProjects,
+    fetchTimeEntryActivities,
     fetchTicketSubject,
+    logTimeEntry,
   };
 }
