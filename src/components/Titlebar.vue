@@ -15,7 +15,7 @@ defineEmits<{
 
 <template>
   <div
-    class="flex z-99 justify-between items-center h-10 bg-slate-200 dark:bg-zinc-900 text-slate-500 dark:text-zinc-400 select-none border-b border-slate-300 dark:border-zinc-800 transition-colors shrink-0 rounded-t-[12px] md:rounded-t-[18px] overflow-hidden"
+    class="flex z-99 justify-between items-center h-10 bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 select-none border-b border-slate-200 dark:border-slate-700/60 transition-colors shrink-0 rounded-t-[12px] md:rounded-t-[18px] overflow-hidden"
   >
     <!-- Drag Region solo para el título y el espacio flexible restante -->
     <div
@@ -25,7 +25,7 @@ defineEmits<{
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        class="h-4 w-4 text-blue-500 pointer-events-none"
+        class="h-4 w-4 text-indigo-500 dark:text-indigo-400 pointer-events-none"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -38,7 +38,7 @@ defineEmits<{
         />
       </svg>
       <span
-        class="text-xs font-semibold tracking-wider uppercase text-slate-700 dark:text-zinc-300 pointer-events-none"
+        class="text-xs font-semibold tracking-wider uppercase text-slate-700 dark:text-slate-300 pointer-events-none"
       >
         Calculadora de horas
       </span>
@@ -48,7 +48,7 @@ defineEmits<{
     <div class="flex h-full">
       <button
         @click="$emit('open-settings')"
-        class="inline-flex items-center justify-center w-11 h-full hover:bg-slate-300 dark:hover:bg-zinc-800 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
+        class="inline-flex items-center justify-center w-11 h-full hover:bg-slate-300 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
         title="Configuración"
       >
         <svg
@@ -73,7 +73,7 @@ defineEmits<{
 
       <button
         @click="toggleDarkMode"
-        class="inline-flex items-center justify-center w-11 h-full hover:bg-slate-300 dark:hover:bg-zinc-800 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
+        class="inline-flex items-center justify-center w-11 h-full hover:bg-slate-300 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
         title="Tema"
       >
         <svg
@@ -110,7 +110,7 @@ defineEmits<{
 
       <button
         @click="minimize"
-        class="inline-flex items-center justify-center w-11 h-full hover:bg-slate-300 dark:hover:bg-zinc-800 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
+        class="inline-flex items-center justify-center w-11 h-full hover:bg-slate-300 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
       >
         <svg class="w-4 h-4" viewBox="0 0 24 24">
           <path fill="currentColor" d="M20 14H4v-4h16v4Z" />

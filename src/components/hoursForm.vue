@@ -30,11 +30,11 @@
           >
             <div class="flex items-center gap-2">
               <div
-                class="flex h-7 w-7 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-500/20"
+                class="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-500/20"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  class="h-3.5 w-3.5 text-purple-600 dark:text-purple-400"
+                  class="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -81,7 +81,7 @@
               >
                 <select
                   v-model="projectId"
-                  class="flex-1 min-w-0 px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none dark:text-slate-100"
+                  class="flex-1 min-w-0 px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100"
                 >
                   <option value="">Sin proyecto</option>
                   <option v-for="p in projects" :key="p.id" :value="p.id">
@@ -92,7 +92,7 @@
                   v-if="!hasProjectToken"
                   type="button"
                   @click="isCreatingProject = true"
-                  class="cursor-pointer p-1.5 text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-500/10 rounded-lg transition-colors shrink-0"
+                  class="cursor-pointer p-1.5 text-indigo-500 hover:bg-purple-50 dark:hover:bg-purple-500/10 rounded-lg transition-colors shrink-0"
                   title="Nuevo proyecto"
                 >
                   <svg
@@ -116,13 +116,13 @@
                   type="text"
                   v-model="newProjectName"
                   placeholder="Nombre del proyecto..."
-                  class="flex-1 min-w-0 px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-purple-400 dark:border-purple-500 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none dark:text-slate-100"
+                  class="flex-1 min-w-0 px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-indigo-400 dark:border-indigo-500 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100"
                   @keyup.enter.prevent="createProject"
                 />
                 <button
                   type="button"
                   @click="createProject"
-                  class="cursor-pointer p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-500/10 rounded-lg shrink-0"
+                  class="cursor-pointer p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg shrink-0"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -161,7 +161,7 @@
                   @blur="onTicketBlur"
                   placeholder="#Ticket"
                   :class="[
-                    'w-24 px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none dark:text-slate-100 placeholder-slate-400',
+                    'w-24 px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400',
                     isLoadingTicket ? 'opacity-50' : '',
                   ]"
                 />
@@ -180,7 +180,7 @@
             >
               <span
                 v-if="ticketTitle"
-                class="inline-flex items-center w-max px-2 py-0.5 rounded-md text-[10px] font-semibold bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-500/30"
+                class="inline-flex items-center w-max px-2 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30"
                 :title="ticketTitle"
               >
                 {{ ticketTitle }}
@@ -193,7 +193,7 @@
               v-model="name"
               placeholder="Descripción de la tarea..."
               required
-              class="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none dark:text-slate-100 placeholder-slate-400"
+              class="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400"
             />
 
             <!-- Row 3: Time -->
@@ -242,7 +242,7 @@
               <button
                 type="submit"
                 :disabled="!isValid"
-                class="cursor-pointer flex-1 py-2 px-3 text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl transition-colors shadow-sm"
+                class="cursor-pointer flex-1 py-2 px-3 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl transition-colors shadow-sm"
               >
                 Añadir
               </button>

@@ -16,10 +16,10 @@
       >
         <!-- Warning Icon -->
         <div
-          class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-500/20 sm:mx-0 sm:h-10 sm:w-10"
+          class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 dark:bg-rose-500/20 sm:mx-0 sm:h-10 sm:w-10"
         >
           <svg
-            class="h-6 w-6 text-red-600 dark:text-red-500"
+            class="h-6 w-6 text-rose-600 dark:text-rose-400"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -56,7 +56,7 @@
           </button>
           <button
             @click="$emit('confirm')"
-            class="cursor-pointer flex-1 py-1.5 px-3 text-sm font-medium text-white bg-red-600 border border-transparent rounded-lg hover:bg-red-700 focus:ring-2 focus:outline-none focus:ring-red-500/50 transition-colors shadow-sm"
+            class="cursor-pointer flex-1 py-1.5 px-3 text-sm font-medium text-white bg-rose-600 border border-transparent rounded-lg hover:bg-rose-700 focus:ring-2 focus:outline-none focus:ring-rose-500/50 transition-colors shadow-sm"
           >
             {{ confirmText }}
           </button>

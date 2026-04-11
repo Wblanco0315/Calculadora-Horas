@@ -18,7 +18,7 @@
           v-if="isLoading"
           class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 rounded-[12px] md:rounded-[18px]"
         >
-          <div class="w-8 h-8 border-[3px] border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
+          <div class="w-8 h-8 border-[3px] border-indigo-500 border-t-transparent rounded-full animate-spin mb-3" />
           <span class="text-xs text-slate-400 dark:text-slate-500 font-medium">Cargando...</span>
         </div>
       </transition>
@@ -41,7 +41,7 @@
       <template v-else>
         <!-- Stats Area -->
         <div
-          class="p-4 bg-linear-to-b from-blue-500 to-blue-600 dark:from-blue-800 dark:to-blue-900 text-white shadow-inner shrink-0"
+          class="p-4 bg-linear-to-b from-indigo-500 to-indigo-600 dark:from-indigo-900 dark:to-slate-900 text-white shadow-inner shrink-0"
         >
           <div class="flex justify-between items-baseline mb-1">
             <span
@@ -58,7 +58,7 @@
             }}</span>
             <button
               @click="resetActivities"
-              class="cursor-pointer px-2 py-1 mb-1 text-xs font-medium text-blue-100 bg-blue-900/30 hover:bg-red-500 hover:text-white rounded flex items-center gap-1 transition-all"
+              class="cursor-pointer px-2 py-1 mb-1 text-xs font-medium text-indigo-200 bg-white/10 hover:bg-rose-500 hover:text-white rounded flex items-center gap-1 transition-all"
               title="Borrar todas las actividades"
             >
               <svg
@@ -98,7 +98,7 @@
           </div>
           <button
             @click="showAddModal = true"
-            class="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 active:scale-95 rounded-xl transition-all shadow-sm shadow-purple-500/20"
+            class="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 rounded-xl transition-all shadow-sm shadow-indigo-500/20"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 5v14M5 12h14"/>
@@ -119,28 +119,13 @@
         />
 
         <!-- Scrollable Activity List -->
-        <div
-          class="flex-1 overflow-y-auto w-full p-4 bg-slate-50 dark:bg-slate-900/50"
-        >
-          <div
-            v-if="activities.length === 0"
-            class="text-center py-8 opacity-50"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-8 w-8 mx-auto mb-2 text-slate-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="1.5"
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-              />
+        <div class="flex-1 overflow-y-auto w-full px-3 pt-3 pb-2 bg-slate-50 dark:bg-slate-900/50">
+          <div v-if="activities.length === 0" class="flex flex-col items-center justify-center h-full gap-3 pb-4 select-none">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-slate-700 dark:text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <circle cx="12" cy="12" r="10" stroke-width="1.5"/>
+              <polyline points="12 6 12 12 16 14" stroke-width="1.5" stroke-linecap="round"/>
             </svg>
-            <p class="text-sm">Sin actividades hoy</p>
+            <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-600 text-center">No hay más registros<br>por hoy</p>
           </div>
 
           <TransitionGroup name="list" tag="div" class="space-y-1 relative">
@@ -157,6 +142,35 @@
             />
           </TransitionGroup>
         </div>
+
+        <!-- Bottom navigation -->
+        <nav class="shrink-0 flex items-center justify-around px-4 py-2 border-t border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-900">
+          <!-- Calculator (active) -->
+          <button class="cursor-pointer flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl text-slate-900 dark:text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1"/>
+              <rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/>
+              <rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+          </button>
+
+          <!-- History (inactive) -->
+          <button class="cursor-not-allowed flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl text-slate-400 dark:text-slate-600 opacity-40" disabled title="Próximamente">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </button>
+
+          <!-- Settings -->
+          <button @click="showSetupModal = true" class="cursor-pointer flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl text-slate-400 dark:text-slate-600 hover:text-slate-700 dark:hover:text-slate-300 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </button>
+        </nav>
       </template>
 
       <!-- Custom Confirm Modal -->
