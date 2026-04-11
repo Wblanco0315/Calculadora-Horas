@@ -7,6 +7,22 @@
     <div
       class="w-full h-full bg-slate-50 dark:bg-slate-900 rounded-[12px] md:rounded-[18px] border border-slate-300 dark:border-slate-700/60 overflow-hidden flex flex-col shadow-2xl relative transition-colors duration-300"
     >
+      <!-- Loading screen -->
+      <transition
+        enter-active-class="transition-opacity duration-200"
+        leave-active-class="transition-opacity duration-300"
+        enter-from-class="opacity-0"
+        leave-to-class="opacity-0"
+      >
+        <div
+          v-if="isLoading"
+          class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 rounded-[12px] md:rounded-[18px]"
+        >
+          <div class="w-8 h-8 border-[3px] border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
+          <span class="text-xs text-slate-400 dark:text-slate-500 font-medium">Cargando...</span>
+        </div>
+      </transition>
+
       <Titlebar @open-settings="showSetupModal = true" />
 
       <InitialSetup
@@ -110,7 +126,7 @@
             <p class="text-sm">Sin actividades hoy</p>
           </div>
 
-          <TransitionGroup name="list" tag="div" class="space-y-2 relative">
+          <TransitionGroup name="list" tag="div" class="space-y-1 relative">
             <Row
               v-for="activity in activities"
               :key="activity.id"
@@ -141,7 +157,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { useActivities } from "../composables/useActivities";
 import { useUserConfig } from "../composables/useUserConfig";
 import { useAppStorage } from "../composables/useAppStorage";
@@ -155,6 +171,7 @@ import InitialSetup from "./InitialSetup.vue";
 
 const showConfirmReset = ref(false);
 const showSetupModal = ref(false);
+const isLoading = ref(true);
 
 const {
   activities,
@@ -180,7 +197,11 @@ const { startNotificationWatcher } = useSystemNotifications();
 initStorage();
 initTheme();
 startNotificationWatcher();
-fetchTimeEntryActivities();
+
+onMounted(async () => {
+  await fetchTimeEntryActivities();
+  isLoading.value = false;
+});
 
 function formatTime(totalMins: number) {
   if (totalMins <= 0) return "00h 00m";
