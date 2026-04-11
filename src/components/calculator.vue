@@ -88,18 +88,35 @@
           </div>
         </div>
 
-        <div
-          class="border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)] z-10 shrink-0"
-        >
-          <HoursForm
-            :projects="projects"
-            :addProject="addProject"
-            :hasProjectToken="!!userConfig.openProjectToken"
-            :fetchTicketSubject="fetchTicketSubject"
-            @add="addActivity"
-            @open-settings="showSetupModal = true"
-          />
+        <!-- Greeting bar -->
+        <div class="flex items-center justify-between px-4 py-2.5 border-b border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800/60 shrink-0">
+          <div>
+            <p class="text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500 font-semibold">Registro del día</p>
+            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-200 leading-tight">
+              Hola, {{ currentUserName || 'Usuario' }} 👋
+            </h2>
+          </div>
+          <button
+            @click="showAddModal = true"
+            class="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 active:scale-95 rounded-xl transition-all shadow-sm shadow-purple-500/20"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            Añadir
+          </button>
         </div>
+
+        <!-- Add activity modal -->
+        <HoursForm
+          :show="showAddModal"
+          :projects="projects"
+          :addProject="addProject"
+          :hasProjectToken="!!userConfig.openProjectToken"
+          :fetchTicketSubject="fetchTicketSubject"
+          @add="addActivity"
+          @close="showAddModal = false"
+        />
 
         <!-- Scrollable Activity List -->
         <div
@@ -170,8 +187,9 @@ import ConfirmModal from "./confirmModal.vue";
 import InitialSetup from "./InitialSetup.vue";
 
 const showConfirmReset = ref(false);
-const showSetupModal = ref(false);
-const isLoading = ref(true);
+const showSetupModal   = ref(false);
+const showAddModal     = ref(false);
+const isLoading        = ref(true);
 
 const {
   activities,
@@ -184,8 +202,10 @@ const {
   removeActivity,
   fetchTicketSubject,
   logTimeEntry,
+  currentUserName,
   timeEntryActivities,
   fetchTimeEntryActivities,
+  fetchCurrentUser,
 } = useActivities();
 
 const { maxDailyMinutes, userConfig, updateUserConfig } = useUserConfig();
@@ -199,7 +219,7 @@ initTheme();
 startNotificationWatcher();
 
 onMounted(async () => {
-  await fetchTimeEntryActivities();
+  await Promise.all([fetchTimeEntryActivities(), fetchCurrentUser()]);
   isLoading.value = false;
 });
 

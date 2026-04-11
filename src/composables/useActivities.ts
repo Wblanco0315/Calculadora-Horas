@@ -25,6 +25,7 @@ export interface TimeEntryActivity {
 const activities = ref<Activity[]>([]);
 const projects = ref<Project[]>([]);
 const timeEntryActivities = ref<TimeEntryActivity[]>([]);
+const currentUserName = ref<string>("");
 const BASE_URL = "https://openproject.wposs.com/openproject/api/v3";
 
 export function useActivities() {
@@ -95,6 +96,20 @@ export function useActivities() {
       }
     } catch (error) {
       console.error("OpenProject error:", error);
+    }
+  }
+
+  async function fetchCurrentUser() {
+    if (!userConfig.value.openProjectToken) return;
+    try {
+      const response = await fetch(`${BASE_URL}/users/me`, {
+        headers: { Authorization: `Bearer ${userConfig.value.openProjectToken}` },
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      currentUserName.value = data.name ?? data.login ?? "";
+    } catch {
+      // silently ignore
     }
   }
 
@@ -208,8 +223,10 @@ export function useActivities() {
     editActivity,
     addProject,
     removeActivity,
+    currentUserName,
     timeEntryActivities,
     fetchOpenProjectProjects,
+    fetchCurrentUser,
     fetchTimeEntryActivities,
     fetchTicketSubject,
     logTimeEntry,

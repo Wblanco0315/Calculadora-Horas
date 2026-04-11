@@ -15,7 +15,7 @@ defineEmits<{
 
 <template>
   <div
-    class="flex justify-between items-center h-10 bg-slate-200 dark:bg-zinc-900 text-slate-500 dark:text-zinc-400 select-none border-b border-slate-300 dark:border-zinc-800 transition-colors shrink-0 rounded-t-[12px] md:rounded-t-[18px] overflow-hidden"
+    class="flex z-99 justify-between items-center h-10 bg-slate-200 dark:bg-zinc-900 text-slate-500 dark:text-zinc-400 select-none border-b border-slate-300 dark:border-zinc-800 transition-colors shrink-0 rounded-t-[12px] md:rounded-t-[18px] overflow-hidden"
   >
     <!-- Drag Region solo para el título y el espacio flexible restante -->
     <div
