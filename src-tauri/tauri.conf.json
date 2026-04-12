@@ -12,6 +12,7 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "Calculadora de horas",
         "width": 425,
         "height": 700,

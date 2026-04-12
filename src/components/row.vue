@@ -11,12 +11,10 @@
     <template v-if="!isEditing">
       <div class="flex items-center gap-3 py-3">
         <!-- Accent bar -->
-        <div
-          class="flex-shrink-0 w-[3px] h-9 bg-indigo-500 dark:bg-indigo-400"
-        />
+        <div class="shrink-0 w-[3px] h-9 bg-indigo-500 dark:bg-indigo-400" />
 
         <!-- Body -->
-        <div class="flex-grow min-w-0">
+        <div class="grow min-w-0">
           <div class="flex items-center gap-2 mb-0.5">
             <h3
               class="text-[11px] font-bold uppercase tracking-wider truncate text-indigo-400 dark:text-indigo-400"

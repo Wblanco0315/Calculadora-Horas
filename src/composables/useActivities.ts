@@ -1,4 +1,4 @@
-import { ref, computed, readonly } from "vue";
+import { ref, computed } from "vue";
 import { fetch } from "@tauri-apps/plugin-http";
 import { useUserConfig } from "./useUserConfig";
 
@@ -103,7 +103,9 @@ export function useActivities() {
     if (!userConfig.value.openProjectToken) return;
     try {
       const response = await fetch(`${BASE_URL}/users/me`, {
-        headers: { Authorization: `Bearer ${userConfig.value.openProjectToken}` },
+        headers: {
+          Authorization: `Bearer ${userConfig.value.openProjectToken}`,
+        },
       });
       if (!response.ok) return;
       const data = await response.json();
@@ -158,7 +160,9 @@ export function useActivities() {
       links.project = { href: `/api/v3/projects/${act.projectId}` };
     }
     if (activityTypeId) {
-      links.activity = { href: `/api/v3/time_entries/activities/${activityTypeId}` };
+      links.activity = {
+        href: `/api/v3/time_entries/activities/${activityTypeId}`,
+      };
     }
 
     const body = {

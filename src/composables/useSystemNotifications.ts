@@ -4,19 +4,47 @@ import {
   requestPermission,
   sendNotification,
 } from "@tauri-apps/plugin-notification";
+import { invoke } from "@tauri-apps/api/core";
 
 export function useSystemNotifications() {
   const { userConfig } = useUserConfig();
   let intervalId: number | null = null;
+  let hasPermission = false;
+
+  async function checkPermission() {
+    try {
+      let granted = await isPermissionGranted();
+      if (!granted) {
+        const permission = await requestPermission();
+        granted = permission === "granted";
+      }
+      hasPermission = granted;
+      return granted;
+    } catch (err) {
+      return false;
+    }
+  }
 
   async function checkWorkdayEnd() {
-    if (!userConfig.value.isConfigured || !userConfig.value.exitTime) return;
+    console.log("[Watcher] Tick - Checking time...");
+    if (!userConfig.value.isConfigured || !userConfig.value.exitTime) {
+      console.log("[Watcher] No configured or no exitTime found.");
+      return;
+    }
+
+    if (!hasPermission) {
+      const granted = await checkPermission();
+      if (!granted) {
+        console.log("[Watcher] Notification permission not granted.");
+        return;
+      }
+    }
 
     const now = new Date();
-    const todayStr = now.toISOString().split("T")[0]; // "YYYY-MM-DD"
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
     if (userConfig.value.lastNotifiedDate === todayStr) {
-      return; // Already notified today
+      return;
     }
 
     const currentH = now.getHours();
@@ -26,37 +54,32 @@ export function useSystemNotifications() {
     const [exitH, exitM] = userConfig.value.exitTime.split(":").map(Number);
     let exitTotalMins = exitH * 60 + exitM;
 
+    // Handle wrap around if exit time is very early (e.g. 1 AM)
     if (exitTotalMins < currentTotalMins && exitTotalMins < 12 * 60) {
       exitTotalMins += 24 * 60;
     }
 
     const diffMins = exitTotalMins - currentTotalMins;
 
-    if (diffMins <= 15 && diffMins >= 0) {
-      try {
-        let permissionGranted = await isPermissionGranted();
-        if (!permissionGranted) {
-          const permission = await requestPermission();
-          permissionGranted = permission === "granted";
-        }
+    console.log(
+      `[Watcher] Status: Exit=${userConfig.value.exitTime} (${exitTotalMins}m), Now=${currentH}:${currentM} (${currentTotalMins}m), Diff=${diffMins}m`,
+    );
 
-        if (permissionGranted) {
-          sendNotification({
-            title: "Calculadora de Horas",
-            body: "¡Atención! Faltan 15 minutos o menos para finalizar tu jornada laboral.",
-          });
-          userConfig.value.lastNotifiedDate = todayStr;
-        }
-      } catch (err) {
-        console.error("Error sending native notification", err);
-      }
+    if (diffMins <= 15 && diffMins >= 0) {
+      console.log("[Watcher] TRIGGERING NOTIFICATION!");
+      sendNotification({
+        title: "Calculadora de Horas",
+        body: "¡Atención! Faltan 15 minutos o menos para finalizar tu jornada laboral.",
+      });
+      userConfig.value.lastNotifiedDate = todayStr;
     }
   }
 
-  function startNotificationWatcher() {
+  async function startNotificationWatcher() {
     if (intervalId === null) {
+      await checkPermission();
       intervalId = window.setInterval(checkWorkdayEnd, 60000);
-      checkWorkdayEnd(); // run once immediately
+      checkWorkdayEnd();
     }
   }
 
@@ -67,5 +90,17 @@ export function useSystemNotifications() {
     }
   }
 
-  return { checkWorkdayEnd, startNotificationWatcher, stopNotificationWatcher };
+  function sendTestNotification() {
+    sendNotification({
+      title: "Calculadora de Horas",
+      body: "¡Funciona! Esta es una notificación de prueba.",
+    });
+  }
+
+  return {
+    checkWorkdayEnd,
+    startNotificationWatcher,
+    stopNotificationWatcher,
+    sendTestNotification,
+  };
 }
