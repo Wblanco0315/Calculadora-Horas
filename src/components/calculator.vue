@@ -113,35 +113,30 @@
             </h2>
           </div>
           <div class="flex gap-2 items-center">
-            <BaseButton
-              @click="sendTestNotification"
-              variant="secondary"
-              size="sm"
-              class="!px-2 !py-1 text-[10px]"
-              label="Test Notify"
-            />
-            <BaseButton
-              @click="showAddModal = true"
-              variant="primary"
-              size="sm"
-              class="scale-105 mr-1"
-              label="Añadir"
-            >
-              <template #left-icon>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="w-3.5 h-3.5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M12 5v14M5 12h14" />
-                </svg>
-              </template>
-            </BaseButton>
+            <div class="relative flex items-center">
+              <BaseButton
+                @click="showAddModal = true"
+                variant="primary"
+                size="sm"
+                class="scale-105 mr-1"
+                label="Añadir"
+              >
+                <template #left-icon>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="w-3.5 h-3.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                </template>
+              </BaseButton>
+            </div>
           </div>
         </div>
 
@@ -328,8 +323,7 @@ const { maxDailyMinutes, userConfig, updateUserConfig } = useUserConfig();
 
 const { initStorage } = useAppStorage();
 const { initTheme } = useTheme();
-const { startNotificationWatcher, sendTestNotification } =
-  useSystemNotifications();
+const { startNotificationWatcher } = useSystemNotifications();
 
 initStorage();
 initTheme();

@@ -9,6 +9,7 @@ export function useAppStorage() {
   const { userConfig, maxDailyMinutes } = useUserConfig();
 
   function initStorage() {
+    const { favoriteTickets } = useActivities();
     const storedData = localStorage.getItem(STORAGE_KEY);
     if (storedData) {
       try {
@@ -16,7 +17,10 @@ export function useAppStorage() {
         if (parsed.activities) activities.value = parsed.activities;
         if (parsed.projects) projects.value = parsed.projects;
         if (parsed.userConfig) userConfig.value = parsed.userConfig;
-        if (parsed.maxDailyMinutes) maxDailyMinutes.value = parsed.maxDailyMinutes;
+        if (parsed.maxDailyMinutes)
+          maxDailyMinutes.value = parsed.maxDailyMinutes;
+        if (parsed.favoriteTickets)
+          favoriteTickets.value = parsed.favoriteTickets;
       } catch (e) {
         console.error("Failed to parse stored activities", e);
       }
@@ -29,7 +33,7 @@ export function useAppStorage() {
 
     // Set up global watcher to save anything that changes
     watch(
-      [activities, projects, maxDailyMinutes, userConfig],
+      [activities, projects, maxDailyMinutes, userConfig, favoriteTickets],
       () => {
         localStorage.setItem(
           STORAGE_KEY,
@@ -38,10 +42,11 @@ export function useAppStorage() {
             projects: projects.value,
             maxDailyMinutes: maxDailyMinutes.value,
             userConfig: userConfig.value,
-          })
+            favoriteTickets: favoriteTickets.value,
+          }),
         );
       },
-      { deep: true }
+      { deep: true },
     );
   }
 

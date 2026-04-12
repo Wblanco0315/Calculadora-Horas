@@ -4,7 +4,6 @@ import {
   requestPermission,
   sendNotification,
 } from "@tauri-apps/plugin-notification";
-import { invoke } from "@tauri-apps/api/core";
 
 export function useSystemNotifications() {
   const { userConfig } = useUserConfig();
@@ -90,17 +89,9 @@ export function useSystemNotifications() {
     }
   }
 
-  function sendTestNotification() {
-    sendNotification({
-      title: "Calculadora de Horas",
-      body: "¡Funciona! Esta es una notificación de prueba.",
-    });
-  }
-
   return {
     checkWorkdayEnd,
     startNotificationWatcher,
     stopNotificationWatcher,
-    sendTestNotification,
   };
 }

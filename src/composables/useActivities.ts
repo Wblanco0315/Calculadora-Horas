@@ -21,11 +21,18 @@ export interface TimeEntryActivity {
   name: string;
 }
 
+export interface FavoriteTicket {
+  ticket: string;
+  title: string;
+  projectId?: string;
+}
+
 // Singletons shared across all calls to useActivities()
 const activities = ref<Activity[]>([]);
 const projects = ref<Project[]>([]);
 const timeEntryActivities = ref<TimeEntryActivity[]>([]);
 const currentUserName = ref<string>("");
+const favoriteTickets = ref<FavoriteTicket[]>([]);
 const BASE_URL = "https://openproject.wposs.com/openproject/api/v3";
 
 export function useActivities() {
@@ -194,6 +201,19 @@ export function useActivities() {
     }
   }
 
+  function toggleFavorite(ticket: string, title: string, projectId?: string) {
+    const index = favoriteTickets.value.findIndex((t) => t.ticket === ticket);
+    if (index === -1) {
+      favoriteTickets.value.push({ ticket, title, projectId });
+    } else {
+      favoriteTickets.value.splice(index, 1);
+    }
+  }
+
+  function isFavorite(ticketId: string) {
+    return favoriteTickets.value.some((t) => t.ticket === ticketId);
+  }
+
   async function fetchTicketSubject(
     ticketId: string,
   ): Promise<{ subject: string; projectId: string } | null> {
@@ -234,5 +254,8 @@ export function useActivities() {
     fetchTimeEntryActivities,
     fetchTicketSubject,
     logTimeEntry,
+    favoriteTickets,
+    toggleFavorite,
+    isFavorite,
   };
 }

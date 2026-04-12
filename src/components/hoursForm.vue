@@ -48,7 +48,9 @@
               <h3
                 class="text-sm font-semibold text-slate-800 dark:text-slate-100"
               >
-                Nueva Actividad
+                {{
+                  viewState === "favorites" ? "Favoritos" : "Nueva Actividad"
+                }}
               </h3>
             </div>
             <button
@@ -70,8 +72,104 @@
             </button>
           </div>
 
-          <!-- Body -->
-          <form @submit.prevent="submitForm" class="flex flex-col gap-3 p-4">
+          <!-- Selection View -->
+          <div
+            v-if="viewState === 'selection'"
+            class="p-6 flex flex-col items-center gap-4"
+          >
+            <p
+              class="text-sm text-slate-500 dark:text-slate-400 text-center mb-2"
+            >
+              ¿Qué deseas hacer?
+            </p>
+
+            <BaseButton
+              @click="viewState = 'form'"
+              variant="secondary"
+              class="w-full !py-3 !rounded-xl"
+              label="Agregar nuevo ticket"
+            >
+              <template #left-icon>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="w-5 h-5 text-indigo-500"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+              </template>
+            </BaseButton>
+
+            <BaseButton
+              v-if="favoriteTickets.length > 0"
+              @click="viewState = 'favorites'"
+              variant="secondary"
+              class="w-full !py-3 !rounded-xl"
+              label="Favoritos"
+            >
+              <template #left-icon>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="w-5 h-5 text-yellow-500"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  stroke="none"
+                >
+                  <path
+                    d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.175 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                  />
+                </svg>
+              </template>
+            </BaseButton>
+          </div>
+
+          <!-- Favorites View -->
+          <div v-if="viewState === 'favorites'" class="flex flex-col">
+            <div
+              class="p-2 overflow-y-auto max-h-64 divide-y divide-slate-100 dark:divide-slate-700"
+            >
+              <button
+                v-for="fav in favoriteTickets"
+                :key="fav.ticket"
+                type="button"
+                @click="selectFavorite(fav)"
+                class="w-full p-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex flex-col gap-1 rounded-lg"
+              >
+                <span
+                  class="text-xs font-bold text-yellow-600 dark:text-yellow-500"
+                  >#{{ fav.ticket }}</span
+                >
+                <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                  fav.title
+                }}</span>
+              </button>
+            </div>
+            <div
+              class="p-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50"
+            >
+              <BaseButton
+                type="button"
+                @click="viewState = 'selection'"
+                variant="secondary"
+                class="w-full"
+                label="Volver"
+              />
+            </div>
+          </div>
+
+          <!-- Form View -->
+          <form
+            v-if="viewState === 'form'"
+            @submit.prevent="submitForm"
+            class="flex flex-col gap-3 p-4"
+          >
             <!-- Row 1: Project + Ticket -->
             <div class="flex items-center gap-2">
               <!-- Project Selector -->
@@ -154,21 +252,47 @@
               </div>
 
               <!-- Ticket Input -->
-              <div class="relative shrink-0">
-                <input
-                  type="text"
-                  v-model="ticket"
-                  @blur="onTicketBlur"
-                  placeholder="#Ticket"
-                  :class="[
-                    'w-24 px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400',
-                    isLoadingTicket ? 'opacity-50' : '',
-                  ]"
-                />
-                <span
-                  v-if="isLoadingTicket"
-                  class="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"
-                />
+              <div class="relative shrink-0 flex items-center gap-1">
+                <div class="relative">
+                  <input
+                    type="text"
+                    v-model="ticket"
+                    @blur="onTicketBlur"
+                    placeholder="#Ticket"
+                    :class="[
+                      'w-24 px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400',
+                      isLoadingTicket ? 'opacity-50' : '',
+                    ]"
+                  />
+                  <span
+                    v-if="isLoadingTicket"
+                    class="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"
+                  />
+                </div>
+
+                <button
+                  v-if="ticket"
+                  type="button"
+                  @click="toggleFavorite(ticket, ticketTitle, projectId)"
+                  class="p-1.5 text-slate-400 hover:text-yellow-500 transition-colors"
+                  :class="{ 'text-yellow-500': isFavorite(ticket) }"
+                  title="Guardar como favorito"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="w-4 h-4"
+                    :fill="isFavorite(ticket) ? 'currentColor' : 'none'"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.175 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                    />
+                  </svg>
+                </button>
               </div>
             </div>
 
@@ -234,10 +358,10 @@
             <div class="flex gap-2 pt-1">
               <BaseButton
                 type="button"
-                @click="close"
+                @click="viewState = 'selection'"
                 variant="secondary"
                 class="flex-1"
-                label="Cancelar"
+                label="Atrás"
               />
               <BaseButton
                 type="submit"
@@ -257,6 +381,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
 import type { Project } from "../composables/useActivities";
+import { useActivities } from "../composables/useActivities";
 import BaseButton from "./shared/baseButton.vue";
 
 const props = defineProps<{
@@ -264,6 +389,9 @@ const props = defineProps<{
   projects: Project[];
   addProject: (name: string) => string;
   hasProjectToken?: boolean;
+  initialTicket?: string;
+  initialTicketTitle?: string;
+  initialProjectId?: string;
   fetchTicketSubject?: (
     id: string,
   ) => Promise<{ subject: string; projectId: string } | null>;
@@ -292,11 +420,15 @@ const newProjectName = ref("");
 const isLoadingTicket = ref(false);
 const ticketTitle = ref("");
 
+const { favoriteTickets, toggleFavorite, isFavorite } = useActivities();
+const viewState = ref<"selection" | "form" | "favorites">("selection");
+
 // Reset form when modal opens
 watch(
   () => props.show,
   (val) => {
     if (val) {
+      viewState.value = "selection";
       name.value = "";
       hours.value = "";
       minutes.value = "";
@@ -308,6 +440,13 @@ watch(
     }
   },
 );
+
+function selectFavorite(fav: any) {
+  ticket.value = fav.ticket;
+  ticketTitle.value = fav.title;
+  if (fav.projectId) projectId.value = fav.projectId;
+  viewState.value = "form";
+}
 
 async function onTicketBlur() {
   const raw = ticket.value.trim().replace(/^#/, "");
