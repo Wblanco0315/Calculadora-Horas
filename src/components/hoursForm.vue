@@ -72,64 +72,6 @@
             </button>
           </div>
 
-          <!-- Selection View -->
-          <div
-            v-if="viewState === 'selection'"
-            class="p-6 flex flex-col items-center gap-4"
-          >
-            <p
-              class="text-sm text-slate-500 dark:text-slate-400 text-center mb-2"
-            >
-              ¿Qué deseas hacer?
-            </p>
-
-            <BaseButton
-              @click="viewState = 'form'"
-              variant="secondary"
-              class="w-full !py-3 !rounded-xl"
-              label="Agregar nuevo ticket"
-            >
-              <template #left-icon>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="w-5 h-5 text-indigo-500"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-              </template>
-            </BaseButton>
-
-            <BaseButton
-              v-if="favoriteTickets.length > 0"
-              @click="viewState = 'favorites'"
-              variant="secondary"
-              class="w-full !py-3 !rounded-xl"
-              label="Favoritos"
-            >
-              <template #left-icon>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="w-5 h-5 text-yellow-500"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  stroke="none"
-                >
-                  <path
-                    d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.175 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
-                  />
-                </svg>
-              </template>
-            </BaseButton>
-          </div>
-
           <!-- Favorites View -->
           <div v-if="viewState === 'favorites'" class="flex flex-col">
             <div
@@ -143,7 +85,10 @@
                 class="w-full p-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex flex-col gap-1 rounded-lg"
               >
                 <div class="flex items-center justify-between gap-2">
-                  <span class="text-xs font-bold text-yellow-600 dark:text-yellow-500">#{{ fav.ticket }}</span>
+                  <span
+                    class="text-xs font-bold text-yellow-600 dark:text-yellow-500"
+                    >#{{ fav.ticket }}</span
+                  >
                   <span
                     v-if="getProjectName(fav.projectId)"
                     class="text-[10px] text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/50 px-1.5 py-0.5 rounded truncate max-w-[130px]"
@@ -162,7 +107,11 @@
             >
               <BaseButton
                 type="button"
-                @click="viewState = 'selection'"
+                @click="
+                  props.initialView === 'favorites'
+                    ? close()
+                    : (viewState = 'form')
+                "
                 variant="secondary"
                 class="w-full"
                 label="Volver"
@@ -363,13 +312,6 @@
             <!-- Footer actions -->
             <div class="flex gap-2 pt-1">
               <BaseButton
-                type="button"
-                @click="viewState = 'selection'"
-                variant="secondary"
-                class="flex-1"
-                label="Atrás"
-              />
-              <BaseButton
                 type="submit"
                 :disabled="!isValid"
                 variant="primary"
@@ -398,6 +340,7 @@ const props = defineProps<{
   initialTicket?: string;
   initialTicketTitle?: string;
   initialProjectId?: string;
+  initialView?: "form" | "favorites";
   fetchTicketSubject?: (
     id: string,
   ) => Promise<{ subject: string; projectId: string } | null>;
@@ -434,7 +377,7 @@ watch(
   () => props.show,
   (val) => {
     if (val) {
-      viewState.value = "selection";
+      viewState.value = props.initialView ?? "selection";
       name.value = "";
       hours.value = "";
       minutes.value = "";
