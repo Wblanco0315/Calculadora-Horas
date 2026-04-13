@@ -142,10 +142,16 @@
                 @click="selectFavorite(fav)"
                 class="w-full p-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex flex-col gap-1 rounded-lg"
               >
-                <span
-                  class="text-xs font-bold text-yellow-600 dark:text-yellow-500"
-                  >#{{ fav.ticket }}</span
-                >
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-xs font-bold text-yellow-600 dark:text-yellow-500">#{{ fav.ticket }}</span>
+                  <span
+                    v-if="getProjectName(fav.projectId)"
+                    class="text-[10px] text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/50 px-1.5 py-0.5 rounded truncate max-w-[130px]"
+                    :title="getProjectName(fav.projectId)"
+                  >
+                    {{ getProjectName(fav.projectId) }}
+                  </span>
+                </div>
                 <span class="text-sm text-slate-700 dark:text-slate-200">{{
                   fav.title
                 }}</span>
@@ -448,6 +454,12 @@ function selectFavorite(fav: any) {
   viewState.value = "form";
 }
 
+function getProjectName(id?: string) {
+  if (!id) return "";
+  const proj = props.projects.find((p) => p.id === id);
+  return proj ? proj.name : "";
+}
+
 async function onTicketBlur() {
   const raw = ticket.value.trim().replace(/^#/, "");
   if (!raw || !props.fetchTicketSubject) return;
@@ -457,7 +469,12 @@ async function onTicketBlur() {
     const result = await props.fetchTicketSubject(raw);
     if (result) {
       ticketTitle.value = result.subject;
-      if (result.projectId) projectId.value = result.projectId;
+      if (result.projectId) {
+        projectId.value = result.projectId;
+        // If this ticket was already saved as favorite, update its projectId
+        const existing = favoriteTickets.value.find((f) => f.ticket === raw);
+        if (existing) existing.projectId = result.projectId;
+      }
     }
   } finally {
     isLoadingTicket.value = false;

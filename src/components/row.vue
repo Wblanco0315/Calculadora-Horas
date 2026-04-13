@@ -153,74 +153,99 @@
             </svg>
           </button>
 
-          <!-- Sync -->
-          <button
-            v-if="activity.ticket && hasToken && logTimeEntry"
-            @click="syncTimeEntry"
-            :disabled="isSyncing"
-            class="cursor-pointer p-1.5 rounded-lg transition-all"
-            :class="[
-              syncSuccess
-                ? 'text-emerald-400 hover:bg-white/5'
-                : syncError
-                  ? 'text-rose-400 hover:bg-white/5'
-                  : 'text-slate-500 dark:text-slate-600 hover:text-cyan-400 hover:bg-white/5',
-              isSyncing ? 'opacity-50 cursor-not-allowed' : '',
-            ]"
-            :title="
-              syncSuccess
-                ? '¡Enviado!'
-                : syncError
-                  ? 'Error al enviar'
-                  : 'Enviar a OpenProject'
-            "
-          >
-            <span
-              v-if="isSyncing"
-              class="block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"
-            />
-            <svg
-              v-else-if="syncSuccess"
-              xmlns="http://www.w3.org/2000/svg"
-              class="w-3.5 h-3.5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
+          <!-- Sync: Synced badge (permanent state) -->
+          <template v-if="activity.ticket && hasToken && logTimeEntry">
+            <!-- Already synced: show distinct badge -->
+            <button
+              v-if="activity.synced && !isSyncing && !syncSuccess && !syncError"
+              @click="syncTimeEntry"
+              title="Sincronizado — click para reenviar"
+              class="cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 hover:border-emerald-400/50 transition-all duration-200"
             >
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-            <svg
-              v-else-if="syncError"
-              xmlns="http://www.w3.org/2000/svg"
-              class="w-3.5 h-3.5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
-            <svg
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-3 h-3 shrink-0"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </button>
+
+            <!-- Not yet synced / transient states: action button -->
+            <button
               v-else
-              xmlns="http://www.w3.org/2000/svg"
-              class="w-3.5 h-3.5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
+              @click="syncTimeEntry"
+              :disabled="isSyncing"
+              class="cursor-pointer p-1.5 rounded-lg transition-all relative"
+              :class="[
+                syncSuccess
+                  ? 'text-emerald-400 hover:bg-white/5'
+                  : syncError
+                    ? 'text-rose-400 hover:bg-white/5'
+                    : 'text-slate-500 dark:text-slate-600 hover:text-cyan-400 hover:bg-white/5',
+                isSyncing ? 'opacity-50 cursor-not-allowed' : '',
+              ]"
+              :title="
+                syncSuccess
+                  ? '¡Enviado!'
+                  : syncError
+                    ? 'Error al enviar'
+                    : 'Enviar a OpenProject'
+              "
             >
-              <polyline points="16 16 12 12 8 16" />
-              <line x1="12" y1="12" x2="12" y2="21" />
-              <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
-            </svg>
-          </button>
+              <span
+                v-if="isSyncing"
+                class="block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"
+              />
+              <svg
+                v-else-if="syncSuccess"
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-3.5 h-3.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <svg
+                v-else-if="syncError"
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-3.5 h-3.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+              <!-- Upload to OpenProject icon -->
+              <svg
+                v-else
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-3.5 h-3.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="16 16 12 12 8 16" />
+                <line x1="12" y1="12" x2="12" y2="21" />
+                <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+              </svg>
+            </button>
+          </template>
 
           <!-- Chevron toggle -->
           <button
@@ -371,6 +396,80 @@
       @confirm="onTimeEntryConfirm"
       @cancel="showTimeEntryModal = false"
     />
+
+    <!-- Already synced confirmation modal -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0 scale-95"
+        enter-to-class="opacity-100 scale-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100 scale-100"
+        leave-to-class="opacity-0 scale-95"
+      >
+        <div
+          v-if="showResyncModal"
+          class="fixed inset-0 z-[9999] flex items-center justify-center"
+          @click.self="showResyncModal = false"
+        >
+          <div
+            class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            @click="showResyncModal = false"
+          />
+          <div
+            class="relative z-10 w-72 bg-slate-900 border border-slate-700/60 rounded-2xl shadow-2xl p-5 flex flex-col gap-4"
+          >
+            <!-- Icon + title -->
+            <div class="flex items-start gap-3">
+              <div
+                class="shrink-0 w-9 h-9 rounded-full bg-amber-500/15 flex items-center justify-center"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="w-5 h-5 text-amber-400"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+                  />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              </div>
+              <div>
+                <p class="text-sm font-semibold text-slate-100 leading-snug">
+                  Tiempo ya subido
+                </p>
+                <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+                  Este registro ya fue enviado a OpenProject anteriormente.
+                  ¿Deseas intentarlo de nuevo?
+                </p>
+              </div>
+            </div>
+            <!-- Actions -->
+            <div class="flex gap-2 justify-end">
+              <button
+                @click="showResyncModal = false"
+                class="cursor-pointer px-3 py-1.5 text-xs font-medium rounded-lg text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                @click="confirmResync"
+                class="cursor-pointer px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900 transition-colors"
+              >
+                Reenviar
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -409,6 +508,7 @@ const isSyncing = ref(false);
 const syncSuccess = ref(false);
 const syncError = ref(false);
 const showTimeEntryModal = ref(false);
+const showResyncModal = ref(false);
 
 const editName = ref("");
 const editHours = ref<number | "">("");
@@ -450,6 +550,15 @@ async function copyTaskName() {
 
 function syncTimeEntry() {
   if (!props.logTimeEntry || isSyncing.value) return;
+  if (props.activity.synced) {
+    showResyncModal.value = true;
+    return;
+  }
+  showTimeEntryModal.value = true;
+}
+
+function confirmResync() {
+  showResyncModal.value = false;
   showTimeEntryModal.value = true;
 }
 

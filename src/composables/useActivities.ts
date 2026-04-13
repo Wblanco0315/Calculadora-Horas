@@ -14,6 +14,7 @@ export interface Activity {
   projectId?: string;
   ticket?: string;
   ticketTitle?: string;
+  synced?: boolean;
 }
 
 export interface TimeEntryActivity {
@@ -195,6 +196,9 @@ export function useActivities() {
           error: errData?.message ?? `HTTP ${response.status}`,
         };
       }
+      // Mark the activity as synced
+      const syncedAct = activities.value.find((a) => a.id === activityId);
+      if (syncedAct) syncedAct.synced = true;
       return { ok: true };
     } catch (error) {
       return { ok: false, error: String(error) };
