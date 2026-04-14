@@ -461,22 +461,31 @@ const filteredFavorites = computed(() => {
   );
 });
 
-// Reset form when modal opens
+function resetForm() {
+  name.value = "";
+  date.value = todayISO();
+  hours.value = "";
+  minutes.value = "";
+  ticket.value = "";
+  ticketTitle.value = "";
+  projectId.value = "";
+  isCreatingProject.value = false;
+  newProjectName.value = "";
+  searchFavoriteQuery.value = "";
+  isLoadingTicket.value = false;
+}
+
+// Reset form when modal opens or closes
 watch(
   () => props.show,
   (val) => {
     if (val) {
       viewState.value = props.initialView ?? "selection";
-      name.value = "";
-      date.value = todayISO();
-      hours.value = "";
-      minutes.value = "";
-      ticket.value = "";
-      ticketTitle.value = "";
-      projectId.value = "";
-      isCreatingProject.value = false;
-      newProjectName.value = "";
-      searchFavoriteQuery.value = "";
+      resetForm();
+    } else {
+      setTimeout(() => {
+        resetForm();
+      }, 200); // Reset after close animation
     }
   },
 );
@@ -494,13 +503,21 @@ function getProjectName(id?: string) {
   return proj ? proj.name : "";
 }
 
+let currentSearchId = 0;
+
 async function onTicketBlur() {
   const raw = ticket.value.trim().replace(/^#/, "");
   if (!raw || !props.fetchTicketSubject) return;
+  
+  const searchId = ++currentSearchId;
   isLoadingTicket.value = true;
   ticketTitle.value = "";
   try {
     const result = await props.fetchTicketSubject(raw);
+    
+    // Ignore stale responses or if modal is closed
+    if (searchId !== currentSearchId || !props.show) return;
+
     if (result) {
       ticketTitle.value = result.subject;
       if (result.projectId) {
@@ -511,7 +528,9 @@ async function onTicketBlur() {
       }
     }
   } finally {
-    isLoadingTicket.value = false;
+    if (searchId === currentSearchId) {
+      isLoadingTicket.value = false;
+    }
   }
 }
 

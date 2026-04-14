@@ -775,6 +775,14 @@ function startEdit() {
 
 function cancelEdit() {
   isEditing.value = false;
+  setTimeout(() => {
+    editName.value = "";
+    editDate.value = "";
+    editHours.value = "";
+    editMinutes.value = "";
+    editProjectId.value = "";
+    editTicket.value = "";
+  }, 300);
 }
 
 function saveEdit() {
