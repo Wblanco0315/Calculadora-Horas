@@ -52,14 +52,34 @@
               class="text-blue-100 text-xs font-medium uppercase tracking-wider"
               >Total Registrado</span
             >
-            <span class="text-blue-100/80 text-xs"
-              >Meta: {{ formatTime(maxDailyMinutes) }}</span
-            >
+            <transition name="fade" mode="out-in">
+              <span :key="timeFormat" class="text-blue-100/80 text-xs"
+                >Meta:
+                {{
+                  timeFormat === "HH:MM"
+                    ? formatTime(maxDailyMinutes)
+                    : formatDecimal(maxDailyMinutes) + "h"
+                }}</span
+              >
+            </transition>
           </div>
-          <div class="flex justify-between items-end gap-2 mb-3">
-            <span class="text-4xl font-bold font-mono tracking-tight">{{
-              formatTime(totalMinutes)
-            }}</span>
+          <div class="flex justify-between items-end gap-2 mb-1">
+            <transition name="pop" mode="out-in">
+              <span
+                :key="timeFormat"
+                class="text-4xl font-bold font-mono tracking-tight flex items-baseline min-w-[120px]"
+              >
+                {{
+                  timeFormat === "HH:MM"
+                    ? formatTime(totalMinutes)
+                    : formatDecimal(totalMinutes)
+                }}<span
+                  v-if="timeFormat === 'decimal'"
+                  class="text-2xl text-blue-100/80 ml-1 font-medium"
+                  >h</span
+                >
+              </span>
+            </transition>
             <BaseButton
               @click="resetActivities"
               variant="danger-ghost"
@@ -86,7 +106,48 @@
               </template>
             </BaseButton>
           </div>
+          <div class="flex items-center justify-between gap-3 mb-4 mt-2">
+            <div class="flex items-center gap-3">
+              <span
+                class="text-blue-100/90 text-xs font-medium tracking-wide uppercase"
+                >Formato:</span
+              >
+              <div
+                class="flex bg-black/20 p-1 rounded-full relative w-40 items-center"
+              >
+                <!-- Sliding background -->
+                <div
+                  class="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white rounded-full transition-all duration-300 ease-out z-0 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.3)]"
+                  :class="
+                    timeFormat === 'HH:MM' ? 'left-1' : 'left-[calc(50%+2px)]'
+                  "
+                ></div>
 
+                <button
+                  @click="timeFormat = 'HH:MM'"
+                  class="relative z-10 flex-1 py-1 rounded-full text-xs tracking-wider font-bold transition-all duration-300 text-center cursor-pointer"
+                  :class="
+                    timeFormat === 'HH:MM'
+                      ? 'text-indigo-700 dark:text-indigo-900 transform scale-105'
+                      : 'text-blue-100/70 hover:text-white'
+                  "
+                >
+                  HH:MM
+                </button>
+                <button
+                  @click="timeFormat = 'decimal'"
+                  class="relative z-10 flex-1 py-1 rounded-full text-xs tracking-wider font-bold transition-all duration-300 text-center cursor-pointer"
+                  :class="
+                    timeFormat === 'decimal'
+                      ? 'text-indigo-700 dark:text-indigo-900 transform scale-105'
+                      : 'text-blue-100/70 hover:text-white'
+                  "
+                >
+                  DECIMAL
+                </button>
+              </div>
+            </div>
+          </div>
           <!-- Progress Mini Bar -->
           <div class="w-full bg-black/20 rounded-full h-1.5 overflow-hidden">
             <div
@@ -320,6 +381,7 @@ import Titlebar from "./Titlebar.vue";
 import ConfirmModal from "./confirmModal.vue";
 import InitialSetup from "./InitialSetup.vue";
 import BaseButton from "./shared/baseButton.vue";
+import { formatDecimal, formatTime } from "../utils/timeUtils";
 
 const showConfirmReset = ref(false);
 const showSetupModal = ref(false);
@@ -352,6 +414,8 @@ const { initStorage } = useAppStorage();
 const { initTheme } = useTheme();
 const { startNotificationWatcher } = useSystemNotifications();
 
+const timeFormat = ref("HH:MM");
+
 initStorage();
 initTheme();
 startNotificationWatcher();
@@ -360,17 +424,6 @@ onMounted(async () => {
   await Promise.all([fetchTimeEntryActivities(), fetchCurrentUser()]);
   isLoading.value = false;
 });
-
-function formatTime(totalMins: number) {
-  if (totalMins <= 0) return "00:00";
-  const hours = Math.floor(totalMins / 60);
-  const minutes = totalMins % 60;
-
-  const h = hours.toString().padStart(2, "0");
-  const m = minutes.toString().padStart(2, "0");
-
-  return `${h}:${m}`;
-}
 
 function resetActivities() {
   showConfirmReset.value = true;
@@ -408,5 +461,31 @@ function confirmReset() {
 .list-leave-active {
   position: absolute;
   width: 100%;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+}
+.fade-enter-from {
+  opacity: 0;
+  transform: translateY(-5px);
+}
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(5px);
+}
+
+.pop-enter-active,
+.pop-leave-active {
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.pop-enter-from {
+  opacity: 0;
+  transform: scale(0.9) translateY(10px);
+}
+.pop-leave-to {
+  opacity: 0;
+  transform: scale(0.9) translateY(-10px);
 }
 </style>
