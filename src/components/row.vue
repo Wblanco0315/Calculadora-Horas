@@ -10,23 +10,48 @@
     <!-- ── View Mode ─────────────────────────────────────────── -->
     <div class="flex items-center gap-3 py-3 pl-2">
       <!-- Checkbox (Only for unsynced activities with ticket) -->
-      <div 
-        v-if="isSelectionMode && !activity.synced && activity.ticket && hasToken"
+      <div
+        v-if="
+          isSelectionMode && !activity.synced && activity.ticket && hasToken
+        "
         class="shrink-0 flex items-center pr-1"
       >
         <button
-          @click.stop="$emit('update', activity.id, { selected: !activity.selected })"
+          @click.stop="
+            $emit('update', activity.id, { selected: !activity.selected })
+          "
           class="w-4 h-4 rounded flex items-center justify-center transition-colors cursor-pointer border"
-          :class="activity.selected ? 'bg-indigo-500 border-indigo-500 text-white' : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-indigo-500'"
+          :class="
+            activity.selected
+              ? 'bg-indigo-500 border-indigo-500 text-white'
+              : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-indigo-500'
+          "
         >
-          <svg v-if="activity.selected" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+          <svg
+            v-if="activity.selected"
+            class="w-3 h-3"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="3"
+          >
             <polyline points="20 6 9 17 4 12" />
           </svg>
         </button>
       </div>
 
       <!-- Accent bar -->
-      <div class="shrink-0 w-[3px] h-9 bg-indigo-500 dark:bg-indigo-400" :class="{ 'ml-1': !(isSelectionMode && !activity.synced && activity.ticket && hasToken) }" />
+      <div
+        class="shrink-0 w-[3px] h-9 bg-indigo-500 dark:bg-indigo-400"
+        :class="{
+          'ml-1': !(
+            isSelectionMode &&
+            !activity.synced &&
+            activity.ticket &&
+            hasToken
+          ),
+        }"
+      />
 
       <!-- Body -->
       <div class="grow min-w-0">
@@ -39,7 +64,7 @@
           </h3>
           <span
             v-if="activity.ticket"
-            class="shrink-0 text-[10px] font-mono text-slate-500 dark:text-slate-600 bg-slate-800/60 dark:bg-black/30 px-1.5 py-0.5 rounded border border-slate-700/50 dark:border-slate-800"
+            class="shrink-0 text-xs font-mono text-slate-500 dark:text-slate-600 bg-slate-100 dark:bg-black/30 px-1.5 py-0.5 rounded border border-slate-700/50 dark:border-slate-800"
           >
             #{{ activity.ticket }}
           </span>
@@ -67,7 +92,7 @@
 
       <!-- Time -->
       <div
-        class="flex-shrink-0 flex items-center gap-1.5 font-mono font-bold text-sm text-slate-200 dark:text-slate-200"
+        class="flex-shrink-0 flex items-center gap-1.5 font-mono font-bold text-sm text-slate-700 dark:text-slate-200"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -82,7 +107,10 @@
           <circle cx="12" cy="12" r="10" />
           <polyline points="12 6 12 12 16 14" />
         </svg>
-        {{ formatDecimal(activity.minutes) }}h
+        <div v-if="timeFormat === 'HH:MM'">
+          {{ formatTime(activity.minutes) }}
+        </div>
+        <div v-else>{{ formatDecimal(activity.minutes) }}h</div>
       </div>
 
       <!-- Actions always visible -->
@@ -414,6 +442,7 @@
                     <input
                       type="text"
                       v-model="editTicket"
+                      @input="editTicket = editTicket.replace(/\D/g, '')"
                       placeholder="#Ticket"
                       class="flex-1 w-full px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400"
                     />
@@ -451,18 +480,19 @@
                     type="date"
                     v-model="editDate"
                     required
-                    class="w-32 px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400"
+                    class="w-43 px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400"
                   />
                   <!-- Time Input -->
                   <div
-                    class="flex items-center justify-center gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 flex-1 px-2 py-1.5 shadow-sm"
+                    class="flex justify-evenly gap-1 bg-slate-50 dark:bg-[#0f172b] border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 flex-1 py-0.5"
                   >
                     <div class="flex items-center">
                       <input
                         type="number"
                         v-model="editHours"
                         min="0"
-                        class="w-10 px-1 text-xs text-center bg-transparent outline-none dark:text-slate-100 placeholder-slate-400 font-medium"
+                        step="1"
+                        class="w-10 text-xs text-center bg-transparent outline-none dark:text-slate-100 placeholder-slate-400 font-medium"
                         placeholder="0"
                       />
                       <span
@@ -482,7 +512,8 @@
                         v-model="editMinutes"
                         min="0"
                         max="59"
-                        class="w-10 px-1 text-xs text-center bg-transparent outline-none dark:text-slate-100 placeholder-slate-400 font-medium"
+                        step="1"
+                        class="w-10 px-1 text-xs text-center bg-transparent outline-none bg-[#0f172b] dark:text-slate-100 placeholder-slate-400 font-medium"
                         placeholder="0"
                       />
                       <span
@@ -616,6 +647,7 @@ import type {
 } from "../composables/useActivities";
 import { useActivities } from "../composables/useActivities";
 import TimeEntryModal from "./TimeEntryModal.vue";
+import { formatTime, formatDecimal } from "../utils/timeUtils";
 
 const { toggleFavorite, isFavorite } = useActivities();
 
@@ -629,6 +661,7 @@ const props = defineProps<{
     activityTypeId: string,
   ) => Promise<{ ok: boolean; error?: string }>;
   isSelectionMode?: boolean;
+  timeFormat?: string;
 }>();
 
 const emit = defineEmits<{
@@ -756,9 +789,5 @@ function saveEdit() {
     ticket: editTicket.value.trim() || undefined,
   });
   isEditing.value = false;
-}
-
-function formatDecimal(totalMinutes: number) {
-  return parseFloat((totalMinutes / 60).toFixed(2));
 }
 </script>

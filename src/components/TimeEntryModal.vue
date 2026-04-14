@@ -15,9 +15,22 @@
         class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full overflow-hidden flex flex-col"
       >
         <!-- Header -->
-        <div class="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-slate-100 dark:border-slate-700">
-          <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-500/20">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <div
+          class="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-slate-100 dark:border-slate-700"
+        >
+          <div
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-500/20"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-4 w-4 text-indigo-600 dark:text-indigo-400"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
               <polyline points="16 16 12 12 8 16" />
               <line x1="12" y1="12" x2="12" y2="21" />
               <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
@@ -28,17 +41,29 @@
           </h3>
         </div>
 
+        <div class="p-4">
+          <p class="text-sm text-slate-500 dark:text-slate-400">
+            ¿Estás seguro de que deseas enviar el tiempo a OpenProject?
+          </p>
+        </div>
         <!-- Body -->
         <div class="p-4 flex flex-col gap-3">
           <!-- Activity type -->
           <div v-if="timeEntryActivities?.length" class="flex flex-col gap-1">
-            <label class="text-xs font-medium text-slate-500 dark:text-slate-400">Tipo de actividad</label>
+            <label
+              class="text-xs font-medium text-slate-500 dark:text-slate-400"
+              >Tipo de actividad</label
+            >
             <select
               v-model="localActivityId"
               class="w-full px-2 py-1.5 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100"
             >
               <option value="">Sin tipo</option>
-              <option v-for="a in timeEntryActivities" :key="a.id" :value="a.id">
+              <option
+                v-for="a in timeEntryActivities"
+                :key="a.id"
+                :value="a.id"
+              >
                 {{ a.name }}
               </option>
             </select>
@@ -46,7 +71,9 @@
         </div>
 
         <!-- Actions -->
-        <div class="bg-slate-50 dark:bg-slate-800/60 px-4 py-3 border-t border-slate-100 dark:border-slate-700 flex justify-between gap-3">
+        <div
+          class="bg-slate-50 dark:bg-slate-800/60 px-4 py-3 border-t border-slate-100 dark:border-slate-700 flex justify-between gap-3"
+        >
           <button
             @click="$emit('cancel')"
             class="cursor-pointer flex-1 py-1.5 px-3 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"

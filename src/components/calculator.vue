@@ -178,9 +178,10 @@
               <!--Favorite Activities-->
               <BaseButton
                 @click="openFavorites"
-                variant="secondary"
+                variant="ghost"
                 size="sm"
-                class="scale-105 mr-1"
+                class="scale-105 mr-1 text-slate-700 dark:text-slate-200"
+                label="Favoritos"
               >
                 <template #left-icon>
                   <svg
@@ -364,7 +365,7 @@
 
                   <span
                     v-if="!isSyncingAll && !syncSuccessAll && !syncErrorAll"
-                    class="text-xs font-semibold text-slate-500 dark:text-slate-400"
+                    class="text-xs font-semibold text-slate-500 dark:text-slate-300"
                     >Todos</span
                   >
                 </button>
@@ -553,6 +554,7 @@
               :log-time-entry="logTimeEntry"
               :has-token="!!userConfig.openProjectToken"
               :is-selection-mode="isSelectionMode"
+              :timeFormat="timeFormat"
               @update="editActivity"
               @delete="removeActivity"
             />

@@ -263,6 +263,7 @@
                   <input
                     type="text"
                     v-model="ticket"
+                    @input="ticket = ticket.replace(/\D/g, '')"
                     @blur="onTicketBlur"
                     placeholder="#Ticket"
                     :class="[
@@ -323,10 +324,10 @@
                 type="date"
                 v-model="date"
                 required
-                class="w-32 px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400"
+                class="w-43 px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400"
               />
               <div
-                class="flex items-center justify-center gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 flex-1 px-2 py-1.5 shadow-sm"
+                class="flex justify-evenly gap-1 bg-slate-50 dark:bg-[#0f172b] border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 flex-1 py-0.5"
               >
                 <div class="flex items-center">
                   <input
@@ -335,13 +336,18 @@
                     min="0"
                     step="1"
                     placeholder="0"
-                    class="w-10 px-1 text-xs text-center bg-transparent outline-none dark:text-slate-100 placeholder-slate-400 font-medium"
+                    class="w-10 text-xs text-center bg-transparent outline-none dark:text-slate-100 placeholder-slate-400 font-medium"
                   />
-                  <span class="text-[11px] font-bold text-slate-400 dark:text-slate-500 select-none">h</span>
+                  <span
+                    class="text-[11px] font-bold text-slate-400 dark:text-slate-500 select-none"
+                    >h</span
+                  >
                 </div>
-                
-                <span class="text-slate-300 dark:text-slate-600 font-bold mx-1">:</span>
-                
+
+                <span class="text-slate-300 dark:text-slate-600 font-bold mx-1"
+                  >:</span
+                >
+
                 <div class="flex items-center">
                   <input
                     type="number"
@@ -350,9 +356,12 @@
                     max="59"
                     step="1"
                     placeholder="0"
-                    class="w-10 px-1 text-xs text-center bg-transparent outline-none dark:text-slate-100 placeholder-slate-400 font-medium"
+                    class="w-10 px-1 text-xs text-center bg-transparent outline-none bg-[#0f172b] dark:text-slate-100 placeholder-slate-400 font-medium"
                   />
-                  <span class="text-[11px] font-bold text-slate-400 dark:text-slate-500 select-none">m</span>
+                  <span
+                    class="text-[11px] font-bold text-slate-400 dark:text-slate-500 select-none"
+                    >m</span
+                  >
                 </div>
               </div>
             </div>
@@ -363,7 +372,7 @@
                 v-model="name"
                 placeholder="Descripción de la tarea..."
                 required
-                rows="2"
+                rows="4"
                 class="flex-1 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400 resize-none"
               ></textarea>
             </div>
