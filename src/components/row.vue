@@ -8,9 +8,25 @@
     "
   >
     <!-- ── View Mode ─────────────────────────────────────────── -->
-    <div class="flex items-center gap-3 py-3">
+    <div class="flex items-center gap-3 py-3 pl-2">
+      <!-- Checkbox (Only for unsynced activities with ticket) -->
+      <div 
+        v-if="isSelectionMode && !activity.synced && activity.ticket && hasToken"
+        class="shrink-0 flex items-center pr-1"
+      >
+        <button
+          @click.stop="$emit('update', activity.id, { selected: !activity.selected })"
+          class="w-4 h-4 rounded flex items-center justify-center transition-colors cursor-pointer border"
+          :class="activity.selected ? 'bg-indigo-500 border-indigo-500 text-white' : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-indigo-500'"
+        >
+          <svg v-if="activity.selected" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </button>
+      </div>
+
       <!-- Accent bar -->
-      <div class="shrink-0 w-[3px] h-9 bg-indigo-500 dark:bg-indigo-400" />
+      <div class="shrink-0 w-[3px] h-9 bg-indigo-500 dark:bg-indigo-400" :class="{ 'ml-1': !(isSelectionMode && !activity.synced && activity.ticket && hasToken) }" />
 
       <!-- Body -->
       <div class="grow min-w-0">
@@ -394,67 +410,111 @@
                     </select>
                   </div>
                   <!-- Ticket Input -->
-                  <div class="shrink-0 w-24">
+                  <div class="relative shrink-0 flex items-center gap-1 w-32">
                     <input
                       type="text"
                       v-model="editTicket"
                       placeholder="#Ticket"
-                      class="w-full px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400"
+                      class="flex-1 w-full px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400"
                     />
+                    <button
+                      v-if="editTicket"
+                      type="button"
+                      @click="
+                        toggleFavorite(editTicket, displayTitle, editProjectId)
+                      "
+                      class="p-1.5 text-slate-400 hover:text-yellow-500 transition-colors"
+                      :class="{ 'text-yellow-500': isFavorite(editTicket) }"
+                      title="Guardar como favorito"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="w-4 h-4"
+                        :fill="isFavorite(editTicket) ? 'currentColor' : 'none'"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.175 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                        />
+                      </svg>
+                    </button>
                   </div>
                 </div>
 
-                <!-- Row 2: Task name -->
-                <textarea
-                  v-model="editName"
-                  placeholder="Descripción de la tarea..."
-                  required
-                  rows="3"
-                  class="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400 resize-none"
-                ></textarea>
-
-                <!-- Row 3: Time & Actions -->
-                <div class="flex items-center justify-between gap-2 mt-1">
+                <!-- Row 2: Time + Date -->
+                <div class="flex items-center gap-2">
+                  <input
+                    type="date"
+                    v-model="editDate"
+                    required
+                    class="w-32 px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400"
+                  />
+                  <!-- Time Input -->
                   <div
-                    class="flex items-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-purple-500 flex-1"
+                    class="flex items-center justify-center gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 flex-1 px-2 py-1.5 shadow-sm"
                   >
+                    <div class="flex items-center">
+                      <input
+                        type="number"
+                        v-model="editHours"
+                        min="0"
+                        class="w-10 px-1 text-xs text-center bg-transparent outline-none dark:text-slate-100 placeholder-slate-400 font-medium"
+                        placeholder="0"
+                      />
+                      <span
+                        class="text-[11px] font-bold text-slate-400 dark:text-slate-500 select-none"
+                        >h</span
+                      >
+                    </div>
+
                     <span
-                      class="pl-3 pr-1 text-xs text-slate-400 dark:text-slate-500 select-none"
-                      >h</span
-                    >
-                    <input
-                      type="number"
-                      v-model="editHours"
-                      min="0"
-                      class="w-full px-1 py-2 text-sm text-center bg-transparent outline-none dark:text-slate-100 placeholder-slate-400"
-                      placeholder="0"
-                    />
-                    <span class="text-slate-300 dark:text-slate-600 px-1"
+                      class="text-slate-300 dark:text-slate-600 font-bold mx-1"
                       >:</span
                     >
-                    <span
-                      class="pl-0.5 pr-1 text-xs text-slate-400 dark:text-slate-500 select-none"
-                      >m</span
-                    >
-                    <input
-                      type="number"
-                      v-model="editMinutes"
-                      min="0"
-                      max="59"
-                      class="w-full px-1 py-2 text-sm text-center bg-transparent outline-none dark:text-slate-100 placeholder-slate-400"
-                      placeholder="0"
-                    />
+
+                    <div class="flex items-center">
+                      <input
+                        type="number"
+                        v-model="editMinutes"
+                        min="0"
+                        max="59"
+                        class="w-10 px-1 text-xs text-center bg-transparent outline-none dark:text-slate-100 placeholder-slate-400 font-medium"
+                        placeholder="0"
+                      />
+                      <span
+                        class="text-[11px] font-bold text-slate-400 dark:text-slate-500 select-none"
+                        >m</span
+                      >
+                    </div>
                   </div>
                 </div>
 
-                <div class="flex gap-2 pt-2">
-                  <button
-                    @click="saveEdit"
-                    :disabled="!isValid"
-                    class="cursor-pointer flex-1 px-4 py-2 text-sm font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Guardar Cambios
-                  </button>
+                <!-- Row 3: Description -->
+                <div class="flex items-center gap-2">
+                  <textarea
+                    v-model="editName"
+                    placeholder="Descripción de la tarea..."
+                    required
+                    rows="2"
+                    class="flex-1 w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400 resize-none"
+                  ></textarea>
+                </div>
+
+                <!-- Row 4: Actions -->
+                <div class="flex items-center justify-between gap-2 mt-1">
+                  <div class="flex gap-2 pt-2">
+                    <button
+                      @click="saveEdit"
+                      :disabled="!isValid"
+                      class="cursor-pointer flex-1 px-4 py-2 text-sm font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Guardar Cambios
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -466,7 +526,6 @@
     <!-- Time Entry Modal -->
     <TimeEntryModal
       :show="showTimeEntryModal"
-      :initialComment="activity.name"
       :timeEntryActivities="timeEntryActivities ?? []"
       @confirm="onTimeEntryConfirm"
       @cancel="showTimeEntryModal = false"
@@ -555,7 +614,10 @@ import type {
   Project,
   TimeEntryActivity,
 } from "../composables/useActivities";
+import { useActivities } from "../composables/useActivities";
 import TimeEntryModal from "./TimeEntryModal.vue";
+
+const { toggleFavorite, isFavorite } = useActivities();
 
 const props = defineProps<{
   activity: Activity;
@@ -564,10 +626,9 @@ const props = defineProps<{
   timeEntryActivities?: TimeEntryActivity[];
   logTimeEntry?: (
     activityId: string,
-    comment: string,
-    spentOn: string,
     activityTypeId: string,
   ) => Promise<{ ok: boolean; error?: string }>;
+  isSelectionMode?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -586,6 +647,7 @@ const showTimeEntryModal = ref(false);
 const showResyncModal = ref(false);
 
 const editName = ref("");
+const editDate = ref("");
 const editHours = ref<number | "">("");
 const editMinutes = ref<number | "">("");
 const editProjectId = ref("");
@@ -604,7 +666,7 @@ const projectName = computed(() => {
 });
 
 const isValid = computed(() => {
-  if (!editName.value.trim()) return false;
+  if (!editName.value.trim() || !editDate.value) return false;
   const h = typeof editHours.value === "number" ? editHours.value : 0;
   const m = typeof editMinutes.value === "number" ? editMinutes.value : 0;
   return h > 0 || m > 0;
@@ -637,22 +699,13 @@ function confirmResync() {
   showTimeEntryModal.value = true;
 }
 
-async function onTimeEntryConfirm(
-  comment: string,
-  spentOn: string,
-  activityTypeId: string,
-) {
+async function onTimeEntryConfirm(activityTypeId: string) {
   showTimeEntryModal.value = false;
   if (!props.logTimeEntry) return;
   isSyncing.value = true;
   syncSuccess.value = false;
   syncError.value = false;
-  const result = await props.logTimeEntry(
-    props.activity.id,
-    comment,
-    spentOn,
-    activityTypeId,
-  );
+  const result = await props.logTimeEntry(props.activity.id, activityTypeId);
   isSyncing.value = false;
   if (result.ok) {
     syncSuccess.value = true;
@@ -669,6 +722,17 @@ async function onTimeEntryConfirm(
 
 function startEdit() {
   editName.value = props.activity.name;
+
+  if (props.activity.date) {
+    editDate.value = props.activity.date;
+  } else {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    editDate.value = `${yyyy}-${mm}-${dd}`;
+  }
+
   editHours.value = Math.floor(props.activity.minutes / 60);
   editMinutes.value = props.activity.minutes % 60;
   editProjectId.value = props.activity.projectId || "";
@@ -686,6 +750,7 @@ function saveEdit() {
   const m = typeof editMinutes.value === "number" ? editMinutes.value : 0;
   emit("update", props.activity.id, {
     name: editName.value.trim(),
+    date: editDate.value,
     minutes: h * 60 + m,
     projectId: editProjectId.value || undefined,
     ticket: editTicket.value.trim() || undefined,

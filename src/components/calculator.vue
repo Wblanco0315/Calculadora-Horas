@@ -236,12 +236,288 @@
           @close="showAddModal = false"
         />
 
+        <!-- Activity list Filter-->
+        <div
+          class="px-4 py-2 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700/60 flex flex-col gap-2 shrink-0 transition-all duration-300"
+        >
+          <div class="flex items-center justify-between gap-3">
+            <div class="relative flex-1 min-w-0">
+              <input
+                type="text"
+                v-model="searchQuery"
+                placeholder="Filtrar por ticket o descripción..."
+                class="w-full pl-8 pr-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400"
+              />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </div>
+
+            <button
+              @click="showFilters = !showFilters"
+              class="cursor-pointer p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+              :class="{
+                'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-200':
+                  showFilters,
+              }"
+              title="Filtros avanzados"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-4 h-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polygon
+                  points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"
+                ></polygon>
+              </svg>
+            </button>
+
+            <!-- Sync Controls -->
+            <div
+              v-if="
+                unsyncedActivities.length > 0 && userConfig.openProjectToken
+              "
+              class="flex flex-col gap-2"
+            >
+              <span
+                class="text-xs font-semibold text-slate-500 dark:text-slate-400"
+                >Subir a OpenProject</span
+              >
+              <div v-if="!isSelectionMode" class="flex gap-2">
+                <!-- Sync All Icon Button -->
+                <button
+                  @click="syncAll"
+                  :disabled="isSyncingAll"
+                  class="cursor-pointer p-1.5 rounded-lg transition-all shrink-0 border flex items-center gap-1"
+                  :class="[
+                    syncSuccessAll
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-500 dark:bg-emerald-500/10 dark:border-emerald-500/30 dark:text-emerald-400'
+                      : syncErrorAll
+                        ? 'bg-rose-50 border-rose-200 text-rose-500 dark:bg-rose-500/10 dark:border-rose-500/30 dark:text-rose-400'
+                        : 'bg-white border-slate-200 text-slate-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400',
+                    isSyncingAll ? 'opacity-50 cursor-not-allowed' : '',
+                  ]"
+                  :title="'Sincronizar todos pendientes'"
+                >
+                  <span
+                    v-if="isSyncingAll"
+                    class="block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"
+                  />
+                  <svg
+                    v-else-if="syncSuccessAll"
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="w-4 h-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <svg
+                    v-else-if="syncErrorAll"
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="w-4 h-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                  <svg
+                    v-else
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="16 16 12 12 8 16" />
+                    <line x1="12" y1="12" x2="12" y2="21" />
+                    <path
+                      d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"
+                    />
+                  </svg>
+
+                  <span
+                    v-if="!isSyncingAll && !syncSuccessAll && !syncErrorAll"
+                    class="text-xs font-semibold text-slate-500 dark:text-slate-400"
+                    >Todos</span
+                  >
+                </button>
+
+                <!-- Seleccionar Mode Button -->
+                <button
+                  @click="isSelectionMode = true"
+                  class="flex items-center gap-1 shrink-0 cursor-pointer px-2 py-1 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition"
+                  title="Modo selección múltiple"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="w-4 h-4"
+                    viewBox="0 0 24 24"
+                  >
+                    <g fill="none">
+                      <path
+                        fill="currentColor"
+                        fill-opacity=".16"
+                        d="m11 11l10 4.4l-4.437 1.163L15.4 21z"
+                      />
+                      <path
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-miterlimit="10"
+                        stroke-width="1.5"
+                        d="M12 2v3m-6.995 6.995h-3m2.926-7.063l2.12 2.122m12.022-2.129L16.95 7.047m-9.9 9.9l-2.12 2.12M11 11l10 4.4l-4.437 1.163L15.4 21z"
+                      />
+                    </g>
+                  </svg>
+                  Seleccionar
+                </button>
+              </div>
+
+              <!-- Selection Mode Active -->
+              <div v-else class="flex gap-2">
+                <button
+                  @click="cancelSelection"
+                  class="cursor-pointer shrink-0 px-2.5 py-1 text-xs font-semibold rounded-lg bg-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-300 transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  @click="syncAll"
+                  :disabled="
+                    manuallySelectedActivities.length === 0 || isSyncingAll
+                  "
+                  class="cursor-pointer shrink-0 flex items-center justify-center gap-1.5 px-3 py-1 text-xs font-bold rounded-lg transition-colors border"
+                  :class="[
+                    manuallySelectedActivities.length === 0
+                      ? 'bg-slate-100 border-slate-200 text-slate-400 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-500 cursor-not-allowed'
+                      : syncSuccessAll
+                        ? 'bg-emerald-500 border-emerald-600 text-white dark:bg-emerald-500 dark:border-emerald-500'
+                        : syncErrorAll
+                          ? 'bg-rose-500 border-rose-600 text-white dark:bg-rose-500 dark:border-rose-500'
+                          : 'bg-indigo-600 border-indigo-700 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:border-indigo-500 dark:hover:bg-indigo-400',
+                    isSyncingAll ? 'opacity-50 cursor-wait' : '',
+                  ]"
+                >
+                  <span
+                    v-if="isSyncingAll"
+                    class="block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"
+                  />
+                  <svg
+                    v-else-if="syncSuccessAll"
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="w-3.5 h-3.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="3"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <svg
+                    v-else-if="syncErrorAll"
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="w-3.5 h-3.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                  <span
+                    >Enviar
+                    {{
+                      manuallySelectedActivities.length
+                        ? manuallySelectedActivities.length
+                        : ""
+                    }}</span
+                  >
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Extended Filters -->
+          <div
+            v-show="showFilters"
+            class="flex gap-2 items-center flex-wrap mt-1"
+          >
+            <select
+              v-model="filterProject"
+              class="px-2 py-1.5 text-[11px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 min-w-[70px] flex-1"
+            >
+              <option value="">Proyectos (Todos)</option>
+              <option v-for="p in projects" :key="p.id" :value="p.id">
+                {{ p.name }}
+              </option>
+            </select>
+
+            <select
+              v-model="sortBy"
+              class="px-2 py-1.5 text-[11px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 min-w-[70px] flex-1"
+            >
+              <option value="none">Orden (Por defecto)</option>
+              <option value="time-desc">Horas (Mayor a menor)</option>
+              <option value="time-asc">Horas (Menor a mayor)</option>
+            </select>
+
+            <select
+              v-model="filterStatus"
+              class="px-2 py-1.5 text-[11px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 min-w-[70px] flex-1"
+            >
+              <option value="all">Estado (Todos)</option>
+              <option value="synced">Sincronizados</option>
+              <option value="unsynced">Pendientes</option>
+            </select>
+
+            <button
+              v-if="
+                filterProject ||
+                sortBy !== 'none' ||
+                filterStatus !== 'all' ||
+                searchQuery
+              "
+              @click="clearFilters"
+              class="cursor-pointer px-2 py-1.5 text-[11px] font-medium text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded transition-colors shrink-0"
+            >
+              Limpiar
+            </button>
+          </div>
+        </div>
+
         <!-- Scrollable Activity List -->
         <div
           class="flex-1 overflow-y-auto w-full bg-slate-50 dark:bg-slate-900/50"
         >
           <div
-            v-if="activities.length === 0"
+            v-if="filteredActivities.length === 0"
             class="flex flex-col items-center justify-center h-full gap-3 select-none"
           >
             <svg
@@ -271,15 +547,14 @@
             class="bg-white dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 divide-y divide-slate-100 dark:divide-slate-700/60 shadow-sm relative overflow-hidden"
           >
             <Row
-              v-for="activity in activities"
-              :key="activity.id"
-              :activity="activity"
-              :projects="projects"
-              :hasToken="!!userConfig.openProjectToken"
-              :logTimeEntry="logTimeEntry"
-              :timeEntryActivities="timeEntryActivities"
-              @delete="removeActivity"
+              v-for="act in filteredActivities"
+              :key="act.id"
+              :activity="act"
+              :log-time-entry="logTimeEntry"
+              :has-token="!!userConfig.openProjectToken"
+              :is-selection-mode="isSelectionMode"
               @update="editActivity"
+              @delete="removeActivity"
             />
           </TransitionGroup>
         </div>
@@ -364,6 +639,15 @@
         @confirm="confirmReset"
         @cancel="showConfirmReset = false"
       />
+
+      <!-- Sync All Modal -->
+      <TimeEntryModal
+        v-if="showSyncAllModal"
+        :show="showSyncAllModal"
+        :timeEntryActivities="timeEntryActivities ?? []"
+        @confirm="onSyncAllConfirm"
+        @cancel="showSyncAllModal = false"
+      />
     </div>
   </div>
 </template>
@@ -381,7 +665,9 @@ import Titlebar from "./Titlebar.vue";
 import ConfirmModal from "./confirmModal.vue";
 import InitialSetup from "./InitialSetup.vue";
 import BaseButton from "./shared/baseButton.vue";
+import TimeEntryModal from "./TimeEntryModal.vue";
 import { formatDecimal, formatTime } from "../utils/timeUtils";
+import { computed } from "vue";
 
 const showConfirmReset = ref(false);
 const showSetupModal = ref(false);
@@ -442,6 +728,124 @@ function openFavorites() {
 function confirmReset() {
   activities.value = [];
   showConfirmReset.value = false;
+}
+
+const searchQuery = ref("");
+const showFilters = ref(false);
+const filterProject = ref("");
+const filterStatus = ref<"all" | "synced" | "unsynced">("all");
+const sortBy = ref<"none" | "time-desc" | "time-asc">("none");
+
+function clearFilters() {
+  searchQuery.value = "";
+  filterProject.value = "";
+  filterStatus.value = "all";
+  sortBy.value = "none";
+}
+
+const filteredActivities = computed(() => {
+  let result = [...activities.value];
+
+  // 1. Text Search
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase();
+    result = result.filter((a) => {
+      return (
+        a.name.toLowerCase().includes(q) ||
+        (a.ticket && a.ticket.toLowerCase().includes(q))
+      );
+    });
+  }
+
+  // 2. Project Filter
+  if (filterProject.value) {
+    result = result.filter((a) => a.projectId === filterProject.value);
+  }
+
+  // 3. Status Filter
+  if (filterStatus.value === "synced") {
+    result = result.filter((a) => a.synced);
+  } else if (filterStatus.value === "unsynced") {
+    result = result.filter((a) => !a.synced);
+  }
+
+  // 4. Sorting
+  if (sortBy.value === "time-desc") {
+    result.sort((a, b) => b.minutes - a.minutes);
+  } else if (sortBy.value === "time-asc") {
+    result.sort((a, b) => a.minutes - b.minutes);
+  }
+
+  return result;
+});
+
+const unsyncedActivities = computed(() => {
+  return activities.value.filter((a) => a.ticket && !a.synced);
+});
+
+const manuallySelectedActivities = computed(() => {
+  return unsyncedActivities.value.filter((a) => a.selected);
+});
+
+const isSelectionMode = ref(false);
+
+function cancelSelection() {
+  isSelectionMode.value = false;
+  unsyncedActivities.value.forEach((act) => {
+    editActivity(act.id, { selected: false });
+  });
+}
+
+const showSyncAllModal = ref(false);
+const isSyncingAll = ref(false);
+const syncSuccessAll = ref(false);
+const syncErrorAll = ref(false);
+
+function syncAll() {
+  showSyncAllModal.value = true;
+}
+
+async function onSyncAllConfirm(activityTypeId: string) {
+  showSyncAllModal.value = false;
+  isSyncingAll.value = true;
+  syncSuccessAll.value = false;
+  syncErrorAll.value = false;
+
+  const allUnsynced = [...unsyncedActivities.value];
+  const toSync =
+    manuallySelectedActivities.value.length > 0
+      ? [...manuallySelectedActivities.value]
+      : allUnsynced;
+
+  let allOk = true;
+
+  for (const act of toSync) {
+    const res = await logTimeEntry(act.id, activityTypeId);
+    if (res.ok) {
+      if (act.selected) {
+        editActivity(act.id, { selected: false });
+      }
+    } else {
+      allOk = false;
+    }
+  }
+
+  isSyncingAll.value = false;
+
+  if (toSync.length > 0) {
+    if (allOk) {
+      syncSuccessAll.value = true;
+      setTimeout(() => {
+        syncSuccessAll.value = false;
+        if (isSelectionMode.value) cancelSelection();
+      }, 2000);
+    } else {
+      syncErrorAll.value = true;
+      setTimeout(() => {
+        syncErrorAll.value = false;
+      }, 2000);
+    }
+  }
 }
 </script>
 

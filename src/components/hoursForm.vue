@@ -317,47 +317,55 @@
               </span>
             </transition>
 
-            <!-- Row 2: Task name -->
-            <textarea
-              v-model="name"
-              placeholder="Descripción de la tarea..."
-              required
-              rows="3"
-              class="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400 resize-none"
-            ></textarea>
-
-            <!-- Row 3: Time -->
+            <!-- Row 2: Time + Date -->
             <div class="flex items-center gap-2">
+              <input
+                type="date"
+                v-model="date"
+                required
+                class="w-32 px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400"
+              />
               <div
-                class="flex items-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-purple-500 flex-1"
+                class="flex items-center justify-center gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 flex-1 px-2 py-1.5 shadow-sm"
               >
-                <span
-                  class="pl-3 pr-1 text-xs text-slate-400 dark:text-slate-500 select-none"
-                  >h</span
-                >
-                <input
-                  type="number"
-                  v-model="hours"
-                  min="0"
-                  step="1"
-                  placeholder="0"
-                  class="w-full px-1 py-2 text-sm text-center bg-transparent outline-none dark:text-slate-100 placeholder-slate-400"
-                />
-                <span class="text-slate-300 dark:text-slate-600 px-1">:</span>
-                <span
-                  class="pr-1 text-xs text-slate-400 dark:text-slate-500 select-none"
-                  >m</span
-                >
-                <input
-                  type="number"
-                  v-model="minutes"
-                  min="0"
-                  max="59"
-                  step="1"
-                  placeholder="0"
-                  class="w-full px-1 py-2 text-sm text-center bg-transparent outline-none dark:text-slate-100 placeholder-slate-400"
-                />
+                <div class="flex items-center">
+                  <input
+                    type="number"
+                    v-model="hours"
+                    min="0"
+                    step="1"
+                    placeholder="0"
+                    class="w-10 px-1 text-xs text-center bg-transparent outline-none dark:text-slate-100 placeholder-slate-400 font-medium"
+                  />
+                  <span class="text-[11px] font-bold text-slate-400 dark:text-slate-500 select-none">h</span>
+                </div>
+                
+                <span class="text-slate-300 dark:text-slate-600 font-bold mx-1">:</span>
+                
+                <div class="flex items-center">
+                  <input
+                    type="number"
+                    v-model="minutes"
+                    min="0"
+                    max="59"
+                    step="1"
+                    placeholder="0"
+                    class="w-10 px-1 text-xs text-center bg-transparent outline-none dark:text-slate-100 placeholder-slate-400 font-medium"
+                  />
+                  <span class="text-[11px] font-bold text-slate-400 dark:text-slate-500 select-none">m</span>
+                </div>
               </div>
+            </div>
+
+            <!-- Row 3: Description-->
+            <div class="flex items-center gap-2">
+              <textarea
+                v-model="name"
+                placeholder="Descripción de la tarea..."
+                required
+                rows="2"
+                class="flex-1 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400 resize-none"
+              ></textarea>
             </div>
 
             <!-- Footer actions -->
@@ -402,6 +410,7 @@ const emit = defineEmits<{
     e: "add",
     name: string,
     minutes: number,
+    date: string,
     projectId?: string,
     ticket?: string,
     ticketTitle?: string,
@@ -409,7 +418,16 @@ const emit = defineEmits<{
   (e: "close"): void;
 }>();
 
+function todayISO() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 const name = ref("");
+const date = ref(todayISO());
 const hours = ref<number | "">("");
 const minutes = ref<number | "">("");
 const projectId = ref<string>("");
@@ -441,6 +459,7 @@ watch(
     if (val) {
       viewState.value = props.initialView ?? "selection";
       name.value = "";
+      date.value = todayISO();
       hours.value = "";
       minutes.value = "";
       ticket.value = "";
@@ -488,7 +507,7 @@ async function onTicketBlur() {
 }
 
 const isValid = computed(() => {
-  if (!name.value.trim()) return false;
+  if (!name.value.trim() || !date.value) return false;
   const h = typeof hours.value === "number" ? hours.value : 0;
   const m = typeof minutes.value === "number" ? minutes.value : 0;
   return h > 0 || m > 0;
@@ -516,6 +535,7 @@ function submitForm() {
     "add",
     name.value.trim(),
     h * 60 + m,
+    date.value,
     projectId.value || undefined,
     finalTicket || undefined,
     ticketTitle.value.trim() || undefined,

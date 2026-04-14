@@ -30,16 +30,6 @@
 
         <!-- Body -->
         <div class="p-4 flex flex-col gap-3">
-          <!-- Date -->
-          <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium text-slate-500 dark:text-slate-400">Fecha</label>
-            <input
-              type="date"
-              v-model="localDate"
-              class="w-full px-2 py-1.5 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100"
-            />
-          </div>
-
           <!-- Activity type -->
           <div v-if="timeEntryActivities?.length" class="flex flex-col gap-1">
             <label class="text-xs font-medium text-slate-500 dark:text-slate-400">Tipo de actividad</label>
@@ -53,17 +43,6 @@
               </option>
             </select>
           </div>
-
-          <!-- Comment -->
-          <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium text-slate-500 dark:text-slate-400">Comentario</label>
-            <textarea
-              v-model="localComment"
-              rows="3"
-              placeholder="Comentario..."
-              class="w-full px-2 py-1.5 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 resize-none"
-            />
-          </div>
         </div>
 
         <!-- Actions -->
@@ -76,7 +55,6 @@
           </button>
           <button
             @click="confirm"
-            :disabled="!localComment.trim() || !localDate"
             class="cursor-pointer flex-1 py-1.5 px-3 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:outline-none focus:ring-indigo-500/50 transition-colors shadow-sm"
           >
             Enviar
@@ -93,36 +71,26 @@ import type { TimeEntryActivity } from "../composables/useActivities";
 
 const props = defineProps<{
   show: boolean;
-  initialComment?: string;
   timeEntryActivities?: TimeEntryActivity[];
 }>();
 
 const emit = defineEmits<{
-  (e: "confirm", comment: string, spentOn: string, activityTypeId: string): void;
+  (e: "confirm", activityTypeId: string): void;
   (e: "cancel"): void;
 }>();
 
-const localComment = ref("");
-const localDate = ref("");
 const localActivityId = ref("");
-
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 watch(
   () => props.show,
   (val) => {
     if (val) {
-      localComment.value = props.initialComment ?? "";
-      localDate.value = todayISO();
       localActivityId.value = "";
     }
   },
 );
 
 function confirm() {
-  if (!localComment.value.trim() || !localDate.value) return;
-  emit("confirm", localComment.value.trim(), localDate.value, localActivityId.value);
+  emit("confirm", localActivityId.value);
 }
 </script>

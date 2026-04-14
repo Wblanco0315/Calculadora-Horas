@@ -11,10 +11,12 @@ export interface Activity {
   id: string;
   name: string;
   minutes: number;
+  date: string;
   projectId?: string;
   ticket?: string;
   ticketTitle?: string;
   synced?: boolean;
+  selected?: boolean;
 }
 
 export interface TimeEntryActivity {
@@ -39,6 +41,14 @@ const BASE_URL = "https://openproject.wposs.com/openproject/api/v3";
 export function useActivities() {
   const { userConfig, maxDailyMinutes } = useUserConfig();
 
+  const unsyncedActivities = computed(() => {
+    return activities.value.filter((a) => a.ticket && !a.synced);
+  });
+
+  const manuallySelectedActivities = computed(() => {
+    return unsyncedActivities.value.filter((a) => a.selected);
+  });
+
   const totalMinutes = computed(() => {
     return activities.value.reduce((total, act) => total + act.minutes, 0);
   });
@@ -52,6 +62,7 @@ export function useActivities() {
   function addActivity(
     name: string,
     minutes: number,
+    date: string,
     projectId?: string,
     ticket?: string,
     ticketTitle?: string,
@@ -60,9 +71,11 @@ export function useActivities() {
       id: crypto.randomUUID(),
       name,
       minutes,
+      date,
       projectId,
       ticket,
       ticketTitle,
+      selected: false,
     });
   }
 
@@ -151,8 +164,6 @@ export function useActivities() {
 
   async function logTimeEntry(
     activityId: string,
-    comment: string,
-    spentOn: string,
     activityTypeId: string,
   ): Promise<{ ok: boolean; error?: string }> {
     const act = activities.value.find((a) => a.id === activityId);
@@ -174,11 +185,14 @@ export function useActivities() {
     }
 
     const body = {
-      comment: { format: "plain", raw: comment },
-      spentOn,
+      comment: { format: "plain", raw: act.name },
+      spentOn: act.date,
       hours: minutesToISO(act.minutes),
       _links: links,
     };
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     try {
       const response = await fetch(`${BASE_URL}/time_entries`, {
@@ -188,7 +202,10 @@ export function useActivities() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
         return {
@@ -198,9 +215,13 @@ export function useActivities() {
       }
       // Mark the activity as synced
       const syncedAct = activities.value.find((a) => a.id === activityId);
-      if (syncedAct) syncedAct.synced = true;
+      if (syncedAct) {
+        syncedAct.synced = true;
+        syncedAct.selected = false;
+      }
       return { ok: true };
     } catch (error) {
+      clearTimeout(timeoutId);
       return { ok: false, error: String(error) };
     }
   }

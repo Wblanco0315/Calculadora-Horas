@@ -25,16 +25,13 @@ export function useSystemNotifications() {
   }
 
   async function checkWorkdayEnd() {
-    console.log("[Watcher] Tick - Checking time...");
     if (!userConfig.value.isConfigured || !userConfig.value.exitTime) {
-      console.log("[Watcher] No configured or no exitTime found.");
       return;
     }
 
     if (!hasPermission) {
       const granted = await checkPermission();
       if (!granted) {
-        console.log("[Watcher] Notification permission not granted.");
         return;
       }
     }
@@ -60,12 +57,7 @@ export function useSystemNotifications() {
 
     const diffMins = exitTotalMins - currentTotalMins;
 
-    console.log(
-      `[Watcher] Status: Exit=${userConfig.value.exitTime} (${exitTotalMins}m), Now=${currentH}:${currentM} (${currentTotalMins}m), Diff=${diffMins}m`,
-    );
-
     if (diffMins <= 15 && diffMins >= 0) {
-      console.log("[Watcher] TRIGGERING NOTIFICATION!");
       sendNotification({
         title: "Calculadora de Horas",
         body: "¡Atención! Faltan 15 minutos o menos para finalizar tu jornada laboral.",
