@@ -8,55 +8,30 @@
     "
   >
     <!-- ── View Mode ─────────────────────────────────────────── -->
-    <template v-if="!isEditing">
-      <div class="flex items-center gap-3 py-3">
-        <!-- Accent bar -->
-        <div class="shrink-0 w-[3px] h-9 bg-indigo-500 dark:bg-indigo-400" />
+    <div class="flex items-center gap-3 py-3">
+      <!-- Accent bar -->
+      <div class="shrink-0 w-[3px] h-9 bg-indigo-500 dark:bg-indigo-400" />
 
-        <!-- Body -->
-        <div class="grow min-w-0">
-          <div class="flex items-center gap-2 mb-0.5">
-            <h3
-              class="text-[11px] font-bold uppercase tracking-wider truncate text-indigo-400 dark:text-indigo-400"
-              :title="displayTitle"
-            >
-              {{ displayTitle }}
-            </h3>
-            <span
-              v-if="activity.ticket"
-              class="shrink-0 text-[10px] font-mono text-slate-500 dark:text-slate-600 bg-slate-800/60 dark:bg-black/30 px-1.5 py-0.5 rounded border border-slate-700/50 dark:border-slate-800"
-            >
-              #{{ activity.ticket }}
-            </span>
-          </div>
-          <div v-if="projectName" class="flex items-center gap-1.5">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="w-3 h-3 text-indigo-400/60 shrink-0"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
-              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-            </svg>
-            <span
-              class="text-[11px] text-slate-400 dark:text-slate-500 font-medium truncate uppercase tracking-wide"
-              >{{ projectName }}</span
-            >
-          </div>
+      <!-- Body -->
+      <div class="grow min-w-0">
+        <div class="flex items-center gap-2 mb-0.5">
+          <h3
+            class="text-[11px] font-bold uppercase tracking-wider truncate text-indigo-400 dark:text-indigo-400"
+            :title="displayTitle"
+          >
+            {{ displayTitle }}
+          </h3>
+          <span
+            v-if="activity.ticket"
+            class="shrink-0 text-[10px] font-mono text-slate-500 dark:text-slate-600 bg-slate-800/60 dark:bg-black/30 px-1.5 py-0.5 rounded border border-slate-700/50 dark:border-slate-800"
+          >
+            #{{ activity.ticket }}
+          </span>
         </div>
-
-        <!-- Time -->
-        <div
-          class="flex-shrink-0 flex items-center gap-1.5 font-mono font-bold text-sm text-slate-200 dark:text-slate-200"
-        >
+        <div v-if="projectName" class="flex items-center gap-1.5">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            class="w-3.5 h-3.5 text-slate-400 dark:text-slate-500"
+            class="w-3 h-3 text-indigo-400/60 shrink-0"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -64,24 +39,170 @@
             stroke-linecap="round"
             stroke-linejoin="round"
           >
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
+            <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
           </svg>
-          {{ formatDecimal(activity.minutes) }}h
+          <span
+            class="text-[11px] text-slate-400 dark:text-slate-500 font-medium truncate uppercase tracking-wide"
+            >{{ projectName }}</span
+          >
         </div>
+      </div>
 
-        <!-- Actions always visible -->
-        <div class="flex items-center gap-0.5 shrink-0">
-          <!-- Copy -->
+      <!-- Time -->
+      <div
+        class="flex-shrink-0 flex items-center gap-1.5 font-mono font-bold text-sm text-slate-200 dark:text-slate-200"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="w-3.5 h-3.5 text-slate-400 dark:text-slate-500"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+        {{ formatDecimal(activity.minutes) }}h
+      </div>
+
+      <!-- Actions always visible -->
+      <div class="flex items-center gap-0.5 shrink-0">
+        <!-- Copy -->
+        <button
+          @click="copyTaskName"
+          class="cursor-pointer p-1.5 rounded-lg transition-all text-slate-500 dark:text-slate-600 hover:text-slate-300 dark:hover:text-slate-300 hover:bg-white/5"
+          :title="isCopied ? '¡Copiado!' : 'Copiar'"
+        >
+          <svg
+            v-if="isCopied"
+            xmlns="http://www.w3.org/2000/svg"
+            class="w-3.5 h-3.5 text-emerald-400"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          <svg
+            v-else
+            xmlns="http://www.w3.org/2000/svg"
+            class="w-3.5 h-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+        </button>
+
+        <!-- Edit -->
+        <button
+          @click="startEdit"
+          class="cursor-pointer p-1.5 rounded-lg transition-all text-slate-500 dark:text-slate-600 hover:text-indigo-400 hover:bg-white/5"
+          title="Editar"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="w-3.5 h-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
+            />
+          </svg>
+        </button>
+
+        <!-- Delete -->
+        <button
+          @click="$emit('delete', activity.id)"
+          class="cursor-pointer p-1.5 rounded-lg transition-all text-slate-500 dark:text-slate-600 hover:text-rose-400 hover:bg-white/5"
+          title="Eliminar"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="w-3.5 h-3.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+            />
+          </svg>
+        </button>
+
+        <!-- Sync: Synced badge (permanent state) -->
+        <template v-if="activity.ticket && hasToken && logTimeEntry">
+          <!-- Already synced: show distinct badge -->
           <button
-            @click="copyTaskName"
-            class="cursor-pointer p-1.5 rounded-lg transition-all text-slate-500 dark:text-slate-600 hover:text-slate-300 dark:hover:text-slate-300 hover:bg-white/5"
-            :title="isCopied ? '¡Copiado!' : 'Copiar'"
+            v-if="activity.synced && !isSyncing && !syncSuccess && !syncError"
+            @click="syncTimeEntry"
+            title="Sincronizado — click para reenviar"
+            class="cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 hover:border-emerald-400/50 transition-all duration-200"
           >
             <svg
-              v-if="isCopied"
               xmlns="http://www.w3.org/2000/svg"
-              class="w-3.5 h-3.5 text-emerald-400"
+              class="w-3 h-3 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </button>
+
+          <!-- Not yet synced / transient states: action button -->
+          <button
+            v-else
+            @click="syncTimeEntry"
+            :disabled="isSyncing"
+            class="cursor-pointer p-1.5 rounded-lg transition-all relative"
+            :class="[
+              syncSuccess
+                ? 'text-emerald-400 hover:bg-white/5'
+                : syncError
+                  ? 'text-rose-400 hover:bg-white/5'
+                  : 'text-slate-500 dark:text-slate-600 hover:text-cyan-400 hover:bg-white/5',
+              isSyncing ? 'opacity-50 cursor-not-allowed' : '',
+            ]"
+            :title="
+              syncSuccess
+                ? '¡Enviado!'
+                : syncError
+                  ? 'Error al enviar'
+                  : 'Enviar a OpenProject'
+            "
+          >
+            <span
+              v-if="isSyncing"
+              class="block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"
+            />
+            <svg
+              v-else-if="syncSuccess"
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-3.5 h-3.5"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -92,6 +213,20 @@
               <polyline points="20 6 9 17 4 12" />
             </svg>
             <svg
+              v-else-if="syncError"
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-3.5 h-3.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+            <!-- Upload to OpenProject icon -->
+            <svg
               v-else
               xmlns="http://www.w3.org/2000/svg"
               class="w-3.5 h-3.5"
@@ -102,291 +237,231 @@
               stroke-linecap="round"
               stroke-linejoin="round"
             >
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-              <path
-                d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
-              />
+              <polyline points="16 16 12 12 8 16" />
+              <line x1="12" y1="12" x2="12" y2="21" />
+              <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
             </svg>
           </button>
+        </template>
 
-          <!-- Edit -->
-          <button
-            @click="startEdit"
-            class="cursor-pointer p-1.5 rounded-lg transition-all text-slate-500 dark:text-slate-600 hover:text-indigo-400 hover:bg-white/5"
-            title="Editar"
+        <!-- Chevron toggle -->
+        <button
+          @click="isOpen = !isOpen"
+          class="cursor-pointer p-1.5 rounded-lg transition-all ml-0.5"
+          :class="
+            isOpen
+              ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/30'
+              : 'text-slate-500 dark:text-slate-600 hover:text-slate-300 hover:bg-white/5'
+          "
+        >
+          <svg
+            v-if="isOpen"
+            xmlns="http://www.w3.org/2000/svg"
+            class="w-4 h-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="w-3.5 h-3.5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path
-                d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-              />
-            </svg>
-          </button>
-
-          <!-- Delete -->
-          <button
-            @click="$emit('delete', activity.id)"
-            class="cursor-pointer p-1.5 rounded-lg transition-all text-slate-500 dark:text-slate-600 hover:text-rose-400 hover:bg-white/5"
-            title="Eliminar"
+            <path d="M18 15l-6-6-6 6" />
+          </svg>
+          <svg
+            v-else
+            xmlns="http://www.w3.org/2000/svg"
+            class="w-4 h-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="w-3.5 h-3.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-              />
-            </svg>
-          </button>
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+      </div>
+    </div>
 
-          <!-- Sync: Synced badge (permanent state) -->
-          <template v-if="activity.ticket && hasToken && logTimeEntry">
-            <!-- Already synced: show distinct badge -->
-            <button
-              v-if="activity.synced && !isSyncing && !syncSuccess && !syncError"
-              @click="syncTimeEntry"
-              title="Sincronizado — click para reenviar"
-              class="cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 hover:border-emerald-400/50 transition-all duration-200"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-3 h-3 shrink-0"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </button>
-
-            <!-- Not yet synced / transient states: action button -->
-            <button
-              v-else
-              @click="syncTimeEntry"
-              :disabled="isSyncing"
-              class="cursor-pointer p-1.5 rounded-lg transition-all relative"
-              :class="[
-                syncSuccess
-                  ? 'text-emerald-400 hover:bg-white/5'
-                  : syncError
-                    ? 'text-rose-400 hover:bg-white/5'
-                    : 'text-slate-500 dark:text-slate-600 hover:text-cyan-400 hover:bg-white/5',
-                isSyncing ? 'opacity-50 cursor-not-allowed' : '',
-              ]"
-              :title="
-                syncSuccess
-                  ? '¡Enviado!'
-                  : syncError
-                    ? 'Error al enviar'
-                    : 'Enviar a OpenProject'
-              "
-            >
-              <span
-                v-if="isSyncing"
-                class="block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"
-              />
-              <svg
-                v-else-if="syncSuccess"
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-3.5 h-3.5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-              <svg
-                v-else-if="syncError"
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-3.5 h-3.5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-              <!-- Upload to OpenProject icon -->
-              <svg
-                v-else
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-3.5 h-3.5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <polyline points="16 16 12 12 8 16" />
-                <line x1="12" y1="12" x2="12" y2="21" />
-                <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
-              </svg>
-            </button>
-          </template>
-
-          <!-- Chevron toggle -->
-          <button
-            @click="isOpen = !isOpen"
-            class="cursor-pointer p-1.5 rounded-lg transition-all ml-0.5"
-            :class="
-              isOpen
-                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/30'
-                : 'text-slate-500 dark:text-slate-600 hover:text-slate-300 hover:bg-white/5'
-            "
+    <!-- Expanded panel -->
+    <div
+      class="overflow-hidden transition-all duration-300 ease-in-out"
+      :class="isOpen ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'"
+    >
+      <div class="px-5 pb-4 pt-1">
+        <div
+          class="px-3 pt-3 border-t border-slate-200 dark:border-slate-700/50"
+        >
+          <p
+            class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed italic"
           >
-            <svg
-              v-if="isOpen"
-              xmlns="http://www.w3.org/2000/svg"
-              class="w-4 h-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M18 15l-6-6-6 6" />
-            </svg>
-            <svg
-              v-else
-              xmlns="http://www.w3.org/2000/svg"
-              class="w-4 h-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-          </button>
+            {{ activity.name }}
+          </p>
         </div>
       </div>
+    </div>
 
-      <!-- Expanded panel -->
-      <div
-        class="overflow-hidden transition-all duration-300 ease-in-out"
-        :class="isOpen ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'"
+    <!-- ── Edit Modal ──────────────────────────────────────────── -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
       >
-        <div class="px-5 pb-4 pt-1">
-          <div
-            class="px-3 pt-3 border-t border-slate-200 dark:border-slate-700/50"
+        <div
+          v-if="isEditing"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-3 pb-3 sm:px-4 sm:pb-0"
+          @click.self="cancelEdit"
+        >
+          <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="translate-y-4 opacity-0 sm:translate-y-0 sm:scale-95"
+            enter-to-class="translate-y-0 opacity-100 sm:scale-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="translate-y-0 opacity-100 sm:scale-100"
+            leave-to-class="translate-y-4 opacity-0 sm:translate-y-0 sm:scale-95"
           >
-            <p
-              class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed italic"
+            <div
+              v-if="isEditing"
+              class="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden"
             >
-              {{ activity.name }}
-            </p>
-          </div>
-        </div>
-      </div>
-    </template>
+              <!-- Header -->
+              <div
+                class="flex items-center justify-between px-4 pt-4 pb-3 border-b border-slate-100 dark:border-slate-700"
+              >
+                <div class="flex items-center gap-2">
+                  <div
+                    class="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-500/20"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path
+                        d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
+                      />
+                    </svg>
+                  </div>
+                  <h3
+                    class="text-sm font-semibold text-slate-800 dark:text-slate-100"
+                  >
+                    Editar Actividad
+                  </h3>
+                </div>
+                <button
+                  @click="cancelEdit"
+                  class="cursor-pointer p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="w-4 h-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
 
-    <!-- ── Edit Mode ──────────────────────────────────────────── -->
-    <template v-else>
-      <div class="flex flex-col gap-2 w-full p-3">
-        <div class="flex items-center gap-2">
-          <input
-            type="text"
-            v-model="editName"
-            placeholder="Tarea..."
-            class="flex-1 min-w-0 px-2 py-1.5 text-sm bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none text-slate-100 placeholder-slate-600"
-          />
-          <div
-            class="flex items-center bg-slate-900 border border-slate-700 rounded-lg overflow-hidden shrink-0 focus-within:ring-2 focus-within:ring-cyan-500"
-          >
-            <input
-              type="number"
-              v-model="editHours"
-              min="0"
-              class="w-10 px-1 py-1.5 text-sm text-center bg-transparent outline-none text-slate-100"
-            />
-            <span class="text-slate-600">:</span>
-            <input
-              type="number"
-              v-model="editMinutes"
-              min="0"
-              max="59"
-              class="w-10 px-1 py-1.5 text-sm text-center bg-transparent outline-none text-slate-100"
-            />
-          </div>
+              <!-- Form Body -->
+              <div class="flex flex-col gap-3 p-4">
+                <!-- Row 1: Project + Ticket -->
+                <div class="flex items-center gap-2">
+                  <!-- Project Selector -->
+                  <div class="flex-1 min-w-0">
+                    <select
+                      v-model="editProjectId"
+                      class="w-full px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100"
+                    >
+                      <option value="">Sin proyecto</option>
+                      <option v-for="p in projects" :key="p.id" :value="p.id">
+                        {{ p.name }}
+                      </option>
+                    </select>
+                  </div>
+                  <!-- Ticket Input -->
+                  <div class="shrink-0 w-24">
+                    <input
+                      type="text"
+                      v-model="editTicket"
+                      placeholder="#Ticket"
+                      class="w-full px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400"
+                    />
+                  </div>
+                </div>
+
+                <!-- Row 2: Task name -->
+                <textarea
+                  v-model="editName"
+                  placeholder="Descripción de la tarea..."
+                  required
+                  rows="3"
+                  class="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400 resize-none"
+                ></textarea>
+
+                <!-- Row 3: Time & Actions -->
+                <div class="flex items-center justify-between gap-2 mt-1">
+                  <div
+                    class="flex items-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-purple-500 flex-1"
+                  >
+                    <span
+                      class="pl-3 pr-1 text-xs text-slate-400 dark:text-slate-500 select-none"
+                      >h</span
+                    >
+                    <input
+                      type="number"
+                      v-model="editHours"
+                      min="0"
+                      class="w-full px-1 py-2 text-sm text-center bg-transparent outline-none dark:text-slate-100 placeholder-slate-400"
+                      placeholder="0"
+                    />
+                    <span class="text-slate-300 dark:text-slate-600 px-1"
+                      >:</span
+                    >
+                    <span
+                      class="pl-0.5 pr-1 text-xs text-slate-400 dark:text-slate-500 select-none"
+                      >m</span
+                    >
+                    <input
+                      type="number"
+                      v-model="editMinutes"
+                      min="0"
+                      max="59"
+                      class="w-full px-1 py-2 text-sm text-center bg-transparent outline-none dark:text-slate-100 placeholder-slate-400"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                  <button
+                    @click="saveEdit"
+                    :disabled="!isValid"
+                    class="cursor-pointer flex-1 px-4 py-2 text-sm font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Guardar Cambios
+                  </button>
+                </div>
+              </div>
+            </div>
+          </Transition>
         </div>
-        <div class="flex items-center gap-2">
-          <select
-            v-model="editProjectId"
-            class="flex-1 min-w-0 px-2 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg outline-none text-slate-100"
-          >
-            <option value="">Sin proyecto</option>
-            <option v-for="p in projects" :key="p.id" :value="p.id">
-              {{ p.name }}
-            </option>
-          </select>
-          <input
-            type="text"
-            v-model="editTicket"
-            placeholder="Ticket"
-            class="w-24 px-2 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg outline-none text-slate-100 placeholder-slate-600"
-          />
-          <div class="flex gap-1 shrink-0">
-            <button
-              @click="saveEdit"
-              :disabled="!isValid"
-              class="cursor-pointer p-1.5 text-emerald-400 hover:bg-emerald-500/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-4 h-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path d="M20 6L9 17l-5-5" />
-              </svg>
-            </button>
-            <button
-              @click="cancelEdit"
-              class="cursor-pointer p-1.5 text-slate-500 hover:text-slate-300 hover:bg-white/5 rounded-lg"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-4 h-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-    </template>
+      </Transition>
+    </Teleport>
 
     <!-- Time Entry Modal -->
     <TimeEntryModal
@@ -409,7 +484,7 @@
       >
         <div
           v-if="showResyncModal"
-          class="fixed inset-0 z-[9999] flex items-center justify-center"
+          class="fixed inset-0 z-50 flex items-center justify-center"
           @click.self="showResyncModal = false"
         >
           <div

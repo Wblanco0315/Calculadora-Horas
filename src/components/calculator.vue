@@ -465,7 +465,9 @@ function confirmReset() {
 
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+  transition:
+    opacity 0.15s ease-out,
+    transform 0.15s ease-out;
 }
 .fade-enter-from {
   opacity: 0;

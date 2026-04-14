@@ -75,32 +75,83 @@
           <!-- Favorites View -->
           <div v-if="viewState === 'favorites'" class="flex flex-col">
             <div
+              v-if="filteredFavorites.length > 0"
               class="p-2 overflow-y-auto max-h-64 divide-y divide-slate-100 dark:divide-slate-700"
             >
-              <button
-                v-for="fav in favoriteTickets"
+              <div
+                v-for="fav in filteredFavorites"
                 :key="fav.ticket"
-                type="button"
-                @click="selectFavorite(fav)"
-                class="w-full p-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex flex-col gap-1 rounded-lg"
+                class="relative group"
               >
-                <div class="flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  @click="selectFavorite(fav)"
+                  class="w-full p-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex flex-col gap-1 rounded-lg pr-12"
+                >
+                  <div class="flex items-center justify-between gap-2">
+                    <span
+                      class="text-xs font-bold text-yellow-600 dark:text-yellow-500 shrink-0"
+                      >#{{ fav.ticket }}</span
+                    >
+                    <span
+                      v-if="getProjectName(fav.projectId)"
+                      class="text-[10px] text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/50 px-1.5 py-0.5 rounded truncate max-w-[100px]"
+                      :title="getProjectName(fav.projectId)"
+                    >
+                      {{ getProjectName(fav.projectId) }}
+                    </span>
+                  </div>
                   <span
-                    class="text-xs font-bold text-yellow-600 dark:text-yellow-500"
-                    >#{{ fav.ticket }}</span
+                    class="text-sm text-slate-700 dark:text-slate-200 line-clamp-2"
+                    >{{ fav.title }}</span
                   >
-                  <span
-                    v-if="getProjectName(fav.projectId)"
-                    class="text-[10px] text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/50 px-1.5 py-0.5 rounded truncate max-w-[130px]"
-                    :title="getProjectName(fav.projectId)"
+                </button>
+                <button
+                  @click.stop="
+                    toggleFavorite(fav.ticket, fav.title, fav.projectId)
+                  "
+                  class="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
+                  title="Eliminar de favoritos"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="w-4 h-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
                   >
-                    {{ getProjectName(fav.projectId) }}
-                  </span>
-                </div>
-                <span class="text-sm text-slate-700 dark:text-slate-200">{{
-                  fav.title
-                }}</span>
-              </button>
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path
+                      d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                    ></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div
+              v-else
+              class="p-8 text-center flex flex-col items-center justify-center gap-2"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-10 h-10 text-slate-300 dark:text-slate-600"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.175 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                />
+              </svg>
+              <p class="text-sm text-slate-500 dark:text-slate-400">
+                Aún no tienes tickets favoritos.
+              </p>
             </div>
             <div
               class="p-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50"
@@ -267,13 +318,13 @@
             </transition>
 
             <!-- Row 2: Task name -->
-            <input
-              type="text"
+            <textarea
               v-model="name"
               placeholder="Descripción de la tarea..."
               required
-              class="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400"
-            />
+              rows="3"
+              class="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400 resize-none"
+            ></textarea>
 
             <!-- Row 3: Time -->
             <div class="flex items-center gap-2">
@@ -371,6 +422,17 @@ const ticketTitle = ref("");
 
 const { favoriteTickets, toggleFavorite, isFavorite } = useActivities();
 const viewState = ref<"selection" | "form" | "favorites">("selection");
+const searchFavoriteQuery = ref("");
+
+const filteredFavorites = computed(() => {
+  if (!searchFavoriteQuery.value) return favoriteTickets.value;
+  const q = searchFavoriteQuery.value.toLowerCase();
+  return favoriteTickets.value.filter(
+    (f) =>
+      f.ticket.toLowerCase().includes(q) ||
+      (f.title && f.title.toLowerCase().includes(q)),
+  );
+});
 
 // Reset form when modal opens
 watch(
@@ -386,6 +448,7 @@ watch(
       projectId.value = "";
       isCreatingProject.value = false;
       newProjectName.value = "";
+      searchFavoriteQuery.value = "";
     }
   },
 );
@@ -435,12 +498,26 @@ function submitForm() {
   if (!isValid.value) return;
   const h = typeof hours.value === "number" ? hours.value : 0;
   const m = typeof minutes.value === "number" ? minutes.value : 0;
+  const finalTicket = ticket.value.trim();
+
+  // Actualizar metadatos en favoritos si existe,
+  // para corregir si el usuario le dio a la estrella antes de que se cargara.
+  if (finalTicket && isFavorite(finalTicket)) {
+    const existing = favoriteTickets.value.find(
+      (f) => f.ticket === finalTicket,
+    );
+    if (existing) {
+      if (projectId.value) existing.projectId = projectId.value;
+      if (ticketTitle.value) existing.title = ticketTitle.value;
+    }
+  }
+
   emit(
     "add",
     name.value.trim(),
     h * 60 + m,
     projectId.value || undefined,
-    ticket.value.trim() || undefined,
+    finalTicket || undefined,
     ticketTitle.value.trim() || undefined,
   );
   emit("close");
