@@ -674,9 +674,7 @@ import { computed } from "vue";
 const showConfirmReset = ref(false);
 const showSetupModal = ref(false);
 const showAddModal = ref(false);
-const addModalInitialView = ref<"selection" | "form" | "favorites">(
-  "selection",
-);
+const addModalInitialView = ref<"form" | "favorites">("form");
 const isLoading = ref(true);
 
 const {

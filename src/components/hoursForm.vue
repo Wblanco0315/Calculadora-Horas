@@ -508,13 +508,13 @@ let currentSearchId = 0;
 async function onTicketBlur() {
   const raw = ticket.value.trim().replace(/^#/, "");
   if (!raw || !props.fetchTicketSubject) return;
-  
+
   const searchId = ++currentSearchId;
   isLoadingTicket.value = true;
   ticketTitle.value = "";
   try {
     const result = await props.fetchTicketSubject(raw);
-    
+
     // Ignore stale responses or if modal is closed
     if (searchId !== currentSearchId || !props.show) return;
 

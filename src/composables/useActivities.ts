@@ -41,14 +41,6 @@ const BASE_URL = "https://openproject.wposs.com/openproject/api/v3";
 export function useActivities() {
   const { userConfig, maxDailyMinutes } = useUserConfig();
 
-  const unsyncedActivities = computed(() => {
-    return activities.value.filter((a) => a.ticket && !a.synced);
-  });
-
-  const manuallySelectedActivities = computed(() => {
-    return unsyncedActivities.value.filter((a) => a.selected);
-  });
-
   const totalMinutes = computed(() => {
     return activities.value.reduce((total, act) => total + act.minutes, 0);
   });
@@ -172,8 +164,7 @@ export function useActivities() {
       return { ok: false, error: "No token" };
 
     const links: Record<string, { href: string }> = {
-      entity: { href: `/api/v3/work_packages/${act.ticket}` },
-      user: { href: `/api/v3/users/me` },
+      workPackage: { href: `/api/v3/work_packages/${act.ticket}` },
     };
     if (act.projectId) {
       links.project = { href: `/api/v3/projects/${act.projectId}` };
@@ -191,9 +182,6 @@ export function useActivities() {
       _links: links,
     };
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-
     try {
       const response = await fetch(`${BASE_URL}/time_entries`, {
         method: "POST",
@@ -202,9 +190,7 @@ export function useActivities() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
-        signal: controller.signal,
       });
-      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
@@ -221,7 +207,6 @@ export function useActivities() {
       }
       return { ok: true };
     } catch (error) {
-      clearTimeout(timeoutId);
       return { ok: false, error: String(error) };
     }
   }
