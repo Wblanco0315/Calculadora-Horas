@@ -551,6 +551,7 @@
               v-for="act in filteredActivities"
               :key="act.id"
               :activity="act"
+              :projects="projects"
               :log-time-entry="logTimeEntry"
               :has-token="!!userConfig.openProjectToken"
               :is-selection-mode="isSelectionMode"
