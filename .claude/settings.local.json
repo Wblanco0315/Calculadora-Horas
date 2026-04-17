@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const s=require\\('./spec.json'\\); const paths=Object.keys\\(s.paths\\).filter\\(p=>p.includes\\('status'\\)\\); console.log\\(paths.join\\('\\\\n'\\)\\)\")",
+      "Bash(node -e ':*)"
+    ]
+  }
+}

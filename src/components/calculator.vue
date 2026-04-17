@@ -552,6 +552,7 @@
               :key="act.id"
               :activity="act"
               :projects="projects"
+              :statuses="statuses"
               :log-time-entry="logTimeEntry"
               :has-token="!!userConfig.openProjectToken"
               :is-selection-mode="isSelectionMode"
@@ -681,6 +682,7 @@ const isLoading = ref(true);
 const {
   activities,
   projects,
+  statuses,
   totalMinutes,
   progressPercentage,
   addActivity,
@@ -693,6 +695,7 @@ const {
   timeEntryActivities,
   fetchTimeEntryActivities,
   fetchCurrentUser,
+  fetchStatuses,
 } = useActivities();
 
 const { maxDailyMinutes, userConfig, updateUserConfig } = useUserConfig();
@@ -708,7 +711,7 @@ initTheme();
 startNotificationWatcher();
 
 onMounted(async () => {
-  await Promise.all([fetchTimeEntryActivities(), fetchCurrentUser()]);
+  await Promise.all([fetchTimeEntryActivities(), fetchCurrentUser(), fetchStatuses()]);
   isLoading.value = false;
 });
 

@@ -55,19 +55,77 @@
 
       <!-- Body -->
       <div class="grow min-w-0">
-        <div class="flex items-center gap-2 mb-0.5">
-          <h3
-            class="text-[11px] font-bold uppercase tracking-wider truncate text-indigo-400 dark:text-indigo-400"
-            :title="displayTitle"
+        <!-- Status badge -->
+        <div
+          v-if="activity.ticket && activity.statusName"
+          class="flex items-center gap-1 mb-2 bg-slate-50 dark:bg-slate-900 border rounded-lg overflow-hidden transition-colors"
+          :class="
+            statusUpdateSuccess
+              ? 'border-emerald-400/60 dark:border-emerald-500/40'
+              : statusUpdateError
+                ? 'border-rose-400/60 dark:border-rose-500/40'
+                : 'border-slate-200 dark:border-slate-700'
+          "
+        >
+          <!-- Color dot / spinner / result icon -->
+          <div class="shrink-0 w-6 flex items-center justify-center ml-1">
+            <span
+              v-if="isUpdatingStatus"
+              class="block w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"
+            />
+            <svg
+              v-else-if="statusUpdateSuccess"
+              class="w-3 h-3 text-emerald-500"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <svg
+              v-else-if="statusUpdateError"
+              class="w-3 h-3 text-rose-500"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+            >
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+            <span
+              v-else
+              class="w-2 h-2 rounded-full"
+              :style="{ backgroundColor: currentStatusColor || '#94a3b8' }"
+            />
+          </div>
+
+          <select
+            v-if="ticketStatuses.length"
+            v-model="localStatusId"
+            @change.stop="onStatusChange"
+            @click.stop
+            :disabled="isUpdatingStatus"
+            class="flex-1 min-w-0 pr-2 py-1.5 text-[11px] ring-0 focus:ring-0 bg-slate-50 dark:bg-slate-900 dark:text-slate-100 outline-none disabled:opacity-50 cursor-pointer"
           >
-            {{ displayTitle }}
-          </h3>
+            <option v-for="s in ticketStatuses" :key="s.id" :value="s.id">
+              {{ s.name }}
+            </option>
+          </select>
+          <span
+            v-else
+            class="px-2 py-1.5 text-[11px] text-slate-400 dark:text-slate-500 font-medium uppercase tracking-wide"
+          >
+            {{ activity.statusName }}
+          </span>
+        </div>
+        <div class="flex items-center gap-2 mb-0.5">
           <span
             v-if="activity.ticket"
             class="shrink-0 text-xs font-mono text-slate-500 dark:text-slate-600 bg-slate-100 dark:bg-black/30 px-1.5 py-0.5 rounded border border-slate-700/50 dark:border-slate-800"
           >
             #{{ activity.ticket }}
           </span>
+          <h3
+            class="text-[11px] font-bold uppercase tracking-wider truncate text-indigo-400 dark:text-indigo-400"
+            :title="displayTitle"
+          >
+            {{ displayTitle }}
+          </h3>
         </div>
         <div v-if="projectName" class="flex items-center gap-1.5">
           <svg
@@ -639,21 +697,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import type {
   Activity,
   Project,
+  StatusOption,
   TimeEntryActivity,
 } from "../composables/useActivities";
 import { useActivities } from "../composables/useActivities";
 import TimeEntryModal from "./TimeEntryModal.vue";
 import { formatTime, formatDecimal } from "../utils/timeUtils";
 
-const { toggleFavorite, isFavorite } = useActivities();
+const { toggleFavorite, isFavorite, updateWorkPackageStatus } = useActivities();
 
 const props = defineProps<{
   activity: Activity;
   projects?: Project[];
+  statuses?: StatusOption[];
   hasToken?: boolean;
   timeEntryActivities?: TimeEntryActivity[];
   logTimeEntry?: (
@@ -685,6 +745,10 @@ const editHours = ref<number | "">("");
 const editMinutes = ref<number | "">("");
 const editProjectId = ref("");
 const editTicket = ref("");
+const localStatusId = ref(props.activity.statusId ?? "");
+const isUpdatingStatus = ref(false);
+const statusUpdateSuccess = ref(false);
+const statusUpdateError = ref(false);
 
 // ── Computed ───────────────────────────────────────────────────
 const displayTitle = computed(
@@ -704,6 +768,55 @@ const isValid = computed(() => {
   const m = typeof editMinutes.value === "number" ? editMinutes.value : 0;
   return h > 0 || m > 0;
 });
+
+// Statuses specific to this ticket (stored when ticket was fetched),
+// falling back to the global list passed from the parent.
+const ticketStatuses = computed(
+  () => props.activity.availableStatuses ?? props.statuses ?? [],
+);
+
+const currentStatusColor = computed(() => {
+  const matched = ticketStatuses.value.find(
+    (s) => s.id === localStatusId.value,
+  );
+  return matched?.color ?? props.activity.statusColor ?? "";
+});
+
+watch(
+  () => props.activity.statusId,
+  (val) => {
+    localStatusId.value = val ?? "";
+  },
+);
+
+async function onStatusChange() {
+  const found = ticketStatuses.value.find((s) => s.id === localStatusId.value);
+  if (!found || isUpdatingStatus.value) return;
+
+  isUpdatingStatus.value = true;
+  statusUpdateSuccess.value = false;
+  statusUpdateError.value = false;
+
+  const result = await updateWorkPackageStatus(props.activity.id, found.id);
+
+  isUpdatingStatus.value = false;
+
+  if (result.ok) {
+    // Persist locally only after confirmed success
+    emit("update", props.activity.id, {
+      statusId: found.id,
+      statusName: found.name,
+      statusColor: found.color ?? undefined,
+    });
+    statusUpdateSuccess.value = true;
+    setTimeout(() => { statusUpdateSuccess.value = false; }, 2000);
+  } else {
+    // Revert dropdown to previous value
+    localStatusId.value = props.activity.statusId ?? "";
+    statusUpdateError.value = true;
+    setTimeout(() => { statusUpdateError.value = false; }, 2000);
+  }
+}
 
 // ── Actions ────────────────────────────────────────────────────
 async function copyTaskName() {

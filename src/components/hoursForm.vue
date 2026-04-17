@@ -411,7 +411,7 @@ const props = defineProps<{
   initialView?: "form" | "favorites";
   fetchTicketSubject?: (
     id: string,
-  ) => Promise<{ subject: string; projectId: string } | null>;
+  ) => Promise<{ subject: string; projectId: string; statusId?: string; statusName?: string; statusColor?: string; availableStatuses?: import("../composables/useActivities").StatusOption[] } | null>;
 }>();
 
 const emit = defineEmits<{
@@ -423,6 +423,10 @@ const emit = defineEmits<{
     projectId?: string,
     ticket?: string,
     ticketTitle?: string,
+    statusId?: string,
+    statusName?: string,
+    statusColor?: string,
+    availableStatuses?: import("../composables/useActivities").StatusOption[],
   ): void;
   (e: "close"): void;
 }>();
@@ -440,6 +444,10 @@ const date = ref(todayISO());
 const hours = ref<number | "">("");
 const minutes = ref<number | "">("");
 const projectId = ref<string>("");
+const statusId = ref<string>("");
+const statusName = ref<string>("");
+const statusColor = ref<string>("");
+const availableStatuses = ref<import("../composables/useActivities").StatusOption[]>([]);
 const ticket = ref("");
 
 const isCreatingProject = ref(false);
@@ -469,6 +477,10 @@ function resetForm() {
   ticket.value = "";
   ticketTitle.value = "";
   projectId.value = "";
+  statusId.value = "";
+  statusName.value = "";
+  statusColor.value = "";
+  availableStatuses.value = [];
   isCreatingProject.value = false;
   newProjectName.value = "";
   searchFavoriteQuery.value = "";
@@ -526,6 +538,10 @@ async function onTicketBlur() {
         const existing = favoriteTickets.value.find((f) => f.ticket === raw);
         if (existing) existing.projectId = result.projectId;
       }
+      if (result.statusId) statusId.value = result.statusId;
+      if (result.statusName) statusName.value = result.statusName;
+      if (result.statusColor) statusColor.value = result.statusColor;
+      if (result.availableStatuses?.length) availableStatuses.value = result.availableStatuses;
     }
   } finally {
     if (searchId === currentSearchId) {
@@ -567,6 +583,10 @@ function submitForm() {
     projectId.value || undefined,
     finalTicket || undefined,
     ticketTitle.value.trim() || undefined,
+    statusId.value || undefined,
+    statusName.value || undefined,
+    statusColor.value || undefined,
+    availableStatuses.value.length ? availableStatuses.value : undefined,
   );
   emit("close");
 }
