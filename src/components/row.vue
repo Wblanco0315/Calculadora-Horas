@@ -76,14 +76,20 @@
             <svg
               v-else-if="statusUpdateSuccess"
               class="w-3 h-3 text-emerald-500"
-              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="3"
             >
               <polyline points="20 6 9 17 4 12" />
             </svg>
             <svg
               v-else-if="statusUpdateError"
               class="w-3 h-3 text-rose-500"
-              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
             >
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
@@ -116,7 +122,7 @@
         <div class="flex items-center gap-2 mb-0.5">
           <span
             v-if="activity.ticket"
-            class="shrink-0 text-xs font-mono text-slate-500 dark:text-slate-600 bg-slate-100 dark:bg-black/30 px-1.5 py-0.5 rounded border border-slate-700/50 dark:border-slate-800"
+            class="shrink-0 text-xs font-mono text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-black/30 px-1.5 py-0.5 rounded border border-slate-700/50 dark:border-slate-800"
           >
             #{{ activity.ticket }}
           </span>
@@ -571,7 +577,7 @@
                         min="0"
                         max="59"
                         step="1"
-                        class="w-10 px-1 text-xs text-center bg-transparent outline-none bg-[#0f172b] dark:text-slate-100 placeholder-slate-400 font-medium"
+                        class="w-10 px-1 text-xs text-center outline-none bg-[#0f172b] dark:text-slate-100 placeholder-slate-400 font-medium"
                         placeholder="0"
                       />
                       <span
@@ -594,12 +600,14 @@
                 </div>
 
                 <!-- Row 4: Actions -->
-                <div class="flex items-center justify-between gap-2 mt-1">
-                  <div class="flex gap-2 pt-2">
+                <div
+                  class="flex items-center justify-between gap-2 mt-1 w-full"
+                >
+                  <div class="flex gap-2 pt-2 w-full">
                     <button
                       @click="saveEdit"
                       :disabled="!isValid"
-                      class="cursor-pointer flex-1 px-4 py-2 text-sm font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      class="cursor-pointer w-full flex-1 px-4 py-2 text-sm font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       Guardar Cambios
                     </button>
@@ -809,12 +817,16 @@ async function onStatusChange() {
       statusColor: found.color ?? undefined,
     });
     statusUpdateSuccess.value = true;
-    setTimeout(() => { statusUpdateSuccess.value = false; }, 2000);
+    setTimeout(() => {
+      statusUpdateSuccess.value = false;
+    }, 2000);
   } else {
     // Revert dropdown to previous value
     localStatusId.value = props.activity.statusId ?? "";
     statusUpdateError.value = true;
-    setTimeout(() => { statusUpdateError.value = false; }, 2000);
+    setTimeout(() => {
+      statusUpdateError.value = false;
+    }, 2000);
   }
 }
 

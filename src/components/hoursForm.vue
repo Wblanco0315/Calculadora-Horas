@@ -33,6 +33,18 @@
                 class="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-500/20"
               >
                 <svg
+                  v-if="viewState === 'favorites'"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  class="h-4 w-4 text-yellow-600 dark:text-yellow-400"
+                >
+                  <path
+                    fill="currentColor"
+                    d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.62L12 2L9.19 8.62L2 9.24l5.45 4.73L5.82 21z"
+                  />
+                </svg>
+                <svg
+                  v-else
                   xmlns="http://www.w3.org/2000/svg"
                   class="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400"
                   viewBox="0 0 24 24"
@@ -76,7 +88,7 @@
           <div v-if="viewState === 'favorites'" class="flex flex-col">
             <div
               v-if="filteredFavorites.length > 0"
-              class="p-2 overflow-y-auto max-h-64 divide-y divide-slate-100 dark:divide-slate-700"
+              class="overflow-y-auto max-h-64 divide-y divide-slate-100 dark:divide-slate-700"
             >
               <div
                 v-for="fav in filteredFavorites"
@@ -86,16 +98,16 @@
                 <button
                   type="button"
                   @click="selectFavorite(fav)"
-                  class="w-full p-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex flex-col gap-1 rounded-lg pr-12"
+                  class="w-full p-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex flex-col gap-1 pr-12"
                 >
-                  <div class="flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-2">
                     <span
                       class="text-xs font-bold text-yellow-600 dark:text-yellow-500 shrink-0"
                       >#{{ fav.ticket }}</span
                     >
                     <span
                       v-if="getProjectName(fav.projectId)"
-                      class="text-[10px] text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/50 px-1.5 py-0.5 rounded truncate max-w-[100px]"
+                      class="text-xs text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/50 px-1.5 py-0.5 rounded truncate max-w-full"
                       :title="getProjectName(fav.projectId)"
                     >
                       {{ getProjectName(fav.projectId) }}
@@ -110,7 +122,7 @@
                   @click.stop="
                     toggleFavorite(fav.ticket, fav.title, fav.projectId)
                   "
-                  class="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all focus:opacity-100 cursor-pointer"
                   title="Eliminar de favoritos"
                 >
                   <svg
@@ -409,9 +421,14 @@ const props = defineProps<{
   initialTicketTitle?: string;
   initialProjectId?: string;
   initialView?: "form" | "favorites";
-  fetchTicketSubject?: (
-    id: string,
-  ) => Promise<{ subject: string; projectId: string; statusId?: string; statusName?: string; statusColor?: string; availableStatuses?: import("../composables/useActivities").StatusOption[] } | null>;
+  fetchTicketSubject?: (id: string) => Promise<{
+    subject: string;
+    projectId: string;
+    statusId?: string;
+    statusName?: string;
+    statusColor?: string;
+    availableStatuses?: import("../composables/useActivities").StatusOption[];
+  } | null>;
 }>();
 
 const emit = defineEmits<{
@@ -447,7 +464,9 @@ const projectId = ref<string>("");
 const statusId = ref<string>("");
 const statusName = ref<string>("");
 const statusColor = ref<string>("");
-const availableStatuses = ref<import("../composables/useActivities").StatusOption[]>([]);
+const availableStatuses = ref<
+  import("../composables/useActivities").StatusOption[]
+>([]);
 const ticket = ref("");
 
 const isCreatingProject = ref(false);
@@ -541,7 +560,8 @@ async function onTicketBlur() {
       if (result.statusId) statusId.value = result.statusId;
       if (result.statusName) statusName.value = result.statusName;
       if (result.statusColor) statusColor.value = result.statusColor;
-      if (result.availableStatuses?.length) availableStatuses.value = result.availableStatuses;
+      if (result.availableStatuses?.length)
+        availableStatuses.value = result.availableStatuses;
     }
   } finally {
     if (searchId === currentSearchId) {
@@ -604,3 +624,16 @@ function close() {
   emit("close");
 }
 </script>
+
+<style>
+.dark input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.5) sepia(1) saturate(5) hue-rotate(200deg);
+  cursor: pointer;
+}
+
+.dark input[type="number"]::-webkit-inner-spin-button,
+.dark input[type="number"]::-webkit-outer-spin-button {
+  filter: invert(1);
+  margin-left: 5px;
+}
+</style>
