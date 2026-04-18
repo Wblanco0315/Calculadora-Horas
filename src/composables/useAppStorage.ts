@@ -14,7 +14,9 @@ export function useAppStorage() {
     if (storedData) {
       try {
         const parsed = JSON.parse(storedData);
-        if (parsed.activities) activities.value = parsed.activities;
+        if (parsed.activities) {
+          activities.value = parsed.activities.map((a: any) => ({ ...a, selected: false }));
+        }
         if (parsed.projects) projects.value = parsed.projects;
         if (parsed.userConfig) userConfig.value = parsed.userConfig;
         if (parsed.maxDailyMinutes)

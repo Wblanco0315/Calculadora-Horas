@@ -817,7 +817,7 @@ async function onSyncAllConfirm(activityTypeId: string) {
 
   const allUnsynced = [...unsyncedActivities.value];
   const toSync =
-    manuallySelectedActivities.value.length > 0
+    isSelectionMode.value && manuallySelectedActivities.value.length > 0
       ? [...manuallySelectedActivities.value]
       : allUnsynced;
 
