@@ -36,6 +36,7 @@ jobs:
         run: bun install
 
       - uses: tauri-apps/tauri-action@v0
+        id: tauri
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -48,3 +49,15 @@ jobs:
           prerelease: false
           args: ${{ matrix.args }}
           includeUpdaterJson: true
+
+      - name: Upload latest.json manually
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          PATH_JSON=$(find src-tauri/target/release/bundle -name "latest.json" | head -n 1)
+          if [ -n "$PATH_JSON" ]; then
+            gh release upload "app-v${{ steps.tauri.outputs.appVersion }}" "$PATH_JSON" --clobber
+          else
+            echo "latest.json not found."
+          fi
