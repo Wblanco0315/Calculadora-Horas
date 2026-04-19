@@ -44,6 +44,7 @@ jobs:
           tagName: app-v__VERSION__
           releaseName: 'App v__VERSION__'
           releaseBody: 'Mira los assets para descargar e instalar esta versión.'
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+          includeUpdaterJson: true
