@@ -42,7 +42,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: app-v__VERSION__
+          tagName: v__VERSION__
           releaseName: 'App v__VERSION__'
           releaseBody: 'Mira los assets para descargar e instalar esta versión.'
           releaseDraft: false
@@ -57,7 +57,7 @@ jobs:
         run: |
           PATH_JSON=$(find src-tauri/target/release/bundle -name "latest.json" | head -n 1)
           if [ -n "$PATH_JSON" ]; then
-            gh release upload "app-v${{ steps.tauri.outputs.appVersion }}" "$PATH_JSON" --clobber
+            gh release upload "v${{ steps.tauri.outputs.appVersion }}" "$PATH_JSON" --clobber
           else
             echo "latest.json not found."
           fi
