@@ -1,6 +1,7 @@
 import { ref, shallowRef } from "vue";
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
+import { info, error } from "@tauri-apps/plugin-log";
 
 // Global state para el actualizador para que todos los componentes (App y InitialSetup) compartan la misma instancia reactiva
 const isChecking = ref(false);
@@ -11,25 +12,26 @@ const downloadProgress = ref(0);
 const updateInfo = shallowRef<any>(null);
 
 export function useUpdater() {
+
   async function checkForUpdates(silent: boolean = true) {
     if (isChecking.value) return;
     try {
       isChecking.value = true;
-      console.log("Checking for updates...");
+      info("Checking for updates...");
       const update = await check();
       if (update) {
-        console.log(`Update ${update.version} found!`);
+        info(`Update ${update.version} found!`);
         updateAvailable.value = true;
         version.value = update.version;
         updateInfo.value = update;
       } else {
         updateAvailable.value = false;
         if (!silent) {
-          console.log("No update available");
+          info("No update available");
         }
       }
     } catch (e) {
-      console.error("Failed to check for updates:", e);
+      error(`Failed to check for updates: ${e}`);
     } finally {
       isChecking.value = false;
     }
@@ -48,7 +50,7 @@ export function useUpdater() {
           case "Started":
             contentLength = event.data?.contentLength || 0;
             downloadProgress.value = 0;
-            console.log(`Started downloading ${contentLength} bytes`);
+            info(`Started downloading ${contentLength} bytes`);
             break;
           case "Progress":
             downloaded += event.data?.chunkLength || 0;
@@ -57,19 +59,20 @@ export function useUpdater() {
                 (downloaded / contentLength) * 100,
               );
             }
-            console.log(`Downloaded ${downloaded} of ${contentLength}`);
+            // Evitamos saturar el log si descargamos muy rápido, pero está disponible
+            // info(`Downloaded ${downloaded} of ${contentLength}`);
             break;
           case "Finished":
             downloadProgress.value = 100;
-            console.log("Download finished");
+            info("Download finished");
             break;
         }
       });
 
-      console.log("Update installed, restarting...");
+      info("Update installed, restarting...");
       await relaunch();
     } catch (e) {
-      console.error("Failed to install update:", e);
+      error(`Failed to install update: ${e}`);
     } finally {
       isUpdating.value = false;
     }
