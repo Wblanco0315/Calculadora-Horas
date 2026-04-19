@@ -1,24 +1,21 @@
-import { ref } from 'vue';
-import { check } from '@tauri-apps/plugin-updater';
-import { relaunch } from '@tauri-apps/plugin-process';
+import { ref, shallowRef } from "vue";
+import { check } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
+
+// Global state para el actualizador para que todos los componentes (App y InitialSetup) compartan la misma instancia reactiva
+const isChecking = ref(false);
+const updateAvailable = ref(false);
+const version = ref("");
+const isUpdating = ref(false);
+const downloadProgress = ref(0);
+const updateInfo = shallowRef<any>(null);
 
 export function useUpdater() {
-  const isChecking = ref(false);
-  const updateAvailable = ref(false);
-  const version = ref('');
-  const isUpdating = ref(false);
-  // Guardamos el objeto entero de la actualización para instalarlo después.
-  const updateInfo = ref<any>(null);
-
-  /**
-   * Revisa si hay una actualización disponible.
-   * @param silent si es true, no hace ruido cuando no hay actualizaciones (útil al iniciar)
-   */
   async function checkForUpdates(silent: boolean = true) {
     if (isChecking.value) return;
     try {
       isChecking.value = true;
-      console.log('Checking for updates...');
+      console.log("Checking for updates...");
       const update = await check();
       if (update) {
         console.log(`Update ${update.version} found!`);
@@ -28,46 +25,51 @@ export function useUpdater() {
       } else {
         updateAvailable.value = false;
         if (!silent) {
-          console.log('No update available');
+          console.log("No update available");
         }
       }
     } catch (e) {
-      console.error('Failed to check for updates:', e);
+      console.error("Failed to check for updates:", e);
     } finally {
       isChecking.value = false;
     }
   }
 
-  /**
-   * Descarga la actualización e instala, luego reinicia la app.
-   */
   async function installUpdate() {
     if (!updateInfo.value) return;
     try {
+      downloadProgress.value = 0;
       isUpdating.value = true;
       let downloaded = 0;
       let contentLength = 0;
-      
+
       await updateInfo.value.downloadAndInstall((event: any) => {
         switch (event.event) {
-          case 'Started':
+          case "Started":
             contentLength = event.data?.contentLength || 0;
+            downloadProgress.value = 0;
             console.log(`Started downloading ${contentLength} bytes`);
             break;
-          case 'Progress':
+          case "Progress":
             downloaded += event.data?.chunkLength || 0;
+            if (contentLength > 0) {
+              downloadProgress.value = Math.round(
+                (downloaded / contentLength) * 100,
+              );
+            }
             console.log(`Downloaded ${downloaded} of ${contentLength}`);
             break;
-          case 'Finished':
-            console.log('Download finished');
+          case "Finished":
+            downloadProgress.value = 100;
+            console.log("Download finished");
             break;
         }
       });
 
-      console.log('Update installed, restarting...');
+      console.log("Update installed, restarting...");
       await relaunch();
     } catch (e) {
-      console.error('Failed to install update:', e);
+      console.error("Failed to install update:", e);
     } finally {
       isUpdating.value = false;
     }
@@ -78,7 +80,8 @@ export function useUpdater() {
     updateAvailable,
     version,
     isUpdating,
+    downloadProgress,
     checkForUpdates,
-    installUpdate
+    installUpdate,
   };
 }
