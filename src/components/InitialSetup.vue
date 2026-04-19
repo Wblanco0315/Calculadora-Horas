@@ -107,6 +107,30 @@
           class="w-full mt-2"
           size="md"
         />
+
+        <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
+          <BaseButton
+            v-if="!updateAvailable"
+            @click="checkForUpdates(false)"
+            :loading="isChecking"
+            label="Buscar actualizaciones"
+            class="w-full"
+            variant="secondary"
+            size="sm"
+          />
+          <div v-else class="text-center space-y-2">
+            <p class="text-sm text-green-600 dark:text-green-400">
+              ¡Actualización v{{ version }} disponible!
+            </p>
+            <BaseButton
+              @click="installUpdate"
+              label="Instalar y reiniciar"
+              class="w-full"
+              variant="primary"
+              size="sm"
+            />
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -116,6 +140,7 @@
 import { ref, computed } from "vue";
 import type { UserConfig } from "../composables/useUserConfig";
 import BaseButton from "./shared/baseButton.vue";
+import { useUpdater } from "../composables/useUpdater";
 
 const props = defineProps<{
   userConfig: UserConfig;
@@ -131,6 +156,9 @@ const entryTime = ref(props.userConfig.entryTime || "08:00");
 const exitTime = ref(props.userConfig.exitTime || "17:00");
 const lunchMinutes = ref(props.userConfig.lunchMinutes ?? 60);
 const openProjectToken = ref(props.userConfig.openProjectToken || "");
+
+const { isChecking, updateAvailable, version, checkForUpdates, installUpdate } =
+  useUpdater();
 
 const isValid = computed(() => {
   return entryTime.value && exitTime.value && lunchMinutes.value >= 0;
