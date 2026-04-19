@@ -1,8 +1,16 @@
 <script setup lang="ts">
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getVersion } from "@tauri-apps/api/app";
 import { useTheme } from "../composables/useTheme";
+import { ref, onMounted } from "vue";
 
 const { isDark, toggleDarkMode } = useTheme();
+
+const appVersion = ref("");
+
+onMounted(async () => {
+  appVersion.value = await getVersion();
+});
 
 const minimize = () => getCurrentWindow().minimize();
 const close = () => getCurrentWindow().close();
@@ -35,6 +43,9 @@ defineEmits<{
         />
         <path d="M13 7h-2v5.414l3.293 3.293 1.414-1.414L13 11.586z" />
       </svg>
+      <span v-if="appVersion" class="text-xs font-medium text-slate-500 dark:text-slate-400 pointer-events-none">
+        v{{ appVersion }}
+      </span>
     </div>
 
     <!-- Window Controls -->
