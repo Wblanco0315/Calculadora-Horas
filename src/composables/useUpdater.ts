@@ -1,6 +1,6 @@
 import { ref, shallowRef } from "vue";
 import { check } from "@tauri-apps/plugin-updater";
-import { relaunch, exit } from "@tauri-apps/plugin-process";
+import { exit } from "@tauri-apps/plugin-process";
 import { info, error } from "@tauri-apps/plugin-log";
 
 // Global state para el actualizador para que todos los componentes (App y InitialSetup) compartan la misma instancia reactiva
