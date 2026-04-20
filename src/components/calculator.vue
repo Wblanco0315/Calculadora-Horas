@@ -54,7 +54,7 @@
             >
             <transition name="fade" mode="out-in">
               <span :key="timeFormat" class="text-blue-100/80 text-xs"
-                >Meta:
+                >Meta del día:
                 {{
                   timeFormat === "HH:MM"
                     ? formatTime(maxDailyMinutes)
@@ -147,6 +147,30 @@
                 </button>
               </div>
             </div>
+            <transition name="fade" mode="out-in">
+              <div class="text-xs text-blue-100/90 font-medium tracking-wide">
+                <span v-if="totalMinutes > maxDailyMinutes"
+                  >¡Meta cumplida!
+                  {{
+                    timeFormat === "HH:MM"
+                      ? formatTime(totalMinutes - maxDailyMinutes)
+                      : formatDecimal(totalMinutes - maxDailyMinutes) + "h"
+                  }}
+                  extras</span
+                >
+                <span v-else-if="totalMinutes === maxDailyMinutes"
+                  >¡Meta cumplida!</span
+                >
+                <span v-else
+                  >{{
+                    timeFormat === "HH:MM"
+                      ? formatTime(maxDailyMinutes - totalMinutes)
+                      : formatDecimal(maxDailyMinutes - totalMinutes) + "h"
+                  }}
+                  restantes
+                </span>
+              </div>
+            </transition>
           </div>
           <!-- Progress Mini Bar -->
           <div class="w-full bg-black/20 rounded-full h-1.5 overflow-hidden">
@@ -711,7 +735,11 @@ initTheme();
 startNotificationWatcher();
 
 onMounted(async () => {
-  await Promise.all([fetchTimeEntryActivities(), fetchCurrentUser(), fetchStatuses()]);
+  await Promise.all([
+    fetchTimeEntryActivities(),
+    fetchCurrentUser(),
+    fetchStatuses(),
+  ]);
   isLoading.value = false;
 });
 
