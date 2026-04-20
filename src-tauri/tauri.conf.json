@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Calculadora de horas",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "identifier": "com.dev.wilsonblanco",
   "build": {
     "beforeDevCommand": "bun run dev",
@@ -26,10 +26,13 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IENBQzIxODJEOEYzQkI4NgpSV1NHdS9QWWdpR3NES21sc1pNbDNqMDNRYm1vd3ZOQmc3N0Ezc0piaGhGdlpDeHRVWlJhRjc0ZAo=",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVCNTNCMzUzNDRBQUU5QTAKUldTZzZhcEVVN05UNnpEUjJKODV3STJCNTBuN1JNUTRic0o3VWkvZDlya1NLY2Ftb3RpVU8rei8K",
       "endpoints": [
         "https://github.com/Wblanco0315/Calculadora-Horas/releases/latest/download/latest.json"
-      ]
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   },
   "bundle": {
