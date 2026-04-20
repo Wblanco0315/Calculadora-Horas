@@ -113,19 +113,35 @@ export function useActivities() {
   async function fetchOpenProjectProjects() {
     if (!userConfig.value.openProjectToken) return;
     try {
-      const response = await fetch(`${BASE_URL}/projects`, {
-        headers: {
-          Authorization: `Bearer ${userConfig.value.openProjectToken}`,
-        },
-      });
-      if (!response.ok) throw new Error("Failed to fetch projects");
-      const data = await response.json();
-      if (data && data._embedded && data._embedded.elements) {
-        projects.value = data._embedded.elements.map((p: any) => ({
-          id: String(p.id),
-          name: p.name,
-        }));
+      const pageSize = 100;
+      let offset = 1;
+      let total = Infinity;
+      const allProjects: { id: string; name: string }[] = [];
+
+      while (allProjects.length < total) {
+        const response = await fetch(
+          `${BASE_URL}/projects?pageSize=${pageSize}&offset=${offset}`,
+          {
+            headers: {
+              Authorization: `Bearer ${userConfig.value.openProjectToken}`,
+            },
+          },
+        );
+        if (!response.ok) throw new Error("Failed to fetch projects");
+        const data = await response.json();
+        if (!data?._embedded?.elements) break;
+
+        total = data.total ?? 0;
+        const elements = data._embedded.elements;
+        allProjects.push(
+          ...elements.map((p: any) => ({ id: String(p.id), name: p.name })),
+        );
+
+        if (elements.length < pageSize) break;
+        offset += pageSize;
       }
+
+      projects.value = allProjects;
     } catch (error) {
       console.error("OpenProject error:", error);
     }
@@ -265,14 +281,21 @@ export function useActivities() {
     return favoriteTickets.value.some((t) => t.ticket === ticketId);
   }
 
-  async function fetchTicketSubject(
-    ticketId: string,
-  ): Promise<{ subject: string; projectId: string; statusId?: string; statusName?: string; statusColor?: string; availableStatuses?: StatusOption[] } | null> {
+  async function fetchTicketSubject(ticketId: string): Promise<{
+    subject: string;
+    projectId: string;
+    statusId?: string;
+    statusName?: string;
+    statusColor?: string;
+    availableStatuses?: StatusOption[];
+  } | null> {
     if (!userConfig.value.openProjectToken || !ticketId) return null;
     try {
       const [wpResponse, formResponse] = await Promise.all([
         fetch(`${BASE_URL}/work_packages/${ticketId}`, {
-          headers: { Authorization: `Bearer ${userConfig.value.openProjectToken}` },
+          headers: {
+            Authorization: `Bearer ${userConfig.value.openProjectToken}`,
+          },
         }),
         fetch(`${BASE_URL}/work_packages/${ticketId}/form`, {
           method: "POST",
@@ -301,7 +324,10 @@ export function useActivities() {
       let availableStatuses: StatusOption[] | undefined;
       if (formResponse.ok) {
         const formData = await formResponse.json();
-        console.debug("[OP] form schema status:", JSON.stringify(formData?._embedded?.schema?.status));
+        console.debug(
+          "[OP] form schema status:",
+          JSON.stringify(formData?._embedded?.schema?.status),
+        );
 
         // allowedValues can be an inline array or a HAL _links array
         const allowedRaw =
@@ -314,7 +340,7 @@ export function useActivities() {
           // Build a set of allowed IDs (extracted from href or id field)
           const allowedIds = new Set<string>(
             allowedArray.map((s: any) =>
-              s.id ? String(s.id) : (s.href ?? "").split("/").pop() ?? "",
+              s.id ? String(s.id) : ((s.href ?? "").split("/").pop() ?? ""),
             ),
           );
 
@@ -322,7 +348,9 @@ export function useActivities() {
           availableStatuses = statuses.value.length
             ? statuses.value.filter((s) => allowedIds.has(s.id))
             : allowedArray.map((s: any) => ({
-                id: s.id ? String(s.id) : (s.href ?? "").split("/").pop() ?? "",
+                id: s.id
+                  ? String(s.id)
+                  : ((s.href ?? "").split("/").pop() ?? ""),
                 name: s.name ?? s.title ?? "",
                 color: s.color ?? undefined,
               }));
@@ -349,12 +377,15 @@ export function useActivities() {
   ): Promise<{ ok: boolean; error?: string }> {
     const act = activities.value.find((a) => a.id === activityId);
     if (!act?.ticket) return { ok: false, error: "No ticket ID" };
-    if (!userConfig.value.openProjectToken) return { ok: false, error: "No token" };
+    if (!userConfig.value.openProjectToken)
+      return { ok: false, error: "No token" };
 
     try {
       // Fetch current lockVersion (required by OpenProject for all PATCH requests)
       const wpRes = await fetch(`${BASE_URL}/work_packages/${act.ticket}`, {
-        headers: { Authorization: `Bearer ${userConfig.value.openProjectToken}` },
+        headers: {
+          Authorization: `Bearer ${userConfig.value.openProjectToken}`,
+        },
       });
       if (!wpRes.ok) return { ok: false, error: `HTTP ${wpRes.status}` };
       const wpData = await wpRes.json();
@@ -377,7 +408,10 @@ export function useActivities() {
 
       if (!patchRes.ok) {
         const errData = await patchRes.json().catch(() => ({}));
-        return { ok: false, error: errData?.message ?? `HTTP ${patchRes.status}` };
+        return {
+          ok: false,
+          error: errData?.message ?? `HTTP ${patchRes.status}`,
+        };
       }
 
       return { ok: true };
