@@ -1,6 +1,6 @@
 [package]
 name = "calculadora_horas"
-version = "0.3.10"
+version = "0.3.11"
 description = "Calculadora de horas para OpenProject"
 authors = ["Wilson Blanco"]
 edition = "2021"
