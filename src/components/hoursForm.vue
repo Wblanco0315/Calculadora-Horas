@@ -428,6 +428,8 @@ const props = defineProps<{
     statusName?: string;
     statusColor?: string;
     availableStatuses?: import("../composables/useActivities").StatusOption[];
+    versionId?: string;
+    versionName?: string;
   } | null>;
 }>();
 
@@ -444,6 +446,8 @@ const emit = defineEmits<{
     statusName?: string,
     statusColor?: string,
     availableStatuses?: import("../composables/useActivities").StatusOption[],
+    versionId?: string,
+    versionName?: string,
   ): void;
   (e: "close"): void;
 }>();
@@ -467,6 +471,8 @@ const statusColor = ref<string>("");
 const availableStatuses = ref<
   import("../composables/useActivities").StatusOption[]
 >([]);
+const versionId = ref<string>("");
+const versionName = ref<string>("");
 const ticket = ref("");
 
 const isCreatingProject = ref(false);
@@ -500,6 +506,8 @@ function resetForm() {
   statusName.value = "";
   statusColor.value = "";
   availableStatuses.value = [];
+  versionId.value = "";
+  versionName.value = "";
   isCreatingProject.value = false;
   newProjectName.value = "";
   searchFavoriteQuery.value = "";
@@ -562,6 +570,8 @@ async function onTicketBlur() {
       if (result.statusColor) statusColor.value = result.statusColor;
       if (result.availableStatuses?.length)
         availableStatuses.value = result.availableStatuses;
+      if (result.versionId) versionId.value = result.versionId;
+      if (result.versionName) versionName.value = result.versionName;
     }
   } finally {
     if (searchId === currentSearchId) {
@@ -607,6 +617,8 @@ function submitForm() {
     statusName.value || undefined,
     statusColor.value || undefined,
     availableStatuses.value.length ? availableStatuses.value : undefined,
+    versionId.value || undefined,
+    versionName.value || undefined,
   );
   emit("close");
 }

@@ -112,6 +112,7 @@
               {{ s.name }}
             </option>
           </select>
+
           <span
             v-else
             class="px-2 py-1.5 text-[11px] text-slate-400 dark:text-slate-500 font-medium uppercase tracking-wide"
@@ -119,6 +120,55 @@
             {{ activity.statusName }}
           </span>
         </div>
+
+        <template v-if="selectedBoardId">
+          <span
+            v-if="isFetchingBoardColumns"
+            class="block w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"
+          />
+          <span
+            v-else-if="isMovingColumn"
+            class="block w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"
+          />
+          <svg
+            v-else-if="columnMoveSuccess"
+            class="w-3 h-3 text-emerald-500 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="3"
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          <svg
+            v-else-if="columnMoveError"
+            class="w-3 h-3 text-rose-500 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+          >
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+          <select
+            v-if="!isFetchingBoardColumns"
+            v-model="selectedColumnQueryId"
+            @change.stop="onBoardColumnChange"
+            @click.stop
+            :disabled="isMovingColumn || isFetchingBoardColumns"
+            class="min-w-0 px-2 py-1 text-[11px] bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 disabled:opacity-50 cursor-pointer max-w-[120px]"
+          >
+            <option value="">Columna...</option>
+            <option
+              v-for="col in boardColumns"
+              :key="col.queryId"
+              :value="col.queryId"
+            >
+              {{ col.name }}
+            </option>
+          </select>
+        </template>
+
         <div class="flex items-center gap-2 mb-0.5">
           <span
             v-if="activity.ticket"
@@ -395,11 +445,11 @@
     <!-- Expanded panel -->
     <div
       class="overflow-hidden transition-all duration-300 ease-in-out"
-      :class="isOpen ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'"
+      :class="isOpen ? 'max-h-80 opacity-100' : 'max-h-0 opacity-0'"
     >
       <div class="px-5 pb-4 pt-1">
         <div
-          class="px-3 pt-3 border-t border-slate-200 dark:border-slate-700/50"
+          class="px-3 pt-3 border-t border-slate-200 dark:border-slate-700/50 flex flex-col gap-3"
         >
           <p
             class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed italic"
@@ -710,13 +760,26 @@ import type {
   Activity,
   Project,
   StatusOption,
+  Version,
+  Board,
+  BoardColumn,
   TimeEntryActivity,
 } from "../composables/useActivities";
 import { useActivities } from "../composables/useActivities";
 import TimeEntryModal from "./TimeEntryModal.vue";
 import { formatTime, formatDecimal } from "../utils/timeUtils";
 
-const { toggleFavorite, isFavorite, updateWorkPackageStatus } = useActivities();
+const {
+  toggleFavorite,
+  isFavorite,
+  updateWorkPackageStatus,
+  fetchProjectVersions,
+  updateWorkPackageVersion,
+  fetchProjectBoards,
+  fetchBoardColumns,
+  findTicketBoardColumn,
+  moveWorkPackageToBoardColumn,
+} = useActivities();
 
 const props = defineProps<{
   activity: Activity;
@@ -758,6 +821,24 @@ const isUpdatingStatus = ref(false);
 const statusUpdateSuccess = ref(false);
 const statusUpdateError = ref(false);
 
+const localVersionId = ref(props.activity.versionId ?? "");
+const projectVersions = ref<Version[]>([]);
+const isFetchingVersions = ref(false);
+const isUpdatingVersion = ref(false);
+const versionUpdateSuccess = ref(false);
+const versionUpdateError = ref(false);
+
+// Board column state
+const selectedBoardId = ref(props.activity.boardId ?? "");
+const selectedColumnQueryId = ref(props.activity.boardColumnQueryId ?? "");
+const projectBoards = ref<Board[]>([]);
+const boardColumns = ref<BoardColumn[]>([]);
+const isFetchingBoards = ref(false);
+const isFetchingBoardColumns = ref(false);
+const isMovingColumn = ref(false);
+const columnMoveSuccess = ref(false);
+const columnMoveError = ref(false);
+
 // ── Computed ───────────────────────────────────────────────────
 const displayTitle = computed(
   () => props.activity.ticketTitle || props.activity.name,
@@ -797,6 +878,81 @@ watch(
   },
 );
 
+watch(
+  () => props.activity.versionId,
+  (val) => {
+    localVersionId.value = val ?? "";
+  },
+);
+
+watch(isOpen, async (open) => {
+  if (
+    !open ||
+    !props.activity.projectId ||
+    !props.activity.ticket ||
+    !props.hasToken
+  )
+    return;
+
+  // Fetch versions (lazy)
+  if (!projectVersions.value.length && !isFetchingVersions.value) {
+    isFetchingVersions.value = true;
+    projectVersions.value = await fetchProjectVersions(
+      props.activity.projectId,
+    );
+    isFetchingVersions.value = false;
+  }
+
+  // Board detection: if we already know the board, just load columns.
+  // Otherwise, search all boards for the ticket.
+  if (selectedBoardId.value) {
+    if (!boardColumns.value.length && !isFetchingBoardColumns.value) {
+      isFetchingBoardColumns.value = true;
+      boardColumns.value = await fetchBoardColumns(selectedBoardId.value);
+      isFetchingBoardColumns.value = false;
+    }
+    // Also ensure the boards list is loaded for the selector
+    if (!projectBoards.value.length) {
+      projectBoards.value = await fetchProjectBoards(props.activity.projectId);
+    }
+  } else if (!isFetchingBoards.value) {
+    // Auto-detect: find which board+column the ticket is currently in
+    isFetchingBoards.value = true;
+    const found = await findTicketBoardColumn(
+      props.activity.projectId,
+      props.activity.ticket,
+    );
+    isFetchingBoards.value = false;
+
+    if (found) {
+      selectedBoardId.value = found.boardId;
+      selectedColumnQueryId.value = found.boardColumnQueryId;
+      // Load the full columns list for the board (already cached from findTicketBoardColumn)
+      boardColumns.value = await fetchBoardColumns(found.boardId);
+      // Load boards list for the selector
+      projectBoards.value = await fetchProjectBoards(props.activity.projectId);
+      // Persist to activity so next open is instant
+      emit("update", props.activity.id, {
+        boardId: found.boardId,
+        boardColumnQueryId: found.boardColumnQueryId,
+        boardColumnName: found.boardColumnName,
+      });
+    } else {
+      // Could not find: just load boards for manual selection
+      projectBoards.value = await fetchProjectBoards(props.activity.projectId);
+    }
+  }
+});
+
+watch(selectedBoardId, async (boardId, oldBoardId) => {
+  if (boardId === oldBoardId || !boardId) return;
+  boardColumns.value = [];
+  selectedColumnQueryId.value = "";
+  isFetchingBoardColumns.value = true;
+  boardColumns.value = await fetchBoardColumns(boardId);
+  isFetchingBoardColumns.value = false;
+});
+
 async function onStatusChange() {
   const found = ticketStatuses.value.find((s) => s.id === localStatusId.value);
   if (!found || isUpdatingStatus.value) return;
@@ -826,6 +982,79 @@ async function onStatusChange() {
     statusUpdateError.value = true;
     setTimeout(() => {
       statusUpdateError.value = false;
+    }, 2000);
+  }
+}
+
+async function onVersionChange() {
+  if (isUpdatingVersion.value) return;
+
+  isUpdatingVersion.value = true;
+  versionUpdateSuccess.value = false;
+  versionUpdateError.value = false;
+
+  const found = projectVersions.value.find(
+    (v) => v.id === localVersionId.value,
+  );
+  const result = await updateWorkPackageVersion(
+    props.activity.id,
+    localVersionId.value || null,
+  );
+
+  isUpdatingVersion.value = false;
+
+  if (result.ok) {
+    emit("update", props.activity.id, {
+      versionId: found?.id ?? undefined,
+      versionName: found?.name ?? undefined,
+    });
+    versionUpdateSuccess.value = true;
+    setTimeout(() => {
+      versionUpdateSuccess.value = false;
+    }, 2000);
+  } else {
+    localVersionId.value = props.activity.versionId ?? "";
+    versionUpdateError.value = true;
+    setTimeout(() => {
+      versionUpdateError.value = false;
+    }, 2000);
+  }
+}
+
+async function onBoardColumnChange() {
+  if (!selectedColumnQueryId.value || isMovingColumn.value) return;
+
+  const found = boardColumns.value.find(
+    (c) => c.queryId === selectedColumnQueryId.value,
+  );
+  if (!found) return;
+
+  isMovingColumn.value = true;
+  columnMoveSuccess.value = false;
+  columnMoveError.value = false;
+
+  const result = await moveWorkPackageToBoardColumn(
+    props.activity.id,
+    found.queryId,
+  );
+
+  isMovingColumn.value = false;
+
+  if (result.ok) {
+    emit("update", props.activity.id, {
+      boardId: selectedBoardId.value,
+      boardColumnQueryId: found.queryId,
+      boardColumnName: found.name,
+    });
+    columnMoveSuccess.value = true;
+    setTimeout(() => {
+      columnMoveSuccess.value = false;
+    }, 2000);
+  } else {
+    selectedColumnQueryId.value = props.activity.boardColumnQueryId ?? "";
+    columnMoveError.value = true;
+    setTimeout(() => {
+      columnMoveError.value = false;
     }, 2000);
   }
 }

@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(node -e \"const s=require\\('./spec.json'\\); const paths=Object.keys\\(s.paths\\).filter\\(p=>p.includes\\('status'\\)\\); console.log\\(paths.join\\('\\\\n'\\)\\)\")",
-      "Bash(node -e ':*)"
+      "Bash(node -e ':*)",
+      "Bash(pg_restore --list \"C:/Users/WPOSS/Downloads/polarisfood_2026-04-24_00-05-12.backup\")",
+      "Bash(npm run *)",
+      "WebFetch(domain:www.openproject.org)",
+      "WebSearch",
+      "WebFetch(domain:docs.openproject.org)",
+      "WebFetch(domain:api.openproject.org)"
     ]
   }
 }

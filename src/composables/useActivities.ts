@@ -5,12 +5,32 @@ import { useUserConfig } from "./useUserConfig";
 export interface Project {
   id: string;
   name: string;
+  identifier?: string;
 }
 
 export interface StatusOption {
   id: string;
   name: string;
   color?: string;
+}
+
+export interface Version {
+  id: string;
+  name: string;
+  status?: string;
+}
+
+export interface Board {
+  id: string;
+  name: string;
+}
+
+export interface BoardColumn {
+  queryId: string;
+  name: string;
+  widgetId: number;
+  startColumn: number;
+  workPackageIds: number[];
 }
 
 export interface Activity {
@@ -25,6 +45,11 @@ export interface Activity {
   statusName?: string;
   statusColor?: string;
   availableStatuses?: StatusOption[];
+  versionId?: string;
+  versionName?: string;
+  boardId?: string;
+  boardColumnQueryId?: string;
+  boardColumnName?: string;
   synced?: boolean;
   selected?: boolean;
 }
@@ -47,6 +72,9 @@ const timeEntryActivities = ref<TimeEntryActivity[]>([]);
 const currentUserName = ref<string>("");
 const favoriteTickets = ref<FavoriteTicket[]>([]);
 const statuses = ref<StatusOption[]>([]);
+const versionsCache = ref<Map<string, Version[]>>(new Map());
+const boardsCache = ref<Map<string, Board[]>>(new Map());
+const boardColumnsCache = ref<Map<string, BoardColumn[]>>(new Map());
 const BASE_URL = "https://openproject.wposs.com/openproject/api/v3";
 
 export function useActivities() {
@@ -73,6 +101,8 @@ export function useActivities() {
     statusName?: string,
     statusColor?: string,
     availableStatuses?: StatusOption[],
+    versionId?: string,
+    versionName?: string,
   ) {
     activities.value.push({
       id: crypto.randomUUID(),
@@ -86,6 +116,8 @@ export function useActivities() {
       statusName,
       statusColor,
       availableStatuses,
+      versionId,
+      versionName,
       selected: false,
     });
   }
@@ -116,7 +148,7 @@ export function useActivities() {
       const pageSize = 100;
       let offset = 1;
       let total = Infinity;
-      const allProjects: { id: string; name: string }[] = [];
+      const allProjects: { id: string; name: string; identifier?: string }[] = [];
 
       while (allProjects.length < total) {
         const response = await fetch(
@@ -134,7 +166,11 @@ export function useActivities() {
         total = data.total ?? 0;
         const elements = data._embedded.elements;
         allProjects.push(
-          ...elements.map((p: any) => ({ id: String(p.id), name: p.name })),
+          ...elements.map((p: any) => ({
+            id: String(p.id),
+            name: p.name,
+            identifier: p.identifier ?? undefined,
+          })),
         );
 
         if (elements.length < pageSize) break;
@@ -288,6 +324,8 @@ export function useActivities() {
     statusName?: string;
     statusColor?: string;
     availableStatuses?: StatusOption[];
+    versionId?: string;
+    versionName?: string;
   } | null> {
     if (!userConfig.value.openProjectToken || !ticketId) return null;
     try {
@@ -357,6 +395,10 @@ export function useActivities() {
         }
       }
 
+      const versionHref: string = data._links?.version?.href ?? "";
+      const versionId = versionHref ? versionHref.split("/").pop() : undefined;
+      const versionName: string = data._links?.version?.title ?? "";
+
       return {
         subject,
         projectId: projectId ?? "",
@@ -364,6 +406,8 @@ export function useActivities() {
         statusName: statusName || undefined,
         statusColor: statusColor || undefined,
         availableStatuses,
+        versionId: versionId || undefined,
+        versionName: versionName || undefined,
       };
     } catch (error) {
       console.error("OpenProject ticket error:", error);
@@ -420,6 +464,279 @@ export function useActivities() {
     }
   }
 
+  async function fetchProjectVersions(projectId: string): Promise<Version[]> {
+    if (!userConfig.value.openProjectToken || !projectId) return [];
+    if (versionsCache.value.has(projectId))
+      return versionsCache.value.get(projectId)!;
+    try {
+      const response = await fetch(
+        `${BASE_URL}/projects/${projectId}/versions`,
+        {
+          headers: {
+            Authorization: `Bearer ${userConfig.value.openProjectToken}`,
+          },
+        },
+      );
+      if (!response.ok) return [];
+      const data = await response.json();
+      if (!data?._embedded?.elements) return [];
+      const versions: Version[] = data._embedded.elements.map((v: any) => ({
+        id: String(v.id),
+        name: v.name,
+        status: v.status ?? undefined,
+      }));
+      versionsCache.value.set(projectId, versions);
+      return versions;
+    } catch {
+      return [];
+    }
+  }
+
+  async function updateWorkPackageVersion(
+    activityId: string,
+    newVersionId: string | null,
+  ): Promise<{ ok: boolean; error?: string }> {
+    const act = activities.value.find((a) => a.id === activityId);
+    if (!act?.ticket) return { ok: false, error: "No ticket ID" };
+    if (!userConfig.value.openProjectToken)
+      return { ok: false, error: "No token" };
+
+    try {
+      const wpRes = await fetch(`${BASE_URL}/work_packages/${act.ticket}`, {
+        headers: {
+          Authorization: `Bearer ${userConfig.value.openProjectToken}`,
+        },
+      });
+      if (!wpRes.ok) return { ok: false, error: `HTTP ${wpRes.status}` };
+      const wpData = await wpRes.json();
+      const lockVersion: number = wpData.lockVersion;
+
+      const patchRes = await fetch(`${BASE_URL}/work_packages/${act.ticket}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${userConfig.value.openProjectToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          lockVersion,
+          _links: {
+            version: newVersionId
+              ? { href: `/api/v3/versions/${newVersionId}` }
+              : { href: null },
+          },
+        }),
+      });
+
+      if (!patchRes.ok) {
+        const errData = await patchRes.json().catch(() => ({}));
+        return {
+          ok: false,
+          error: errData?.message ?? `HTTP ${patchRes.status}`,
+        };
+      }
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: String(error) };
+    }
+  }
+
+  async function fetchProjectBoards(projectId: string): Promise<Board[]> {
+    if (!userConfig.value.openProjectToken || !projectId) return [];
+    if (boardsCache.value.has(projectId))
+      return boardsCache.value.get(projectId)!;
+    try {
+      // Use the project identifier to build the scope URL for the grids filter
+      const project = projects.value.find((p) => p.id === projectId);
+      let url: string;
+      if (project?.identifier) {
+        const scopeUrl = `/openproject/projects/${project.identifier}/boards`;
+        const filters = encodeURIComponent(
+          JSON.stringify([{ scope: { operator: "=", values: [scopeUrl] } }]),
+        );
+        url = `${BASE_URL}/grids?filters=${filters}`;
+      } else {
+        // Fallback: filter by project ID (may not work on all OP versions)
+        const filters = encodeURIComponent(
+          JSON.stringify([
+            { project: { operator: "=", values: [projectId] } },
+          ]),
+        );
+        url = `${BASE_URL}/grids?filters=${filters}`;
+      }
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${userConfig.value.openProjectToken}`,
+        },
+      });
+      if (!response.ok) return [];
+      const data = await response.json();
+      if (!data?._embedded?.elements) return [];
+      const boards: Board[] = data._embedded.elements.map((g: any) => ({
+        id: String(g.id),
+        name: g.name ?? `Board ${g.id}`,
+      }));
+      boardsCache.value.set(projectId, boards);
+      return boards;
+    } catch {
+      return [];
+    }
+  }
+
+  async function fetchBoardColumns(gridId: string): Promise<BoardColumn[]> {
+    if (!userConfig.value.openProjectToken || !gridId) return [];
+    if (boardColumnsCache.value.has(gridId))
+      return boardColumnsCache.value.get(gridId)!;
+    try {
+      const gridRes = await fetch(`${BASE_URL}/grids/${gridId}`, {
+        headers: {
+          Authorization: `Bearer ${userConfig.value.openProjectToken}`,
+        },
+      });
+      if (!gridRes.ok) return [];
+      const gridData = await gridRes.json();
+      const widgets: any[] = gridData.widgets ?? [];
+
+      const columnResults = await Promise.all(
+        widgets.map(async (widget: any) => {
+          const queryId = String(widget.options?.queryId ?? "");
+          if (!queryId) return null;
+          try {
+            const qRes = await fetch(`${BASE_URL}/queries/${queryId}`, {
+              headers: {
+                Authorization: `Bearer ${userConfig.value.openProjectToken}`,
+              },
+            });
+            if (!qRes.ok) return null;
+            const qData = await qRes.json();
+            const elements: any[] =
+              qData._embedded?.results?._embedded?.elements ?? [];
+            return {
+              queryId,
+              name: qData.name ?? `Columna ${queryId}`,
+              widgetId: widget.id,
+              startColumn: widget.startColumn,
+              workPackageIds: elements.map((e: any) => e.id as number),
+            } as BoardColumn;
+          } catch {
+            return null;
+          }
+        }),
+      );
+
+      const columns = columnResults
+        .filter((c): c is BoardColumn => c !== null)
+        .sort((a, b) => a.startColumn - b.startColumn);
+
+      boardColumnsCache.value.set(gridId, columns);
+      return columns;
+    } catch {
+      return [];
+    }
+  }
+
+  // Searches all boards of a project to find which board+column contains a ticket.
+  async function findTicketBoardColumn(
+    projectId: string,
+    ticketId: string,
+  ): Promise<{
+    boardId: string;
+    boardName: string;
+    boardColumnQueryId: string;
+    boardColumnName: string;
+  } | null> {
+    const ticketNum = parseInt(ticketId, 10);
+    if (isNaN(ticketNum)) return null;
+
+    const boards = await fetchProjectBoards(projectId);
+    if (!boards.length) return null;
+
+    const results = await Promise.all(
+      boards.map(async (board) => {
+        const columns = await fetchBoardColumns(board.id);
+        const col = columns.find((c) => c.workPackageIds.includes(ticketNum));
+        return col
+          ? {
+              boardId: board.id,
+              boardName: board.name,
+              boardColumnQueryId: col.queryId,
+              boardColumnName: col.name,
+            }
+          : null;
+      }),
+    );
+
+    return results.find((r) => r !== null) ?? null;
+  }
+
+  async function moveWorkPackageToBoardColumn(
+    activityId: string,
+    targetQueryId: string,
+  ): Promise<{ ok: boolean; error?: string }> {
+    const act = activities.value.find((a) => a.id === activityId);
+    if (!act?.ticket) return { ok: false, error: "No ticket ID" };
+    if (!userConfig.value.openProjectToken)
+      return { ok: false, error: "No token" };
+
+    try {
+      // Fetch target column's current ordered work packages
+      const qRes = await fetch(`${BASE_URL}/queries/${targetQueryId}`, {
+        headers: {
+          Authorization: `Bearer ${userConfig.value.openProjectToken}`,
+        },
+      });
+      if (!qRes.ok) return { ok: false, error: `HTTP ${qRes.status}` };
+      const qData = await qRes.json();
+
+      const elements: any[] =
+        qData._embedded?.results?._embedded?.elements ?? [];
+      const sortedIds: number[] = elements
+        .slice()
+        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+        .map((e: any) => e.id as number);
+
+      const ticketNum = parseInt(act.ticket, 10);
+      if (!isNaN(ticketNum) && !sortedIds.includes(ticketNum)) {
+        sortedIds.push(ticketNum);
+      }
+
+      // Build position map { "wpId": index } for the PUT /order endpoint
+      const orderBody: Record<string, number> = {};
+      sortedIds.forEach((id, idx) => {
+        orderBody[String(id)] = idx;
+      });
+
+      const putRes = await fetch(
+        `${BASE_URL}/queries/${targetQueryId}/order`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${userConfig.value.openProjectToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(orderBody),
+        },
+      );
+
+      if (!putRes.ok) {
+        const errData = await putRes.json().catch(() => ({}));
+        return {
+          ok: false,
+          error: errData?.message ?? `HTTP ${putRes.status}`,
+        };
+      }
+      // Invalidate the cache for the target column's board so next open re-fetches
+      boardColumnsCache.value.forEach((cols, gridId) => {
+        if (cols.some((c) => c.queryId === targetQueryId)) {
+          boardColumnsCache.value.delete(gridId);
+        }
+      });
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: String(error) };
+    }
+  }
+
   return {
     activities,
     projects,
@@ -439,6 +756,12 @@ export function useActivities() {
     fetchTicketSubject,
     logTimeEntry,
     updateWorkPackageStatus,
+    fetchProjectVersions,
+    updateWorkPackageVersion,
+    fetchProjectBoards,
+    fetchBoardColumns,
+    findTicketBoardColumn,
+    moveWorkPackageToBoardColumn,
     favoriteTickets,
     toggleFavorite,
     isFavorite,
