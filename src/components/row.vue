@@ -121,54 +121,6 @@
           </span>
         </div>
 
-        <template v-if="selectedBoardId">
-          <span
-            v-if="isFetchingBoardColumns"
-            class="block w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"
-          />
-          <span
-            v-else-if="isMovingColumn"
-            class="block w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"
-          />
-          <svg
-            v-else-if="columnMoveSuccess"
-            class="w-3 h-3 text-emerald-500 shrink-0"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="3"
-          >
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          <svg
-            v-else-if="columnMoveError"
-            class="w-3 h-3 text-rose-500 shrink-0"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-          >
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
-          <select
-            v-if="!isFetchingBoardColumns"
-            v-model="selectedColumnQueryId"
-            @change.stop="onBoardColumnChange"
-            @click.stop
-            :disabled="isMovingColumn || isFetchingBoardColumns"
-            class="min-w-0 px-2 py-1 text-[11px] bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 disabled:opacity-50 cursor-pointer max-w-[120px]"
-          >
-            <option value="">Columna...</option>
-            <option
-              v-for="col in boardColumns"
-              :key="col.queryId"
-              :value="col.queryId"
-            >
-              {{ col.name }}
-            </option>
-          </select>
-        </template>
-
         <div class="flex items-center gap-2 mb-0.5">
           <span
             v-if="activity.ticket"
@@ -456,6 +408,74 @@
           >
             {{ activity.name }}
           </p>
+
+          <!-- Board / column selectors -->
+          <div
+            v-if="activity.ticket && hasToken"
+            class="flex items-center gap-2 flex-wrap"
+          >
+            <!-- Loading boards/columns -->
+            <span
+              v-if="isFetchingBoards || isFetchingBoardColumns"
+              class="block w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"
+            />
+
+            <!-- Board name label -->
+            <span
+              v-if="currentBoard && !isFetchingBoards"
+              class="text-[11px] text-slate-400 dark:text-slate-500 font-medium"
+              >{{ currentBoard.name }}</span
+            >
+
+            <!-- Column selector -->
+            <template v-if="selectedBoardId && !isFetchingBoards">
+              <span
+                v-if="isFetchingBoardColumns"
+                class="block w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"
+              />
+              <span
+                v-else-if="isMovingColumn"
+                class="block w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"
+              />
+              <svg
+                v-else-if="columnMoveSuccess"
+                class="w-3 h-3 text-emerald-500 shrink-0"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <svg
+                v-else-if="columnMoveError"
+                class="w-3 h-3 text-rose-500 shrink-0"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+              <select
+                v-if="!isFetchingBoardColumns"
+                v-model="selectedColumnQueryId"
+                @change.stop="onBoardColumnChange"
+                @click.stop
+                :disabled="isMovingColumn || isFetchingBoardColumns"
+                class="min-w-0 px-2 py-1 text-[11px] bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 disabled:opacity-50 cursor-pointer"
+              >
+                <option value="">Columna...</option>
+                <option
+                  v-for="col in boardColumns"
+                  :key="col.queryId"
+                  :value="col.queryId"
+                >
+                  {{ col.name }}
+                </option>
+              </select>
+            </template>
+          </div>
         </div>
       </div>
     </div>
@@ -831,7 +851,7 @@ const versionUpdateError = ref(false);
 // Board column state
 const selectedBoardId = ref(props.activity.boardId ?? "");
 const selectedColumnQueryId = ref(props.activity.boardColumnQueryId ?? "");
-const projectBoards = ref<Board[]>([]);
+const currentBoard = ref<Board | null>(null);
 const boardColumns = ref<BoardColumn[]>([]);
 const isFetchingBoards = ref(false);
 const isFetchingBoardColumns = ref(false);
@@ -906,14 +926,24 @@ watch(isOpen, async (open) => {
   // Board detection: if we already know the board, just load columns.
   // Otherwise, search all boards for the ticket.
   if (selectedBoardId.value) {
+    // Resolve board name if not yet set
+    if (!currentBoard.value) {
+      const boards = await fetchProjectBoards(props.activity.projectId);
+      currentBoard.value =
+        boards.find((b) => b.id === selectedBoardId.value) ?? null;
+      console.log(
+        "[isOpen] resolved currentBoard from cache:",
+        currentBoard.value,
+      );
+    }
     if (!boardColumns.value.length && !isFetchingBoardColumns.value) {
       isFetchingBoardColumns.value = true;
       boardColumns.value = await fetchBoardColumns(selectedBoardId.value);
       isFetchingBoardColumns.value = false;
-    }
-    // Also ensure the boards list is loaded for the selector
-    if (!projectBoards.value.length) {
-      projectBoards.value = await fetchProjectBoards(props.activity.projectId);
+      console.log(
+        "[isOpen] loaded columns for known board:",
+        boardColumns.value.map((c) => c.name),
+      );
     }
   } else if (!isFetchingBoards.value) {
     // Auto-detect: find which board+column the ticket is currently in
@@ -925,32 +955,46 @@ watch(isOpen, async (open) => {
     isFetchingBoards.value = false;
 
     if (found) {
+      console.log(
+        "[isOpen] auto-detected board:",
+        found.boardId,
+        "column:",
+        found.boardColumnQueryId,
+      );
+      currentBoard.value = { id: found.boardId, name: found.boardName };
       selectedBoardId.value = found.boardId;
       selectedColumnQueryId.value = found.boardColumnQueryId;
-      // Load the full columns list for the board (already cached from findTicketBoardColumn)
       boardColumns.value = await fetchBoardColumns(found.boardId);
-      // Load boards list for the selector
-      projectBoards.value = await fetchProjectBoards(props.activity.projectId);
-      // Persist to activity so next open is instant
+      console.log(
+        "[isOpen] columns loaded:",
+        boardColumns.value.map((c) => c.name),
+      );
       emit("update", props.activity.id, {
         boardId: found.boardId,
         boardColumnQueryId: found.boardColumnQueryId,
         boardColumnName: found.boardColumnName,
       });
     } else {
-      // Could not find: just load boards for manual selection
-      projectBoards.value = await fetchProjectBoards(props.activity.projectId);
+      console.log("[isOpen] auto-detect failed, picking first board");
+      const boards = await fetchProjectBoards(props.activity.projectId);
+      console.log(
+        "[isOpen] available boards:",
+        boards.map((b) => ({ id: b.id, name: b.name })),
+      );
+      if (boards.length) {
+        const board = boards[0];
+        currentBoard.value = board;
+        selectedBoardId.value = board.id;
+        isFetchingBoardColumns.value = true;
+        boardColumns.value = await fetchBoardColumns(board.id);
+        isFetchingBoardColumns.value = false;
+        console.log(
+          "[isOpen] columns loaded for first board:",
+          boardColumns.value.map((c) => c.name),
+        );
+      }
     }
   }
-});
-
-watch(selectedBoardId, async (boardId, oldBoardId) => {
-  if (boardId === oldBoardId || !boardId) return;
-  boardColumns.value = [];
-  selectedColumnQueryId.value = "";
-  isFetchingBoardColumns.value = true;
-  boardColumns.value = await fetchBoardColumns(boardId);
-  isFetchingBoardColumns.value = false;
 });
 
 async function onStatusChange() {
@@ -1022,13 +1066,41 @@ async function onVersionChange() {
 }
 
 async function onBoardColumnChange() {
-  if (!selectedColumnQueryId.value || isMovingColumn.value) return;
+  console.log(
+    "[onBoardColumnChange] selectedColumnQueryId:",
+    selectedColumnQueryId.value,
+    "isMovingColumn:",
+    isMovingColumn.value,
+  );
+  if (!selectedColumnQueryId.value || isMovingColumn.value) {
+    console.warn(
+      "[onBoardColumnChange] early return — no queryId or already moving",
+    );
+    return;
+  }
 
   const found = boardColumns.value.find(
     (c) => c.queryId === selectedColumnQueryId.value,
   );
-  if (!found) return;
+  console.log(
+    "[onBoardColumnChange] found column:",
+    found,
+    "boardColumns:",
+    boardColumns.value.map((c) => ({ queryId: c.queryId, name: c.name })),
+  );
+  if (!found) {
+    console.warn("[onBoardColumnChange] column not found in boardColumns");
+    return;
+  }
 
+  console.log(
+    "[onBoardColumnChange] calling moveWorkPackageToBoardColumn activityId:",
+    props.activity.id,
+    "targetQueryId:",
+    found.queryId,
+    "sourceQueryId:",
+    props.activity.boardColumnQueryId,
+  );
   isMovingColumn.value = true;
   columnMoveSuccess.value = false;
   columnMoveError.value = false;
@@ -1038,6 +1110,7 @@ async function onBoardColumnChange() {
     found.queryId,
   );
 
+  console.log("[onBoardColumnChange] result:", result);
   isMovingColumn.value = false;
 
   if (result.ok) {

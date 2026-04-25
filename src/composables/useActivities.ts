@@ -148,7 +148,8 @@ export function useActivities() {
       const pageSize = 100;
       let offset = 1;
       let total = Infinity;
-      const allProjects: { id: string; name: string; identifier?: string }[] = [];
+      const allProjects: { id: string; name: string; identifier?: string }[] =
+        [];
 
       while (allProjects.length < total) {
         const response = await fetch(
@@ -191,11 +192,14 @@ export function useActivities() {
           Authorization: `Bearer ${userConfig.value.openProjectToken}`,
         },
       });
-      if (!response.ok) return;
+      if (!response.ok) {
+        console.error("[fetchCurrentUser] HTTP", response.status);
+        return;
+      }
       const data = await response.json();
       currentUserName.value = data.name ?? data.login ?? "";
-    } catch {
-      // silently ignore
+    } catch (e) {
+      console.error("[fetchCurrentUser]", e);
     }
   }
 
@@ -207,7 +211,10 @@ export function useActivities() {
           Authorization: `Bearer ${userConfig.value.openProjectToken}`,
         },
       });
-      if (!response.ok) return;
+      if (!response.ok) {
+        console.error("[fetchTimeEntryActivities] HTTP", response.status);
+        return;
+      }
       const data = await response.json();
       if (data?._embedded?.elements) {
         timeEntryActivities.value = data._embedded.elements.map((a: any) => ({
@@ -215,8 +222,8 @@ export function useActivities() {
           name: a.name,
         }));
       }
-    } catch (error) {
-      console.error("OpenProject activities error:", error);
+    } catch (e) {
+      console.error("[fetchTimeEntryActivities]", e);
     }
   }
 
@@ -228,7 +235,10 @@ export function useActivities() {
           Authorization: `Bearer ${userConfig.value.openProjectToken}`,
         },
       });
-      if (!response.ok) return;
+      if (!response.ok) {
+        console.error("[fetchStatuses] HTTP", response.status);
+        return;
+      }
       const data = await response.json();
       if (data?._embedded?.elements) {
         statuses.value = data._embedded.elements.map((s: any) => ({
@@ -237,8 +247,8 @@ export function useActivities() {
           color: s.color ?? undefined,
         }));
       }
-    } catch (error) {
-      console.error("OpenProject statuses error:", error);
+    } catch (e) {
+      console.error("[fetchStatuses]", e);
     }
   }
 
@@ -345,7 +355,13 @@ export function useActivities() {
         }),
       ]);
 
-      if (!wpResponse.ok) return null;
+      if (!wpResponse.ok) {
+        console.error(
+          "[fetchTicketSubject] work_package HTTP",
+          wpResponse.status,
+        );
+        return null;
+      }
       const data = await wpResponse.json();
       const subject = data.subject || null;
       if (!subject) return null;
@@ -431,7 +447,13 @@ export function useActivities() {
           Authorization: `Bearer ${userConfig.value.openProjectToken}`,
         },
       });
-      if (!wpRes.ok) return { ok: false, error: `HTTP ${wpRes.status}` };
+      if (!wpRes.ok) {
+        console.error(
+          "[updateWorkPackageStatus] GET work_package HTTP",
+          wpRes.status,
+        );
+        return { ok: false, error: `HTTP ${wpRes.status}` };
+      }
       const wpData = await wpRes.json();
       const lockVersion: number = wpData.lockVersion;
 
@@ -452,6 +474,11 @@ export function useActivities() {
 
       if (!patchRes.ok) {
         const errData = await patchRes.json().catch(() => ({}));
+        console.error(
+          "[updateWorkPackageStatus] PATCH HTTP",
+          patchRes.status,
+          errData,
+        );
         return {
           ok: false,
           error: errData?.message ?? `HTTP ${patchRes.status}`,
@@ -460,6 +487,7 @@ export function useActivities() {
 
       return { ok: true };
     } catch (error) {
+      console.error("[updateWorkPackageStatus]", error);
       return { ok: false, error: String(error) };
     }
   }
@@ -477,7 +505,10 @@ export function useActivities() {
           },
         },
       );
-      if (!response.ok) return [];
+      if (!response.ok) {
+        console.error("[fetchProjectVersions] HTTP", response.status);
+        return [];
+      }
       const data = await response.json();
       if (!data?._embedded?.elements) return [];
       const versions: Version[] = data._embedded.elements.map((v: any) => ({
@@ -487,7 +518,8 @@ export function useActivities() {
       }));
       versionsCache.value.set(projectId, versions);
       return versions;
-    } catch {
+    } catch (e) {
+      console.error("[fetchProjectVersions]", e);
       return [];
     }
   }
@@ -507,7 +539,13 @@ export function useActivities() {
           Authorization: `Bearer ${userConfig.value.openProjectToken}`,
         },
       });
-      if (!wpRes.ok) return { ok: false, error: `HTTP ${wpRes.status}` };
+      if (!wpRes.ok) {
+        console.error(
+          "[updateWorkPackageVersion] GET work_package HTTP",
+          wpRes.status,
+        );
+        return { ok: false, error: `HTTP ${wpRes.status}` };
+      }
       const wpData = await wpRes.json();
       const lockVersion: number = wpData.lockVersion;
 
@@ -529,6 +567,11 @@ export function useActivities() {
 
       if (!patchRes.ok) {
         const errData = await patchRes.json().catch(() => ({}));
+        console.error(
+          "[updateWorkPackageVersion] PATCH HTTP",
+          patchRes.status,
+          errData,
+        );
         return {
           ok: false,
           error: errData?.message ?? `HTTP ${patchRes.status}`,
@@ -536,6 +579,7 @@ export function useActivities() {
       }
       return { ok: true };
     } catch (error) {
+      console.error("[updateWorkPackageVersion]", error);
       return { ok: false, error: String(error) };
     }
   }
@@ -545,40 +589,49 @@ export function useActivities() {
     if (boardsCache.value.has(projectId))
       return boardsCache.value.get(projectId)!;
     try {
-      // Use the project identifier to build the scope URL for the grids filter
       const project = projects.value.find((p) => p.id === projectId);
-      let url: string;
-      if (project?.identifier) {
-        const scopeUrl = `/openproject/projects/${project.identifier}/boards`;
-        const filters = encodeURIComponent(
-          JSON.stringify([{ scope: { operator: "=", values: [scopeUrl] } }]),
-        );
-        url = `${BASE_URL}/grids?filters=${filters}`;
-      } else {
-        // Fallback: filter by project ID (may not work on all OP versions)
-        const filters = encodeURIComponent(
-          JSON.stringify([
-            { project: { operator: "=", values: [projectId] } },
-          ]),
-        );
-        url = `${BASE_URL}/grids?filters=${filters}`;
-      }
-
-      const response = await fetch(url, {
+      const response = await fetch(`${BASE_URL}/grids`, {
         headers: {
           Authorization: `Bearer ${userConfig.value.openProjectToken}`,
         },
       });
-      if (!response.ok) return [];
+      if (!response.ok) {
+        console.error("[boards] grids fetch failed", response.status);
+        return [];
+      }
       const data = await response.json();
-      if (!data?._embedded?.elements) return [];
-      const boards: Board[] = data._embedded.elements.map((g: any) => ({
-        id: String(g.id),
-        name: g.name ?? `Board ${g.id}`,
-      }));
+      if (!data?._embedded?.elements) {
+        console.error("[boards] no elements in grids response", data);
+        return [];
+      }
+
+      const identifier = project?.identifier ?? projectId;
+      console.log(
+        "[boards] all grids:",
+        data._embedded.elements.map((g: any) => ({
+          id: g.id,
+          scope: g._links?.scope?.href ?? g._links?.page?.href,
+        })),
+      );
+      const boards: Board[] = data._embedded.elements
+        .filter((g: any) => {
+          const scope: string =
+            g._links?.scope?.href ?? g._links?.page?.href ?? "";
+          return scope.endsWith("/boards") && scope.includes(`/${identifier}/`);
+        })
+        .map((g: any) => ({
+          id: String(g.id),
+          name:
+            g.name ??
+            g._links?.scope?.title ??
+            g._links?.page?.title ??
+            `Board ${g.id}`,
+        }));
+      console.log("[boards] filtered boards:", boards);
       boardsCache.value.set(projectId, boards);
       return boards;
-    } catch {
+    } catch (e) {
+      console.error("[boards] exception", e);
       return [];
     }
   }
@@ -593,24 +646,54 @@ export function useActivities() {
           Authorization: `Bearer ${userConfig.value.openProjectToken}`,
         },
       });
-      if (!gridRes.ok) return [];
+      if (!gridRes.ok) {
+        console.error(
+          `[columns] grid fetch failed gridId=${gridId}`,
+          gridRes.status,
+        );
+        return [];
+      }
       const gridData = await gridRes.json();
       const widgets: any[] = gridData.widgets ?? [];
+      console.log(
+        `[columns] gridId=${gridId} widgets:`,
+        widgets.map((w: any) => ({
+          id: w.id,
+          identifier: w.identifier,
+          options: w.options,
+        })),
+      );
 
       const columnResults = await Promise.all(
         widgets.map(async (widget: any) => {
           const queryId = String(widget.options?.queryId ?? "");
-          if (!queryId) return null;
+          if (!queryId) {
+            console.warn(
+              `[columns] widget ${widget.id} has no queryId`,
+              widget.options,
+            );
+            return null;
+          }
           try {
             const qRes = await fetch(`${BASE_URL}/queries/${queryId}`, {
               headers: {
                 Authorization: `Bearer ${userConfig.value.openProjectToken}`,
               },
             });
-            if (!qRes.ok) return null;
+            if (!qRes.ok) {
+              console.error(
+                `[columns] query fetch failed queryId=${queryId}`,
+                qRes.status,
+              );
+              return null;
+            }
             const qData = await qRes.json();
             const elements: any[] =
               qData._embedded?.results?._embedded?.elements ?? [];
+            console.log(
+              `[columns] queryId=${queryId} name="${qData.name}" elements:`,
+              elements.length,
+            );
             return {
               queryId,
               name: qData.name ?? `Columna ${queryId}`,
@@ -618,7 +701,8 @@ export function useActivities() {
               startColumn: widget.startColumn,
               workPackageIds: elements.map((e: any) => e.id as number),
             } as BoardColumn;
-          } catch {
+          } catch (e) {
+            console.error(`[columns] exception fetching queryId=${queryId}`, e);
             return null;
           }
         }),
@@ -628,9 +712,14 @@ export function useActivities() {
         .filter((c): c is BoardColumn => c !== null)
         .sort((a, b) => a.startColumn - b.startColumn);
 
+      console.log(
+        `[columns] final columns for gridId=${gridId}:`,
+        columns.map((c) => c.name),
+      );
       boardColumnsCache.value.set(gridId, columns);
       return columns;
-    } catch {
+    } catch (e) {
+      console.error(`[columns] exception gridId=${gridId}`, e);
       return [];
     }
   }
@@ -678,48 +767,41 @@ export function useActivities() {
     if (!userConfig.value.openProjectToken)
       return { ok: false, error: "No token" };
 
+    const ticketNum = parseInt(act.ticket, 10);
+    if (isNaN(ticketNum)) return { ok: false, error: "Invalid ticket ID" };
+
+    const headers = {
+      Authorization: `Bearer ${userConfig.value.openProjectToken}`,
+      "Content-Type": "application/json",
+    };
+
     try {
-      // Fetch target column's current ordered work packages
-      const qRes = await fetch(`${BASE_URL}/queries/${targetQueryId}`, {
-        headers: {
-          Authorization: `Bearer ${userConfig.value.openProjectToken}`,
-        },
-      });
-      if (!qRes.ok) return { ok: false, error: `HTTP ${qRes.status}` };
-      const qData = await qRes.json();
-
-      const elements: any[] =
-        qData._embedded?.results?._embedded?.elements ?? [];
-      const sortedIds: number[] = elements
-        .slice()
-        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
-        .map((e: any) => e.id as number);
-
-      const ticketNum = parseInt(act.ticket, 10);
-      if (!isNaN(ticketNum) && !sortedIds.includes(ticketNum)) {
-        sortedIds.push(ticketNum);
+      // Remove ticket from source column (if known)
+      const sourceQueryId = act.boardColumnQueryId;
+      console.log(`[moveWorkPackage] ticket=${ticketNum} source=${sourceQueryId} target=${targetQueryId}`);
+      if (sourceQueryId && sourceQueryId !== targetQueryId) {
+        const srcRes = await fetch(`${BASE_URL}/queries/${sourceQueryId}/order`, {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ delta: { [String(ticketNum)]: -40960 } }),
+        });
+        console.log(`[moveWorkPackage] source PATCH status=${srcRes.status}`);
       }
 
-      // Build position map { "wpId": index } for the PUT /order endpoint
-      const orderBody: Record<string, number> = {};
-      sortedIds.forEach((id, idx) => {
-        orderBody[String(id)] = idx;
+      // Add ticket to target column at the top
+      const putRes = await fetch(`${BASE_URL}/queries/${targetQueryId}/order`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({ delta: { [String(ticketNum)]: -1 } }),
       });
-
-      const putRes = await fetch(
-        `${BASE_URL}/queries/${targetQueryId}/order`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${userConfig.value.openProjectToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(orderBody),
-        },
-      );
 
       if (!putRes.ok) {
         const errData = await putRes.json().catch(() => ({}));
+        console.error(
+          "[moveWorkPackage] PATCH target HTTP",
+          putRes.status,
+          errData,
+        );
         return {
           ok: false,
           error: errData?.message ?? `HTTP ${putRes.status}`,
@@ -733,6 +815,7 @@ export function useActivities() {
       });
       return { ok: true };
     } catch (error) {
+      console.error("[moveWorkPackage]", error);
       return { ok: false, error: String(error) };
     }
   }
