@@ -37,6 +37,7 @@ export interface Activity {
   id: string;
   name: string;
   minutes: number;
+  seconds?: number;
   date: string;
   projectId?: string;
   ticket?: string;
@@ -56,6 +57,9 @@ export interface Activity {
   syncSuccess?: boolean;
   syncError?: boolean;
   editing?: boolean;
+  timerSeconds?: number;
+  timerState?: 'idle' | 'running' | 'paused';
+  timerLastStarted?: number;
 }
 
 export interface TimeEntryActivity {
@@ -107,6 +111,10 @@ export function useActivities() {
     availableStatuses?: StatusOption[],
     versionId?: string,
     versionName?: string,
+    timerSeconds?: number,
+    timerState?: "idle" | "running" | "paused",
+    timerLastStarted?: number,
+    seconds?: number,
   ) {
     activities.value.push({
       id: crypto.randomUUID(),
@@ -123,6 +131,10 @@ export function useActivities() {
       versionId,
       versionName,
       selected: false,
+      timerSeconds,
+      timerState,
+      timerLastStarted,
+      seconds: seconds !== undefined ? seconds : minutes * 60,
     });
   }
 

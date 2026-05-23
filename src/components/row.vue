@@ -220,6 +220,146 @@
           </div>
         </div>
 
+        <!-- Stopwatch controls state -->
+        <div
+          v-else-if="showStopwatchControls"
+          :key="'stopwatch'"
+          class="flex flex-col items-end gap-1.5 shrink-0 select-none pr-2"
+        >
+          <!-- Running Time Display & Stopwatch Title -->
+          <div class="flex items-center gap-2">
+            <span
+              class="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider"
+              >Cronómetro</span
+            >
+            <span
+              class="font-mono font-bold text-sm text-indigo-500 dark:text-indigo-400"
+              :class="{ 'animate-pulse': activity.timerState === 'running' }"
+            >
+              {{ formattedStopwatchTime }}
+            </span>
+          </div>
+
+          <!-- Stopwatch Buttons -->
+          <div class="flex items-center gap-1.5">
+            <!-- Play/Pause Toggle -->
+            <BaseButton
+              @click="toggleTimer"
+              :variant="
+                activity.timerState === 'running' ? 'secondary' : 'primary'
+              "
+              size="sm"
+              class="!px-2.5 !py-0.5 !text-[11px] font-semibold flex items-center gap-1"
+            >
+              <template #left-icon>
+                <!-- Pause Icon -->
+                <svg
+                  v-if="activity.timerState === 'running'"
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="w-3 h-3"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M15.75 5.25v13.5m-7.5-13.5v13.5"
+                  />
+                </svg>
+                <!-- Play Icon -->
+                <svg
+                  v-else
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="w-3 h-3"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </template>
+              <span>{{
+                activity.timerState === "running" ? "Pausar" : "Iniciar"
+              }}</span>
+            </BaseButton>
+
+            <!-- Terminar / Guardar Button -->
+            <BaseButton
+              @click="finishTimer"
+              variant="primary"
+              size="sm"
+              class="!px-2.5 !py-0.5 !text-[11px] font-semibold flex items-center gap-1 !bg-emerald-600 hover:!bg-emerald-700 text-white"
+            >
+              <template #left-icon>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="w-3 h-3"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="3"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </template>
+              <span>Terminar</span>
+            </BaseButton>
+
+            <!-- Minimizar / Atrás Button -->
+            <BaseButton
+              @click="showStopwatchControls = false"
+              variant="secondary"
+              size="sm"
+              class="!px-2.5 !py-0.5 !text-[11px] font-semibold flex items-center gap-1"
+              title="Ocultar controles (sigue corriendo en segundo plano)"
+            >
+              <template #left-icon>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="w-3 h-3"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M15 15v4.5M15 15h4.5M15 15l5.25 5.25"
+                  />
+                </svg>
+              </template>
+              <span>Atrás</span>
+            </BaseButton>
+
+            <!-- Descartar Button -->
+            <BaseButton
+              @click="cancelTimer"
+              variant="danger-ghost"
+              size="sm"
+              class="!px-1.5 !py-0.5 !text-[11px] font-semibold flex items-center gap-1"
+              title="Descartar cronómetro y reiniciar tiempo"
+            >
+              <template #left-icon>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="w-3 h-3"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                >
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path
+                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                  ></path>
+                </svg>
+              </template>
+            </BaseButton>
+          </div>
+        </div>
+
         <!-- Normal Right Side (Time + Action Buttons) -->
         <div
           v-else
@@ -244,13 +384,44 @@
               <polyline points="12 6 12 12 16 14" />
             </svg>
             <div v-if="timeFormat === 'HH:MM'">
-              {{ formatTime(activity.minutes) }}
+              {{ formatTimeSeconds(activity.seconds !== undefined ? activity.seconds : activity.minutes * 60) }}
             </div>
-            <div v-else>{{ formatDecimal(activity.minutes) }}h</div>
+            <div v-else>
+              {{ formatDecimalSeconds(activity.seconds !== undefined ? activity.seconds : activity.minutes * 60) }}h
+            </div>
           </div>
 
           <!-- Actions always visible -->
           <div class="flex items-center gap-0.5 shrink-0">
+            <!-- Timer/Stopwatch Button -->
+            <button
+              v-if="!activity.synced"
+              @click="showStopwatchControls = true"
+              class="cursor-pointer p-1.5 rounded-lg transition-all"
+              :class="[
+                activity.timerState === 'running'
+                  ? 'text-emerald-500 animate-pulse bg-emerald-500/10'
+                  : activity.timerState === 'paused'
+                    ? 'text-yellow-500 bg-yellow-500/10'
+                    : 'text-slate-500 dark:text-slate-600 hover:text-indigo-400 hover:bg-white/5',
+              ]"
+              title="Cronómetro"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-3.5 h-3.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+            </button>
+
             <!-- Copy -->
             <button
               @click="copyTaskName"
@@ -770,7 +941,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import type {
   Activity,
   Project,
@@ -782,7 +953,12 @@ import type {
 } from "../composables/useActivities";
 import { useActivities } from "../composables/useActivities";
 import BaseButton from "./shared/baseButton.vue";
-import { formatTime, formatDecimal } from "../utils/timeUtils";
+import {
+  formatTime,
+  formatDecimal,
+  formatTimeSeconds,
+  formatDecimalSeconds,
+} from "../utils/timeUtils";
 
 const {
   toggleFavorite,
@@ -820,6 +996,13 @@ const isOpen = ref(false);
 const isEditing = ref(false);
 const isCopied = ref(false);
 const isConfirmingDelete = ref(false);
+const showStopwatchControls = ref(
+  props.activity.timerState === "running" ||
+    props.activity.timerState === "paused",
+);
+const currentTimeTick = ref(Date.now());
+let tickInterval: any = null;
+
 const isSyncing = computed(() => !!props.activity.isSyncing);
 const syncSuccess = computed(() => !!props.activity.syncSuccess);
 const syncError = computed(() => !!props.activity.syncError);
@@ -854,6 +1037,34 @@ const columnMoveError = ref(false);
 const displayTitle = computed(
   () => props.activity.ticketTitle || props.activity.name,
 );
+
+const elapsedSeconds = computed(() => {
+  const state = props.activity.timerState;
+  const seconds = props.activity.timerSeconds || 0;
+  if (state === "running" && props.activity.timerLastStarted) {
+    const diff = Math.max(
+      0,
+      Math.floor(
+        (currentTimeTick.value - props.activity.timerLastStarted) / 1000,
+      ),
+    );
+    return seconds + diff;
+  }
+  return seconds;
+});
+
+const formattedStopwatchTime = computed(() => {
+  const totalSecs = elapsedSeconds.value;
+  const h = Math.floor(totalSecs / 3600);
+  const m = Math.floor((totalSecs % 3600) / 60);
+  const s = totalSecs % 60;
+
+  const hh = String(h).padStart(2, "0");
+  const mm = String(m).padStart(2, "0");
+  const ss = String(s).padStart(2, "0");
+
+  return `${hh}:${mm}:${ss}`;
+});
 
 const projectName = computed(() => {
   if (!props.activity.projectId || !props.projects) return "";
@@ -905,6 +1116,99 @@ watch(
     }
   },
 );
+
+function startTicking() {
+  if (tickInterval) return;
+  currentTimeTick.value = Date.now();
+  tickInterval = setInterval(() => {
+    currentTimeTick.value = Date.now();
+  }, 1000);
+}
+
+function stopTicking() {
+  if (tickInterval) {
+    clearInterval(tickInterval);
+    tickInterval = null;
+  }
+}
+
+onMounted(() => {
+  if (props.activity.timerState === "running") {
+    startTicking();
+  }
+});
+
+onUnmounted(() => {
+  stopTicking();
+});
+
+watch(
+  () => props.activity.timerState,
+  (newState) => {
+    if (newState === "running") {
+      startTicking();
+    } else {
+      stopTicking();
+    }
+  },
+);
+
+watch(
+  () => props.activity.timerState,
+  (newState) => {
+    if (newState === "running" || newState === "paused") {
+      showStopwatchControls.value = true;
+    }
+  },
+);
+
+function toggleTimer() {
+  const state = props.activity.timerState;
+  if (state === "running") {
+    // Pause
+    const totalSecs = elapsedSeconds.value;
+    emit("update", props.activity.id, {
+      timerSeconds: totalSecs,
+      timerState: "paused",
+      timerLastStarted: undefined,
+    });
+  } else {
+    // Start / Resume
+    emit("update", props.activity.id, {
+      timerState: "running",
+      timerLastStarted: Date.now(),
+    });
+  }
+}
+
+function finishTimer() {
+  const totalSecs = elapsedSeconds.value;
+  const currentSeconds = props.activity.seconds !== undefined 
+    ? props.activity.seconds 
+    : (props.activity.minutes || 0) * 60;
+  const finalSeconds = currentSeconds + totalSecs;
+  
+  // Round up minutes to the benefit of the user when logging
+  const finalMinutes = Math.ceil(finalSeconds / 60);
+
+  emit("update", props.activity.id, {
+    minutes: finalMinutes,
+    seconds: finalSeconds,
+    timerSeconds: 0,
+    timerState: "idle",
+    timerLastStarted: undefined,
+  });
+  showStopwatchControls.value = false;
+}
+
+function cancelTimer() {
+  emit("update", props.activity.id, {
+    timerSeconds: 0,
+    timerState: "idle",
+    timerLastStarted: undefined,
+  });
+  showStopwatchControls.value = false;
+}
 
 watch(isOpen, async (open) => {
   if (
@@ -1151,13 +1455,19 @@ function saveEdit() {
   if (!isValid.value) return;
   const h = typeof editHours.value === "number" ? editHours.value : 0;
   const m = typeof editMinutes.value === "number" ? editMinutes.value : 0;
+  const totalMinutes = h * 60 + m;
   emit("update", props.activity.id, {
     name: editName.value.trim(),
     date: editDate.value,
-    minutes: h * 60 + m,
+    minutes: totalMinutes,
+    seconds: totalMinutes * 60,
     projectId: editProjectId.value || undefined,
     ticket: editTicket.value.trim() || undefined,
+    timerSeconds: 0,
+    timerState: "idle",
+    timerLastStarted: undefined,
   });
+  showStopwatchControls.value = false;
   isEditing.value = false;
 }
 </script>

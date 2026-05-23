@@ -22,7 +22,7 @@
       >
         <div
           v-if="show"
-          class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-sm overflow-hidden"
+          class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-sm overflow-hidden"
         >
           <!-- Header -->
           <div
@@ -328,6 +328,7 @@
               >
                 <div class="flex items-center">
                   <input
+                    ref="hoursInput"
                     type="number"
                     v-model="hours"
                     min="0"
@@ -399,6 +400,19 @@
               />
             </div>
           </form>
+
+          <!-- Confirm Stopwatch Modal -->
+          <ConfirmModal
+            :show="showStopwatchConfirm"
+            title="Modo Cronómetro"
+            message="¿Deseas iniciar el modo cronómetro para esta actividad o prefieres rellenar el tiempo manualmente?"
+            confirmText="Usar cronómetro"
+            confirmVariant="primary"
+            variant="info"
+            cancelText="Llenar manualmente"
+            @confirm="confirmStopwatchMode"
+            @cancel="cancelStopwatchMode"
+          />
         </div>
       </transition>
     </div>
@@ -410,6 +424,7 @@ import { ref, computed, watch } from "vue";
 import type { Project } from "../composables/useActivities";
 import { useActivities } from "../composables/useActivities";
 import BaseButton from "./shared/baseButton.vue";
+import ConfirmModal from "./confirmModal.vue";
 
 const props = defineProps<{
   show: boolean;
@@ -447,6 +462,10 @@ const emit = defineEmits<{
     availableStatuses?: import("../composables/useActivities").StatusOption[],
     versionId?: string,
     versionName?: string,
+    timerSeconds?: number,
+    timerState?: "idle" | "running" | "paused",
+    timerLastStarted?: number,
+    seconds?: number,
   ): void;
   (e: "close"): void;
 }>();
@@ -478,6 +497,8 @@ const isCreatingProject = ref(false);
 const newProjectName = ref("");
 const isLoadingTicket = ref(false);
 const ticketTitle = ref("");
+const showStopwatchConfirm = ref(false);
+const hoursInput = ref<HTMLInputElement | null>(null);
 
 const { favoriteTickets, toggleFavorite, isFavorite } = useActivities();
 const viewState = ref<"selection" | "form" | "favorites">("selection");
@@ -580,16 +601,23 @@ async function onTicketBlur() {
 }
 
 const isValid = computed(() => {
-  if (!date.value) return false;
-  const h = typeof hours.value === "number" ? hours.value : 0;
-  const m = typeof minutes.value === "number" ? minutes.value : 0;
-  return h > 0 || m > 0;
+  return !!date.value;
 });
 
 function submitForm() {
   if (!isValid.value) return;
   const h = typeof hours.value === "number" ? hours.value : 0;
   const m = typeof minutes.value === "number" ? minutes.value : 0;
+
+  if (h === 0 && m === 0) {
+    showStopwatchConfirm.value = true;
+    return;
+  }
+
+  proceedSubmit(h * 60 + m);
+}
+
+function proceedSubmit(minutesLogged: number, useStopwatch: boolean = false) {
   const finalTicket = ticket.value.trim();
 
   // Actualizar metadatos en favoritos si existe,
@@ -607,7 +635,7 @@ function submitForm() {
   emit(
     "add",
     name.value.trim(),
-    h * 60 + m,
+    minutesLogged,
     date.value,
     projectId.value || undefined,
     finalTicket || undefined,
@@ -618,8 +646,25 @@ function submitForm() {
     availableStatuses.value.length ? availableStatuses.value : undefined,
     versionId.value || undefined,
     versionName.value || undefined,
+    useStopwatch ? 0 : undefined,
+    useStopwatch ? "paused" : undefined,
+    undefined,
+    useStopwatch ? 0 : minutesLogged * 60,
   );
   emit("close");
+}
+
+function confirmStopwatchMode() {
+  showStopwatchConfirm.value = false;
+  proceedSubmit(0, true);
+}
+
+function cancelStopwatchMode() {
+  showStopwatchConfirm.value = false;
+  setTimeout(() => {
+    hoursInput.value?.focus();
+    hoursInput.value?.select();
+  }, 100);
 }
 
 function createProject() {
