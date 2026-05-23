@@ -42,15 +42,22 @@
 
       <!-- Accent bar -->
       <div
-        class="shrink-0 w-[3px] h-9 bg-indigo-500 dark:bg-indigo-400"
-        :class="{
-          'ml-1': !(
-            isSelectionMode &&
-            !activity.synced &&
-            activity.ticket &&
-            hasToken
-          ),
-        }"
+        class="shrink-0 w-[3px] h-9 transition-colors duration-300"
+        :class="[
+          isConfirmingDelete
+            ? 'bg-rose-500 dark:bg-rose-400'
+            : activity.synced
+              ? 'bg-emerald-500 dark:bg-emerald-400'
+              : 'bg-indigo-500 dark:bg-indigo-400',
+          {
+            'ml-1': !(
+              isSelectionMode &&
+              !activity.synced &&
+              activity.ticket &&
+              hasToken
+            ),
+          },
+        ]"
       />
 
       <!-- Body -->
@@ -156,176 +163,76 @@
         </div>
       </div>
 
-      <!-- Time -->
-      <div
-        class="flex-shrink-0 flex items-center gap-1.5 font-mono font-bold text-sm text-slate-700 dark:text-slate-200"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="w-3.5 h-3.5 text-slate-400 dark:text-slate-500"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+      <transition name="fade-inline" mode="out-in">
+        <!-- Confirm Delete state (Right Side) -->
+        <div
+          v-if="isConfirmingDelete"
+          :key="'confirm'"
+          class="flex flex-col items-center gap-3 shrink-0 select-none pr-2"
         >
-          <circle cx="12" cy="12" r="10" />
-          <polyline points="12 6 12 12 16 14" />
-        </svg>
-        <div v-if="timeFormat === 'HH:MM'">
-          {{ formatTime(activity.minutes) }}
+          <div class="flex items-center gap-1 text-xs">
+            <span class="font-medium">¿Desea eliminar la actividad?</span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <BaseButton
+              @click="$emit('delete', activity.id)"
+              variant="danger"
+              size="sm"
+              class="!px-3 !py-1 !text-xs font-semibold flex items-center gap-1"
+            >
+              <template #left-icon>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="w-3 h-3"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="3"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </template>
+              <span>Aceptar</span>
+            </BaseButton>
+
+            <BaseButton
+              @click="isConfirmingDelete = false"
+              variant="secondary"
+              size="sm"
+              class="!px-3 !py-1 !text-xs font-semibold flex items-center gap-1"
+            >
+              <template #left-icon>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="w-3 h-3"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="3"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </template>
+              <span>Cancelar</span>
+            </BaseButton>
+          </div>
         </div>
-        <div v-else>{{ formatDecimal(activity.minutes) }}h</div>
-      </div>
 
-      <!-- Actions always visible -->
-      <div class="flex items-center gap-0.5 shrink-0">
-        <!-- Copy -->
-        <button
-          @click="copyTaskName"
-          class="cursor-pointer p-1.5 rounded-lg transition-all text-slate-500 dark:text-slate-600 hover:text-slate-300 dark:hover:text-slate-300 hover:bg-white/5"
-          :title="isCopied ? '¡Copiado!' : 'Copiar'"
+        <!-- Normal Right Side (Time + Action Buttons) -->
+        <div
+          v-else
+          :key="'normal'"
+          class="flex items-center gap-3 shrink-0 pr-1"
         >
-          <svg
-            v-if="isCopied"
-            xmlns="http://www.w3.org/2000/svg"
-            class="w-3.5 h-3.5 text-emerald-400"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          <svg
-            v-else
-            xmlns="http://www.w3.org/2000/svg"
-            class="w-3.5 h-3.5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-          </svg>
-        </button>
-
-        <!-- Edit -->
-        <button
-          @click="startEdit"
-          class="cursor-pointer p-1.5 rounded-lg transition-all text-slate-500 dark:text-slate-600 hover:text-indigo-400 hover:bg-white/5"
-          title="Editar"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="w-3.5 h-3.5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path
-              d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-            />
-          </svg>
-        </button>
-
-        <!-- Delete -->
-        <button
-          @click="$emit('delete', activity.id)"
-          class="cursor-pointer p-1.5 rounded-lg transition-all text-slate-500 dark:text-slate-600 hover:text-rose-400 hover:bg-white/5"
-          title="Eliminar"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="w-3.5 h-3.5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-            />
-          </svg>
-        </button>
-
-        <!-- Sync: Synced badge (permanent state) -->
-        <template v-if="activity.ticket && hasToken && logTimeEntry">
-          <!-- Already synced: show distinct badge -->
-          <button
-            v-if="activity.synced && !isSyncing && !syncSuccess && !syncError"
-            @click="syncTimeEntry"
-            title="Sincronizado — click para reenviar"
-            class="cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 hover:border-emerald-400/50 transition-all duration-200"
+          <!-- Time -->
+          <div
+            class="flex-shrink-0 flex items-center gap-1.5 font-mono font-bold text-sm text-slate-700 dark:text-slate-200"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              class="w-3 h-3 shrink-0"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-          </button>
-
-          <!-- Not yet synced / transient states: action button -->
-          <button
-            v-else
-            @click="syncTimeEntry"
-            :disabled="isSyncing"
-            class="cursor-pointer p-1.5 rounded-lg transition-all relative"
-            :class="[
-              syncSuccess
-                ? 'text-emerald-400 hover:bg-white/5'
-                : syncError
-                  ? 'text-rose-400 hover:bg-white/5'
-                  : 'text-slate-500 dark:text-slate-600 hover:text-cyan-400 hover:bg-white/5',
-              isSyncing ? 'opacity-50 cursor-not-allowed' : '',
-            ]"
-            :title="
-              syncSuccess
-                ? '¡Enviado!'
-                : syncError
-                  ? 'Error al enviar'
-                  : 'Enviar a OpenProject'
-            "
-          >
-            <span
-              v-if="isSyncing"
-              class="block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"
-            />
-            <svg
-              v-else-if="syncSuccess"
-              xmlns="http://www.w3.org/2000/svg"
-              class="w-3.5 h-3.5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-            <svg
-              v-else-if="syncError"
-              xmlns="http://www.w3.org/2000/svg"
-              class="w-3.5 h-3.5"
+              class="w-3.5 h-3.5 text-slate-400 dark:text-slate-500"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -333,65 +240,236 @@
               stroke-linecap="round"
               stroke-linejoin="round"
             >
-              <path d="M18 6L6 18M6 6l12 12" />
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
             </svg>
-            <!-- Upload to OpenProject icon -->
-            <svg
-              v-else
-              xmlns="http://www.w3.org/2000/svg"
-              class="w-3.5 h-3.5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <polyline points="16 16 12 12 8 16" />
-              <line x1="12" y1="12" x2="12" y2="21" />
-              <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
-            </svg>
-          </button>
-        </template>
+            <div v-if="timeFormat === 'HH:MM'">
+              {{ formatTime(activity.minutes) }}
+            </div>
+            <div v-else>{{ formatDecimal(activity.minutes) }}h</div>
+          </div>
 
-        <!-- Chevron toggle -->
-        <button
-          @click="isOpen = !isOpen"
-          class="cursor-pointer p-1.5 rounded-lg transition-all ml-0.5"
-          :class="
-            isOpen
-              ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/30'
-              : 'text-slate-500 dark:text-slate-600 hover:text-slate-300 hover:bg-white/5'
-          "
-        >
-          <svg
-            v-if="isOpen"
-            xmlns="http://www.w3.org/2000/svg"
-            class="w-4 h-4"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M18 15l-6-6-6 6" />
-          </svg>
-          <svg
-            v-else
-            xmlns="http://www.w3.org/2000/svg"
-            class="w-4 h-4"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M6 9l6 6 6-6" />
-          </svg>
-        </button>
-      </div>
+          <!-- Actions always visible -->
+          <div class="flex items-center gap-0.5 shrink-0">
+            <!-- Copy -->
+            <button
+              @click="copyTaskName"
+              class="cursor-pointer p-1.5 rounded-lg transition-all text-slate-500 dark:text-slate-600 hover:text-slate-300 dark:hover:text-slate-300 hover:bg-white/5"
+              :title="isCopied ? '¡Copiado!' : 'Copiar'"
+            >
+              <svg
+                v-if="isCopied"
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-3.5 h-3.5 text-emerald-400"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <svg
+                v-else
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-3.5 h-3.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path
+                  d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                />
+              </svg>
+            </button>
+
+            <!-- Edit -->
+            <button
+              @click="startEdit"
+              class="cursor-pointer p-1.5 rounded-lg transition-all text-slate-500 dark:text-slate-600 hover:text-indigo-400 hover:bg-white/5"
+              title="Editar"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-3.5 h-3.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
+                />
+              </svg>
+            </button>
+
+            <!-- Delete -->
+            <button
+              @click="isConfirmingDelete = true"
+              class="cursor-pointer p-1.5 rounded-lg transition-all text-slate-500 dark:text-slate-600 hover:text-rose-400 hover:bg-white/5"
+              title="Eliminar"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-3.5 h-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+            </button>
+
+            <!-- Sync: Synced badge (permanent state) -->
+            <template v-if="activity.ticket && hasToken && logTimeEntry">
+              <!-- Already synced: show distinct badge -->
+              <button
+                v-if="
+                  activity.synced && !isSyncing && !syncSuccess && !syncError
+                "
+                @click="syncTimeEntry"
+                title="Sincronizado — click para reenviar"
+                class="cursor-pointer flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 hover:border-emerald-400/50 transition-all duration-200"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="w-3 h-3 shrink-0"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </button>
+
+              <!-- Not yet synced / transient states: action button -->
+              <button
+                v-else
+                @click="syncTimeEntry"
+                :disabled="isSyncing"
+                class="cursor-pointer p-1.5 rounded-lg transition-all relative"
+                :class="[
+                  syncSuccess
+                    ? 'text-emerald-400 hover:bg-white/5'
+                    : syncError
+                      ? 'text-rose-400 hover:bg-white/5'
+                      : 'text-slate-500 dark:text-slate-600 hover:text-cyan-400 hover:bg-white/5',
+                  isSyncing ? 'opacity-50 cursor-not-allowed' : '',
+                ]"
+                :title="
+                  syncSuccess
+                    ? '¡Enviado!'
+                    : syncError
+                      ? 'Error al enviar'
+                      : 'Enviar a OpenProject'
+                "
+              >
+                <span
+                  v-if="isSyncing"
+                  class="block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"
+                />
+                <svg
+                  v-else-if="syncSuccess"
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="w-3.5 h-3.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <svg
+                  v-else-if="syncError"
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="w-3.5 h-3.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+                <!-- Upload to OpenProject icon -->
+                <svg
+                  v-else
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="w-3.5 h-3.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="16 16 12 12 8 16" />
+                  <line x1="12" y1="12" x2="12" y2="21" />
+                  <path
+                    d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"
+                  />
+                </svg>
+              </button>
+            </template>
+
+            <!-- Chevron toggle -->
+            <button
+              @click="isOpen = !isOpen"
+              class="cursor-pointer p-1.5 rounded-lg transition-all ml-0.5"
+              :class="
+                isOpen
+                  ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/30'
+                  : 'text-slate-500 dark:text-slate-600 hover:text-slate-300 hover:bg-white/5'
+              "
+            >
+              <svg
+                v-if="isOpen"
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-4 h-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M18 15l-6-6-6 6" />
+              </svg>
+              <svg
+                v-else
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-4 h-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </transition>
     </div>
 
     <!-- Expanded panel -->
@@ -663,7 +741,6 @@
                   <textarea
                     v-model="editName"
                     placeholder="Descripción de la tarea..."
-                    required
                     rows="2"
                     class="flex-1 w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400 resize-none"
                   ></textarea>
@@ -689,88 +766,6 @@
         </div>
       </Transition>
     </Teleport>
-
-    <!-- Time Entry Modal -->
-    <TimeEntryModal
-      :show="showTimeEntryModal"
-      :timeEntryActivities="timeEntryActivities ?? []"
-      @confirm="onTimeEntryConfirm"
-      @cancel="showTimeEntryModal = false"
-    />
-
-    <!-- Already synced confirmation modal -->
-    <Teleport to="body">
-      <Transition
-        enter-active-class="transition duration-200 ease-out"
-        enter-from-class="opacity-0 scale-95"
-        enter-to-class="opacity-100 scale-100"
-        leave-active-class="transition duration-150 ease-in"
-        leave-from-class="opacity-100 scale-100"
-        leave-to-class="opacity-0 scale-95"
-      >
-        <div
-          v-if="showResyncModal"
-          class="fixed inset-0 z-50 flex items-center justify-center"
-          @click.self="showResyncModal = false"
-        >
-          <div
-            class="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            @click="showResyncModal = false"
-          />
-          <div
-            class="relative z-10 w-72 bg-slate-900 border border-slate-700/60 rounded-2xl shadow-2xl p-5 flex flex-col gap-4"
-          >
-            <!-- Icon + title -->
-            <div class="flex items-start gap-3">
-              <div
-                class="shrink-0 w-9 h-9 rounded-full bg-amber-500/15 flex items-center justify-center"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="w-5 h-5 text-amber-400"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path
-                    d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
-                  />
-                  <line x1="12" y1="9" x2="12" y2="13" />
-                  <line x1="12" y1="17" x2="12.01" y2="17" />
-                </svg>
-              </div>
-              <div>
-                <p class="text-sm font-semibold text-slate-100 leading-snug">
-                  Tiempo ya subido
-                </p>
-                <p class="text-xs text-slate-400 mt-1 leading-relaxed">
-                  Este registro ya fue enviado a OpenProject anteriormente.
-                  ¿Deseas intentarlo de nuevo?
-                </p>
-              </div>
-            </div>
-            <!-- Actions -->
-            <div class="flex gap-2 justify-end">
-              <button
-                @click="showResyncModal = false"
-                class="cursor-pointer px-3 py-1.5 text-xs font-medium rounded-lg text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                @click="confirmResync"
-                class="cursor-pointer px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900 transition-colors"
-              >
-                Reenviar
-              </button>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
   </div>
 </template>
 
@@ -786,7 +781,7 @@ import type {
   TimeEntryActivity,
 } from "../composables/useActivities";
 import { useActivities } from "../composables/useActivities";
-import TimeEntryModal from "./TimeEntryModal.vue";
+import BaseButton from "./shared/baseButton.vue";
 import { formatTime, formatDecimal } from "../utils/timeUtils";
 
 const {
@@ -794,7 +789,6 @@ const {
   isFavorite,
   updateWorkPackageStatus,
   fetchProjectVersions,
-  updateWorkPackageVersion,
   fetchProjectBoards,
   fetchBoardColumns,
   findTicketBoardColumn,
@@ -818,17 +812,17 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "delete", id: string): void;
   (e: "update", id: string, updates: Partial<Activity>): void;
+  (e: "sync-click", id: string): void;
 }>();
 
 // ── State ──────────────────────────────────────────────────────
 const isOpen = ref(false);
 const isEditing = ref(false);
 const isCopied = ref(false);
-const isSyncing = ref(false);
-const syncSuccess = ref(false);
-const syncError = ref(false);
-const showTimeEntryModal = ref(false);
-const showResyncModal = ref(false);
+const isConfirmingDelete = ref(false);
+const isSyncing = computed(() => !!props.activity.isSyncing);
+const syncSuccess = computed(() => !!props.activity.syncSuccess);
+const syncError = computed(() => !!props.activity.syncError);
 
 const editName = ref("");
 const editDate = ref("");
@@ -844,9 +838,6 @@ const statusUpdateError = ref(false);
 const localVersionId = ref(props.activity.versionId ?? "");
 const projectVersions = ref<Version[]>([]);
 const isFetchingVersions = ref(false);
-const isUpdatingVersion = ref(false);
-const versionUpdateSuccess = ref(false);
-const versionUpdateError = ref(false);
 
 // Board column state
 const selectedBoardId = ref(props.activity.boardId ?? "");
@@ -872,7 +863,7 @@ const projectName = computed(() => {
 });
 
 const isValid = computed(() => {
-  if (!editName.value.trim() || !editDate.value) return false;
+  if (!editDate.value) return false;
   const h = typeof editHours.value === "number" ? editHours.value : 0;
   const m = typeof editMinutes.value === "number" ? editMinutes.value : 0;
   return h > 0 || m > 0;
@@ -902,6 +893,16 @@ watch(
   () => props.activity.versionId,
   (val) => {
     localVersionId.value = val ?? "";
+  },
+);
+
+watch(
+  () => props.activity.editing,
+  (val) => {
+    if (val) {
+      startEdit();
+      emit("update", props.activity.id, { editing: false });
+    }
   },
 );
 
@@ -1030,41 +1031,6 @@ async function onStatusChange() {
   }
 }
 
-async function onVersionChange() {
-  if (isUpdatingVersion.value) return;
-
-  isUpdatingVersion.value = true;
-  versionUpdateSuccess.value = false;
-  versionUpdateError.value = false;
-
-  const found = projectVersions.value.find(
-    (v) => v.id === localVersionId.value,
-  );
-  const result = await updateWorkPackageVersion(
-    props.activity.id,
-    localVersionId.value || null,
-  );
-
-  isUpdatingVersion.value = false;
-
-  if (result.ok) {
-    emit("update", props.activity.id, {
-      versionId: found?.id ?? undefined,
-      versionName: found?.name ?? undefined,
-    });
-    versionUpdateSuccess.value = true;
-    setTimeout(() => {
-      versionUpdateSuccess.value = false;
-    }, 2000);
-  } else {
-    localVersionId.value = props.activity.versionId ?? "";
-    versionUpdateError.value = true;
-    setTimeout(() => {
-      versionUpdateError.value = false;
-    }, 2000);
-  }
-}
-
 async function onBoardColumnChange() {
   console.log(
     "[onBoardColumnChange] selectedColumnQueryId:",
@@ -1146,38 +1112,7 @@ async function copyTaskName() {
 }
 
 function syncTimeEntry() {
-  if (!props.logTimeEntry || isSyncing.value) return;
-  if (props.activity.synced) {
-    showResyncModal.value = true;
-    return;
-  }
-  showTimeEntryModal.value = true;
-}
-
-function confirmResync() {
-  showResyncModal.value = false;
-  showTimeEntryModal.value = true;
-}
-
-async function onTimeEntryConfirm(activityTypeId: string) {
-  showTimeEntryModal.value = false;
-  if (!props.logTimeEntry) return;
-  isSyncing.value = true;
-  syncSuccess.value = false;
-  syncError.value = false;
-  const result = await props.logTimeEntry(props.activity.id, activityTypeId);
-  isSyncing.value = false;
-  if (result.ok) {
-    syncSuccess.value = true;
-    setTimeout(() => {
-      syncSuccess.value = false;
-    }, 2000);
-  } else {
-    syncError.value = true;
-    setTimeout(() => {
-      syncError.value = false;
-    }, 2000);
-  }
+  emit("sync-click", props.activity.id);
 }
 
 function startEdit() {
@@ -1226,3 +1161,15 @@ function saveEdit() {
   isEditing.value = false;
 }
 </script>
+
+<style scoped>
+.fade-inline-enter-active,
+.fade-inline-leave-active {
+  transition: all 0.15s ease;
+}
+.fade-inline-enter-from,
+.fade-inline-leave-to {
+  opacity: 0;
+  transform: scale(0.9);
+}
+</style>

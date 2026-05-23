@@ -383,7 +383,6 @@
               <textarea
                 v-model="name"
                 placeholder="Descripción de la tarea..."
-                required
                 rows="4"
                 class="flex-1 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400 resize-none"
               ></textarea>
@@ -581,7 +580,7 @@ async function onTicketBlur() {
 }
 
 const isValid = computed(() => {
-  if (!name.value.trim() || !date.value) return false;
+  if (!date.value) return false;
   const h = typeof hours.value === "number" ? hours.value : 0;
   const m = typeof minutes.value === "number" ? minutes.value : 0;
   return h > 0 || m > 0;

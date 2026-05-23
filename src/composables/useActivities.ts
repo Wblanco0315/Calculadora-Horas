@@ -52,6 +52,10 @@ export interface Activity {
   boardColumnName?: string;
   synced?: boolean;
   selected?: boolean;
+  isSyncing?: boolean;
+  syncSuccess?: boolean;
+  syncError?: boolean;
+  editing?: boolean;
 }
 
 export interface TimeEntryActivity {

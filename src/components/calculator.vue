@@ -583,6 +583,7 @@
               :timeFormat="timeFormat"
               @update="editActivity"
               @delete="removeActivity"
+              @sync-click="onSyncClick"
             />
           </TransitionGroup>
         </div>
@@ -675,6 +676,30 @@
         :timeEntryActivities="timeEntryActivities ?? []"
         @confirm="onSyncAllConfirm"
         @cancel="showSyncAllModal = false"
+      />
+
+      <!-- Warning no description modal during sync -->
+      <ConfirmModal
+        :show="showWarningModal"
+        title="Actividad sin descripción"
+        :message="`La actividad ${currentWarningActivity?.ticketTitle || 'Sin título'} con número #${currentWarningActivity?.ticket} no tiene descripción. ¿Qué deseas hacer?`"
+        confirmText="Enviar de todos modos"
+        confirmVariant="primary"
+        cancelText="Editar"
+        @confirm="confirmWarningSend"
+        @cancel="editWarningActivity"
+      />
+
+      <!-- Already synced confirmation modal -->
+      <ConfirmModal
+        :show="showResyncModal"
+        title="Tiempo ya subido"
+        message="Este registro ya fue enviado a OpenProject anteriormente. ¿Deseas intentarlo de nuevo?"
+        confirmText="Reenviar"
+        confirmVariant="danger"
+        cancelText="Cancelar"
+        @confirm="confirmResync"
+        @cancel="showResyncModal = false"
       />
     </div>
   </div>
@@ -832,51 +857,157 @@ const showSyncAllModal = ref(false);
 const isSyncingAll = ref(false);
 const syncSuccessAll = ref(false);
 const syncErrorAll = ref(false);
+const showWarningModal = ref(false);
+const syncQueue = ref<any[]>([]);
+const currentSyncActivityTypeId = ref("");
+const currentWarningActivity = ref<any | null>(null);
+const syncAllOk = ref(true);
+const syncAllAttempted = ref(false);
+
+const singleSyncActivity = ref<any | null>(null);
+const showResyncModal = ref(false);
+const resyncActivityId = ref("");
 
 function syncAll() {
   showSyncAllModal.value = true;
 }
 
+function onSyncClick(id: string) {
+  const act = activities.value.find((a) => a.id === id);
+  if (!act) return;
+
+  if (act.synced) {
+    resyncActivityId.value = id;
+    showResyncModal.value = true;
+  } else {
+    singleSyncActivity.value = act;
+    showSyncAllModal.value = true;
+  }
+}
+
+function confirmResync() {
+  showResyncModal.value = false;
+  const id = resyncActivityId.value;
+  resyncActivityId.value = "";
+  const act = activities.value.find((a) => a.id === id);
+  if (act) {
+    singleSyncActivity.value = act;
+    showSyncAllModal.value = true;
+  }
+}
+
 async function onSyncAllConfirm(activityTypeId: string) {
   showSyncAllModal.value = false;
-  isSyncingAll.value = true;
-  syncSuccessAll.value = false;
-  syncErrorAll.value = false;
+  
+  let toSync: any[] = [];
+  const isSingle = !!singleSyncActivity.value;
 
-  const allUnsynced = [...unsyncedActivities.value];
-  const toSync =
-    isSelectionMode.value && manuallySelectedActivities.value.length > 0
-      ? [...manuallySelectedActivities.value]
-      : allUnsynced;
-
-  let allOk = true;
-
-  for (const act of toSync) {
-    const res = await logTimeEntry(act.id, activityTypeId);
-    if (res.ok) {
-      if (act.selected) {
-        editActivity(act.id, { selected: false });
-      }
-    } else {
-      allOk = false;
-    }
+  if (isSingle) {
+    toSync = [singleSyncActivity.value];
+    singleSyncActivity.value = null;
+  } else {
+    isSyncingAll.value = true;
+    syncSuccessAll.value = false;
+    syncErrorAll.value = false;
+    const allUnsynced = [...unsyncedActivities.value];
+    toSync =
+      isSelectionMode.value && manuallySelectedActivities.value.length > 0
+        ? [...manuallySelectedActivities.value]
+        : allUnsynced;
   }
 
+  currentSyncActivityTypeId.value = activityTypeId;
+  syncQueue.value = [...toSync];
+  syncAllOk.value = true;
+  syncAllAttempted.value = false;
+
+  await processNextInQueue();
+}
+
+async function processNextInQueue() {
+  if (syncQueue.value.length === 0) {
+    if (isSyncingAll.value) {
+      isSyncingAll.value = false;
+      if (syncAllAttempted.value) {
+        if (syncAllOk.value) {
+          syncSuccessAll.value = true;
+          setTimeout(() => {
+            syncSuccessAll.value = false;
+            if (isSelectionMode.value) cancelSelection();
+          }, 2000);
+        } else {
+          syncErrorAll.value = true;
+          setTimeout(() => {
+            syncErrorAll.value = false;
+          }, 2000);
+        }
+      }
+    }
+    return;
+  }
+
+  const act = syncQueue.value[0];
+
+  // Verificar si no tiene descripción
+  if (!act.name || !act.name.trim()) {
+    currentWarningActivity.value = act;
+    showWarningModal.value = true;
+    return;
+  }
+
+  await syncActivityDirectly(act);
+}
+
+async function syncActivityDirectly(act: any) {
+  syncQueue.value.shift();
+  syncAllAttempted.value = true;
+
+  editActivity(act.id, { isSyncing: true, syncSuccess: false, syncError: false });
+
+  const res = await logTimeEntry(act.id, currentSyncActivityTypeId.value);
+  
+  editActivity(act.id, { isSyncing: false });
+
+  if (res.ok) {
+    editActivity(act.id, { syncSuccess: true });
+    setTimeout(() => {
+      editActivity(act.id, { syncSuccess: false });
+    }, 2000);
+    if (act.selected) {
+      editActivity(act.id, { selected: false });
+    }
+  } else {
+    editActivity(act.id, { syncError: true });
+    setTimeout(() => {
+      editActivity(act.id, { syncError: false });
+    }, 2000);
+    syncAllOk.value = false;
+  }
+
+  await processNextInQueue();
+}
+
+async function confirmWarningSend() {
+  showWarningModal.value = false;
+  const act = currentWarningActivity.value;
+  currentWarningActivity.value = null;
+  if (act) {
+    await syncActivityDirectly(act);
+  }
+}
+
+function editWarningActivity() {
+  showWarningModal.value = false;
+  const act = currentWarningActivity.value;
+  currentWarningActivity.value = null;
+
+  // Abortar el resto de la sincronización
+  syncQueue.value = [];
   isSyncingAll.value = false;
 
-  if (toSync.length > 0) {
-    if (allOk) {
-      syncSuccessAll.value = true;
-      setTimeout(() => {
-        syncSuccessAll.value = false;
-        if (isSelectionMode.value) cancelSelection();
-      }, 2000);
-    } else {
-      syncErrorAll.value = true;
-      setTimeout(() => {
-        syncErrorAll.value = false;
-      }, 2000);
-    }
+  if (act) {
+    // Abrir el modal de edición para esta actividad
+    editActivity(act.id, { editing: true });
   }
 }
 </script>
