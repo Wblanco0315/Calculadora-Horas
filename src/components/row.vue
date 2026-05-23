@@ -224,139 +224,138 @@
         <div
           v-else-if="showStopwatchControls"
           :key="'stopwatch'"
-          class="flex flex-col items-end gap-1.5 shrink-0 select-none pr-2"
+          class="flex flex-col w-max justify-end gap-4 pr-2"
         >
-          <!-- Running Time Display & Stopwatch Title -->
-          <div class="flex items-center gap-2">
-            <span
-              class="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider"
-              >Cronómetro</span
+          <!-- Left part: Stopwatch box + buttons -->
+          <div class="flex flex-row items-end justify-end gap-2">
+            <!-- Box display -->
+            <div
+              class="bg-slate-950/80 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-lg px-6 py-1 flex flex-col justify-center"
             >
-            <span
-              class="font-mono font-bold text-sm text-indigo-500 dark:text-indigo-400"
-              :class="{ 'animate-pulse': activity.timerState === 'running' }"
+              <div
+                class="flex items-center font-mono font-bold text-md text-white"
+              >
+                <span>{{ formattedStopwatchTime }}</span>
+              </div>
+            </div>
+
+            <!-- Minimizar Button -->
+            <button
+              @click="showStopwatchControls = false"
+              class="cursor-pointer w-24 justify-center flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-950/30 hover:bg-slate-900/40 text-slate-300 border border-slate-200 dark:border-slate-800 transition-all duration-200"
+              title="Ocultar controles"
             >
-              {{ formattedStopwatchTime }}
-            </span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+              <span>Ocultar</span>
+            </button>
           </div>
 
-          <!-- Stopwatch Buttons -->
-          <div class="flex items-center gap-1.5">
+          <div class="flex w-full flex-row items-center justify-end gap-2">
             <!-- Play/Pause Toggle -->
-            <BaseButton
+            <button
               @click="toggleTimer"
-              :variant="
-                activity.timerState === 'running' ? 'secondary' : 'primary'
+              class="cursor-pointer gap-1 px-2 py-1 rounded-lg flex items-center justify-center transition-all duration-200"
+              :class="
+                activity.timerState === 'running'
+                  ? 'bg-amber-500 hover:bg-amber-600 text-slate-900 shadow-md shadow-amber-500/20'
+                  : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20'
               "
-              size="sm"
-              class="!px-2.5 !py-0.5 !text-[11px] font-semibold flex items-center gap-1"
             >
-              <template #left-icon>
-                <!-- Pause Icon -->
-                <svg
-                  v-if="activity.timerState === 'running'"
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="w-3 h-3"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="2.5"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M15.75 5.25v13.5m-7.5-13.5v13.5"
-                  />
-                </svg>
-                <!-- Play Icon -->
-                <svg
-                  v-else
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="w-3 h-3"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              </template>
-              <span>{{
-                activity.timerState === "running" ? "Pausar" : "Iniciar"
-              }}</span>
-            </BaseButton>
+              <!-- Pause Icon (2 vertical bars) -->
+              <svg
+                v-if="activity.timerState === 'running'"
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-3.5 h-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="3"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M15.75 5.25v13.5m-7.5-13.5v13.5"
+                />
+              </svg>
+              <!-- Play Icon (triangle) -->
+              <svg
+                v-else
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-3.5 h-3.5"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M8 5v14l11-7z" />
+              </svg>
+              <span class="text-xs font-semibold">
+                {{ activity.timerState === "running" ? "Detener" : "Iniciar" }}
+              </span>
+            </button>
 
-            <!-- Terminar / Guardar Button -->
-            <BaseButton
+            <!-- Save/Checkmark Button (Terminar) -->
+            <button
               @click="finishTimer"
-              variant="primary"
-              size="sm"
-              class="!px-2.5 !py-0.5 !text-[11px] font-semibold flex items-center gap-1 !bg-emerald-600 hover:!bg-emerald-700 text-white"
+              class="cursor-pointer gap-1 px-2 py-1 rounded-lg flex items-center justify-center transition-all duration-200 border"
+              :class="
+                activity.timerState === 'running'
+                  ? 'border-slate-800 text-slate-600 bg-slate-950/20 opacity-55'
+                  : 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 hover:border-emerald-400/50 shadow-sm shadow-emerald-500/5'
+              "
+              title="Terminar"
             >
-              <template #left-icon>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="w-3 h-3"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="3"
-                >
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              </template>
-              <span>Terminar</span>
-            </BaseButton>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="3"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span class="text-xs font-semibold"> Terminar </span>
+            </button>
 
-            <!-- Minimizar / Atrás Button -->
-            <BaseButton
-              @click="showStopwatchControls = false"
-              variant="secondary"
-              size="sm"
-              class="!px-2.5 !py-0.5 !text-[11px] font-semibold flex items-center gap-1"
-              title="Ocultar controles (sigue corriendo en segundo plano)"
-            >
-              <template #left-icon>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="w-3 h-3"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="2.5"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M15 15v4.5M15 15h4.5M15 15l5.25 5.25"
-                  />
-                </svg>
-              </template>
-              <span>Atrás</span>
-            </BaseButton>
-
-            <!-- Descartar Button -->
-            <BaseButton
+            <!-- Discard Button (trash) -->
+            <button
               @click="cancelTimer"
-              variant="danger-ghost"
-              size="sm"
-              class="!px-1.5 !py-0.5 !text-[11px] font-semibold flex items-center gap-1"
+              class="cursor-pointer gap-1 px-2 py-1 rounded-lg flex items-center justify-center transition-all duration-200 border"
+              :class="
+                activity.timerState === 'running'
+                  ? 'border-slate-800 text-slate-600 bg-slate-950/20 opacity-55'
+                  : 'border-rose-500/30 text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 hover:border-rose-400/50 shadow-sm shadow-rose-500/5'
+              "
               title="Descartar cronómetro y reiniciar tiempo"
             >
-              <template #left-icon>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="w-3 h-3"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="2.5"
-                >
-                  <polyline points="3 6 5 6 21 6"></polyline>
-                  <path
-                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-                  ></path>
-                </svg>
-              </template>
-            </BaseButton>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+              <span class="text-xs font-semibold"> Descartar </span>
+            </button>
           </div>
         </div>
 
@@ -384,10 +383,22 @@
               <polyline points="12 6 12 12 16 14" />
             </svg>
             <div v-if="timeFormat === 'HH:MM'">
-              {{ formatTimeSeconds(activity.seconds !== undefined ? activity.seconds : activity.minutes * 60) }}
+              {{
+                formatTimeSeconds(
+                  activity.seconds !== undefined
+                    ? activity.seconds
+                    : activity.minutes * 60,
+                )
+              }}
             </div>
             <div v-else>
-              {{ formatDecimalSeconds(activity.seconds !== undefined ? activity.seconds : activity.minutes * 60) }}h
+              {{
+                formatDecimalSeconds(
+                  activity.seconds !== undefined
+                    ? activity.seconds
+                    : activity.minutes * 60,
+                )
+              }}h
             </div>
           </div>
 
@@ -981,11 +992,12 @@ function toggleTimer() {
 
 function finishTimer() {
   const totalSecs = elapsedSeconds.value;
-  const currentSeconds = props.activity.seconds !== undefined 
-    ? props.activity.seconds 
-    : (props.activity.minutes || 0) * 60;
+  const currentSeconds =
+    props.activity.seconds !== undefined
+      ? props.activity.seconds
+      : (props.activity.minutes || 0) * 60;
   const finalSeconds = currentSeconds + totalSecs;
-  
+
   // Round up minutes to the benefit of the user when logging
   const finalMinutes = Math.ceil(finalSeconds / 60);
 
