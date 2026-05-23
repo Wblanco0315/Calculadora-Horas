@@ -3,6 +3,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getVersion } from "@tauri-apps/api/app";
 import { useTheme } from "../composables/useTheme";
 import { ref, onMounted } from "vue";
+import AppLogo from "./shared/appLogo.vue";
 
 const { isDark, toggleDarkMode } = useTheme();
 
@@ -23,7 +24,7 @@ defineEmits<{
 
 <template>
   <div
-    class="flex z-99 justify-between items-center h-8 bg-[#f3f3f3] dark:bg-[#202020] text-[#1a1a1a] dark:text-[#ffffff] select-none transition-colors shrink-0 rounded-t-[12px] md:rounded-t-[18px] overflow-hidden"
+    class="flex z-99 justify-between items-center h-8 bg-[#f3f3f3] dark:bg-[#202020] text-[#1a1a1a] dark:text-[#ffffff] select-none transition-colors shrink-0 overflow-hidden"
   >
     <!-- Drag Region (Title and flex space) -->
     <div
@@ -31,19 +32,12 @@ defineEmits<{
       @mousedown="startDragging"
       class="flex items-center px-3 gap-3 h-full flex-1 cursor-default"
     >
-      <!-- App Icon (Native style) -->
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        class="h-4 w-4 text-indigo-500 pointer-events-none drop-shadow-sm"
-        viewBox="0 0 24 24"
-        fill="currentColor"
-      >
-        <path
-          d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"
-        />
-        <path d="M13 7h-2v5.414l3.293 3.293 1.414-1.414L13 11.586z" />
-      </svg>
-      <span v-if="appVersion" class="text-xs font-medium text-slate-500 dark:text-slate-400 pointer-events-none">
+      <!-- App Icon (PocketProject style) -->
+      <AppLogo class="h-4.5 w-4.5 drop-shadow-sm pointer-events-none" />
+      <span class="text-xs font-bold text-slate-700 dark:text-slate-200 pointer-events-none">
+        PocketProject
+      </span>
+      <span v-if="appVersion" class="text-[10px] font-medium text-slate-500 dark:text-slate-400 pointer-events-none">
         v{{ appVersion }}
       </span>
     </div>

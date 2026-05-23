@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Calculadora de horas",
+  "productName": "PocketProject",
   "version": "0.3.10",
   "identifier": "com.dev.wilsonblanco",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Calculadora de horas",
+        "title": "PocketProject",
         "width": 525,
         "height": 800,
         "decorations": false,

@@ -5,7 +5,7 @@
   >
     <!-- Main Compact Container -->
     <div
-      class="w-full h-full bg-slate-50 dark:bg-slate-900 rounded-[12px] md:rounded-[18px] border border-slate-300 dark:border-slate-700/60 overflow-hidden flex flex-col shadow-2xl relative transition-colors duration-300"
+      class="w-full h-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700/60 overflow-hidden flex flex-col shadow-2xl relative transition-colors duration-300"
     >
       <!-- Loading screen -->
       <transition

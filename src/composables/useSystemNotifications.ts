@@ -59,7 +59,7 @@ export function useSystemNotifications() {
 
     if (diffMins <= 15 && diffMins >= 0) {
       sendNotification({
-        title: "Calculadora de Horas",
+        title: "PocketProject",
         body: "¡Atención! Faltan 15 minutos o menos para finalizar tu jornada laboral.",
       });
       userConfig.value.lastNotifiedDate = todayStr;
