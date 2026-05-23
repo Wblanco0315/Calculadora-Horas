@@ -290,7 +290,7 @@
                 </div>
 
                 <button
-                  v-if="ticket"
+                  v-if="ticket && !isLoadingTicket && ticketTitle"
                   type="button"
                   @click="toggleFavorite(ticket, ticketTitle, projectId)"
                   class="p-1.5 text-slate-400 hover:text-yellow-500 transition-colors"
@@ -314,21 +314,6 @@
                 </button>
               </div>
             </div>
-
-            <!-- Ticket title badge -->
-            <transition
-              enter-active-class="transition-all duration-200"
-              enter-from-class="opacity-0 -translate-y-1"
-              enter-to-class="opacity-100 translate-y-0"
-            >
-              <span
-                v-if="ticketTitle"
-                class="inline-flex items-center w-max px-2 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30"
-                :title="ticketTitle"
-              >
-                {{ ticketTitle }}
-              </span>
-            </transition>
 
             <!-- Row 2: Time + Date -->
             <div class="flex items-center gap-2">
@@ -368,7 +353,7 @@
                     max="59"
                     step="1"
                     placeholder="0"
-                    class="w-10 px-1 text-xs text-center bg-transparent outline-none bg-[#0f172b] dark:text-slate-100 placeholder-slate-400 font-medium"
+                    class="w-11 px-1 text-xs text-center bg-transparent outline-none bg-[#0f172b] dark:text-slate-100 placeholder-slate-400 font-medium"
                   />
                   <span
                     class="text-[11px] font-bold text-slate-400 dark:text-slate-500 select-none"
@@ -377,6 +362,21 @@
                 </div>
               </div>
             </div>
+
+            <!-- Ticket title badge -->
+            <transition
+              enter-active-class="transition-all duration-200"
+              enter-from-class="opacity-0 -translate-y-1"
+              enter-to-class="opacity-100 translate-y-0"
+            >
+              <span
+                v-if="ticketTitle"
+                class="inline-flex items-center w-max px-2 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30"
+                :title="ticketTitle"
+              >
+                {{ ticketTitle }}
+              </span>
+            </transition>
 
             <!-- Row 3: Description-->
             <div class="flex items-center gap-2">
