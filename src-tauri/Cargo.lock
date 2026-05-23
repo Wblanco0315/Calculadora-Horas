@@ -485,7 +485,7 @@ dependencies = [
 
 [[package]]
 name = "calculadora_horas"
-version = "0.3.11"
+version = "0.4.1"
 dependencies = [
  "serde",
  "serde_json",
