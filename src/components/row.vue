@@ -775,15 +775,11 @@ import { useActivities } from "../composables/useActivities";
 import BaseButton from "./shared/baseButton.vue";
 import HoursForm from "./hoursForm.vue";
 import {
-  formatTime,
-  formatDecimal,
   formatTimeSeconds,
   formatDecimalSeconds,
 } from "../utils/timeUtils";
 
 const {
-  toggleFavorite,
-  isFavorite,
   updateWorkPackageStatus,
   fetchProjectVersions,
   fetchProjectBoards,
