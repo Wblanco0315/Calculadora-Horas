@@ -33,7 +33,22 @@
                 class="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-500/20"
               >
                 <svg
-                  v-if="viewState === 'favorites'"
+                  v-if="isEdit"
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
+                  />
+                </svg>
+                <svg
+                  v-else-if="viewState === 'favorites'"
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
                   class="h-4 w-4 text-yellow-600 dark:text-yellow-400"
@@ -61,7 +76,7 @@
                 class="text-sm font-semibold text-slate-800 dark:text-slate-100"
               >
                 {{
-                  viewState === "favorites" ? "Favoritos" : "Nueva Actividad"
+                  isEdit ? "Editar Actividad" : (viewState === "favorites" ? "Favoritos" : "Nueva Actividad")
                 }}
               </h3>
             </div>
@@ -396,7 +411,7 @@
                 :disabled="!isValid"
                 variant="primary"
                 class="flex-1"
-                label="Añadir"
+                :label="isEdit ? 'Guardar Cambios' : 'Añadir'"
               />
             </div>
           </form>
@@ -431,6 +446,10 @@ const props = defineProps<{
   projects: Project[];
   addProject: (name: string) => string;
   hasProjectToken?: boolean;
+  isEdit?: boolean;
+  initialName?: string;
+  initialMinutes?: number;
+  initialDate?: string;
   initialTicket?: string;
   initialTicketTitle?: string;
   initialProjectId?: string;
@@ -466,6 +485,15 @@ const emit = defineEmits<{
     timerState?: "idle" | "running" | "paused",
     timerLastStarted?: number,
     seconds?: number,
+  ): void;
+  (
+    e: "update",
+    name: string,
+    minutes: number,
+    date: string,
+    projectId?: string,
+    ticket?: string,
+    ticketTitle?: string,
   ): void;
   (e: "close"): void;
 }>();
@@ -515,23 +543,43 @@ const filteredFavorites = computed(() => {
 });
 
 function resetForm() {
-  name.value = "";
-  date.value = todayISO();
-  hours.value = "";
-  minutes.value = "";
-  ticket.value = "";
-  ticketTitle.value = "";
-  projectId.value = "";
-  statusId.value = "";
-  statusName.value = "";
-  statusColor.value = "";
-  availableStatuses.value = [];
-  versionId.value = "";
-  versionName.value = "";
-  isCreatingProject.value = false;
-  newProjectName.value = "";
-  searchFavoriteQuery.value = "";
-  isLoadingTicket.value = false;
+  if (props.isEdit) {
+    name.value = props.initialName ?? "";
+    date.value = props.initialDate ?? todayISO();
+    hours.value = props.initialMinutes ? Math.floor(props.initialMinutes / 60) : "";
+    minutes.value = props.initialMinutes ? props.initialMinutes % 60 : "";
+    ticket.value = props.initialTicket ?? "";
+    ticketTitle.value = props.initialTicketTitle ?? "";
+    projectId.value = props.initialProjectId ?? "";
+    statusId.value = "";
+    statusName.value = "";
+    statusColor.value = "";
+    availableStatuses.value = [];
+    versionId.value = "";
+    versionName.value = "";
+    isCreatingProject.value = false;
+    newProjectName.value = "";
+    searchFavoriteQuery.value = "";
+    isLoadingTicket.value = false;
+  } else {
+    name.value = "";
+    date.value = todayISO();
+    hours.value = "";
+    minutes.value = "";
+    ticket.value = "";
+    ticketTitle.value = "";
+    projectId.value = "";
+    statusId.value = "";
+    statusName.value = "";
+    statusColor.value = "";
+    availableStatuses.value = [];
+    versionId.value = "";
+    versionName.value = "";
+    isCreatingProject.value = false;
+    newProjectName.value = "";
+    searchFavoriteQuery.value = "";
+    isLoadingTicket.value = false;
+  }
 }
 
 // Reset form when modal opens or closes
@@ -539,7 +587,7 @@ watch(
   () => props.show,
   (val) => {
     if (val) {
-      viewState.value = props.initialView ?? "selection";
+      viewState.value = props.isEdit ? "form" : (props.initialView ?? "selection");
       resetForm();
     } else {
       setTimeout(() => {
@@ -601,7 +649,13 @@ async function onTicketBlur() {
 }
 
 const isValid = computed(() => {
-  return !!date.value;
+  if (!date.value) return false;
+  if (props.isEdit) {
+    const h = typeof hours.value === "number" ? hours.value : 0;
+    const m = typeof minutes.value === "number" ? minutes.value : 0;
+    return h > 0 || m > 0;
+  }
+  return true;
 });
 
 function submitForm() {
@@ -632,25 +686,37 @@ function proceedSubmit(minutesLogged: number, useStopwatch: boolean = false) {
     }
   }
 
-  emit(
-    "add",
-    name.value.trim(),
-    minutesLogged,
-    date.value,
-    projectId.value || undefined,
-    finalTicket || undefined,
-    ticketTitle.value.trim() || undefined,
-    statusId.value || undefined,
-    statusName.value || undefined,
-    statusColor.value || undefined,
-    availableStatuses.value.length ? availableStatuses.value : undefined,
-    versionId.value || undefined,
-    versionName.value || undefined,
-    useStopwatch ? 0 : undefined,
-    useStopwatch ? "paused" : undefined,
-    undefined,
-    useStopwatch ? 0 : minutesLogged * 60,
-  );
+  if (props.isEdit) {
+    emit(
+      "update",
+      name.value.trim(),
+      minutesLogged,
+      date.value,
+      projectId.value || undefined,
+      finalTicket || undefined,
+      ticketTitle.value.trim() || undefined,
+    );
+  } else {
+    emit(
+      "add",
+      name.value.trim(),
+      minutesLogged,
+      date.value,
+      projectId.value || undefined,
+      finalTicket || undefined,
+      ticketTitle.value.trim() || undefined,
+      statusId.value || undefined,
+      statusName.value || undefined,
+      statusColor.value || undefined,
+      availableStatuses.value.length ? availableStatuses.value : undefined,
+      versionId.value || undefined,
+      versionName.value || undefined,
+      useStopwatch ? 0 : undefined,
+      useStopwatch ? "paused" : undefined,
+      undefined,
+      useStopwatch ? 0 : minutesLogged * 60,
+    );
+  }
   emit("close");
 }
 
