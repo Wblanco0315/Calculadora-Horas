@@ -730,213 +730,22 @@
     </div>
 
     <!-- ── Edit Modal ──────────────────────────────────────────── -->
-    <Teleport to="body">
-      <Transition
-        enter-active-class="transition duration-200 ease-out"
-        enter-from-class="opacity-0"
-        enter-to-class="opacity-100"
-        leave-active-class="transition duration-150 ease-in"
-        leave-from-class="opacity-100"
-        leave-to-class="opacity-0"
-      >
-        <div
-          v-if="isEditing"
-          class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-3 pb-3 sm:px-4 sm:pb-0"
-          @click.self="cancelEdit"
-        >
-          <Transition
-            enter-active-class="transition duration-200 ease-out"
-            enter-from-class="translate-y-4 opacity-0 sm:translate-y-0 sm:scale-95"
-            enter-to-class="translate-y-0 opacity-100 sm:scale-100"
-            leave-active-class="transition duration-150 ease-in"
-            leave-from-class="translate-y-0 opacity-100 sm:scale-100"
-            leave-to-class="translate-y-4 opacity-0 sm:translate-y-0 sm:scale-95"
-          >
-            <div
-              v-if="isEditing"
-              class="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden"
-            >
-              <!-- Header -->
-              <div
-                class="flex items-center justify-between px-4 pt-4 pb-3 border-b border-slate-100 dark:border-slate-700"
-              >
-                <div class="flex items-center gap-2">
-                  <div
-                    class="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-500/20"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      class="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path
-                        d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-                      />
-                    </svg>
-                  </div>
-                  <h3
-                    class="text-sm font-semibold text-slate-800 dark:text-slate-100"
-                  >
-                    Editar Actividad
-                  </h3>
-                </div>
-                <button
-                  @click="cancelEdit"
-                  class="cursor-pointer p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="w-4 h-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M18 6L6 18M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              <!-- Form Body -->
-              <div class="flex flex-col gap-3 p-4">
-                <!-- Row 1: Project + Ticket -->
-                <div class="flex items-center gap-2">
-                  <!-- Project Selector -->
-                  <div class="flex-1 min-w-0">
-                    <select
-                      v-model="editProjectId"
-                      class="w-full px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100"
-                    >
-                      <option value="">Sin proyecto</option>
-                      <option v-for="p in projects" :key="p.id" :value="p.id">
-                        {{ p.name }}
-                      </option>
-                    </select>
-                  </div>
-                  <!-- Ticket Input -->
-                  <div class="relative shrink-0 flex items-center gap-1 w-32">
-                    <input
-                      type="text"
-                      v-model="editTicket"
-                      @input="editTicket = editTicket.replace(/\D/g, '')"
-                      placeholder="#Ticket"
-                      class="flex-1 w-full px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400"
-                    />
-                    <button
-                      v-if="editTicket"
-                      type="button"
-                      @click="
-                        toggleFavorite(editTicket, displayTitle, editProjectId)
-                      "
-                      class="p-1.5 text-slate-400 hover:text-yellow-500 transition-colors"
-                      :class="{ 'text-yellow-500': isFavorite(editTicket) }"
-                      title="Guardar como favorito"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="w-4 h-4"
-                        :fill="isFavorite(editTicket) ? 'currentColor' : 'none'"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="2"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.175 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Row 2: Time + Date -->
-                <div class="flex items-center gap-2">
-                  <input
-                    type="date"
-                    v-model="editDate"
-                    required
-                    class="w-43 px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400"
-                  />
-                  <!-- Time Input -->
-                  <div
-                    class="flex justify-evenly gap-1 bg-slate-50 dark:bg-[#0f172b] border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 flex-1 py-0.5"
-                  >
-                    <div class="flex items-center">
-                      <input
-                        type="number"
-                        v-model="editHours"
-                        min="0"
-                        step="1"
-                        class="w-10 text-xs text-center bg-transparent outline-none dark:text-slate-100 placeholder-slate-400 font-medium"
-                        placeholder="0"
-                      />
-                      <span
-                        class="text-[11px] font-bold text-slate-400 dark:text-slate-500 select-none"
-                        >h</span
-                      >
-                    </div>
-
-                    <span
-                      class="text-slate-300 dark:text-slate-600 font-bold mx-1"
-                      >:</span
-                    >
-
-                    <div class="flex items-center">
-                      <input
-                        type="number"
-                        v-model="editMinutes"
-                        min="0"
-                        max="59"
-                        step="1"
-                        class="w-10 px-1 text-xs text-center outline-none bg-[#0f172b] dark:text-slate-100 placeholder-slate-400 font-medium"
-                        placeholder="0"
-                      />
-                      <span
-                        class="text-[11px] font-bold text-slate-400 dark:text-slate-500 select-none"
-                        >m</span
-                      >
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Row 3: Description -->
-                <div class="flex items-center gap-2">
-                  <textarea
-                    v-model="editName"
-                    placeholder="Descripción de la tarea..."
-                    rows="2"
-                    class="flex-1 w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100 placeholder-slate-400 resize-none"
-                  ></textarea>
-                </div>
-
-                <!-- Row 4: Actions -->
-                <div
-                  class="flex items-center justify-between gap-2 mt-1 w-full"
-                >
-                  <div class="flex gap-2 pt-2 w-full">
-                    <button
-                      @click="saveEdit"
-                      :disabled="!isValid"
-                      class="cursor-pointer w-full flex-1 px-4 py-2 text-sm font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      Guardar Cambios
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Transition>
-        </div>
-      </Transition>
-    </Teleport>
+    <HoursForm
+      :show="isEditing"
+      :is-edit="true"
+      :projects="projects ?? []"
+      :addProject="addProject"
+      :hasProjectToken="hasToken"
+      :fetchTicketSubject="fetchTicketSubject"
+      :initial-name="activity.name"
+      :initial-minutes="activity.minutes"
+      :initial-date="activity.date"
+      :initial-project-id="activity.projectId"
+      :initial-ticket="activity.ticket"
+      :initial-ticket-title="activity.ticketTitle"
+      @update="saveEdit"
+      @close="cancelEdit"
+    />
   </div>
 </template>
 
@@ -953,6 +762,7 @@ import type {
 } from "../composables/useActivities";
 import { useActivities } from "../composables/useActivities";
 import BaseButton from "./shared/baseButton.vue";
+import HoursForm from "./hoursForm.vue";
 import {
   formatTime,
   formatDecimal,
@@ -969,6 +779,8 @@ const {
   fetchBoardColumns,
   findTicketBoardColumn,
   moveWorkPackageToBoardColumn,
+  addProject,
+  fetchTicketSubject,
 } = useActivities();
 
 const props = defineProps<{
@@ -1007,12 +819,7 @@ const isSyncing = computed(() => !!props.activity.isSyncing);
 const syncSuccess = computed(() => !!props.activity.syncSuccess);
 const syncError = computed(() => !!props.activity.syncError);
 
-const editName = ref("");
-const editDate = ref("");
-const editHours = ref<number | "">("");
-const editMinutes = ref<number | "">("");
-const editProjectId = ref("");
-const editTicket = ref("");
+// (State variables for editing cleaned up because they are now managed inside HoursForm)
 const localStatusId = ref(props.activity.statusId ?? "");
 const isUpdatingStatus = ref(false);
 const statusUpdateSuccess = ref(false);
@@ -1073,15 +880,6 @@ const projectName = computed(() => {
   );
 });
 
-const isValid = computed(() => {
-  if (!editDate.value) return false;
-  const h = typeof editHours.value === "number" ? editHours.value : 0;
-  const m = typeof editMinutes.value === "number" ? editMinutes.value : 0;
-  return h > 0 || m > 0;
-});
-
-// Statuses specific to this ticket (stored when ticket was fetched),
-// falling back to the global list passed from the parent.
 const ticketStatuses = computed(
   () => props.activity.availableStatuses ?? props.statuses ?? [],
 );
@@ -1420,49 +1218,29 @@ function syncTimeEntry() {
 }
 
 function startEdit() {
-  editName.value = props.activity.name;
-
-  if (props.activity.date) {
-    editDate.value = props.activity.date;
-  } else {
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    editDate.value = `${yyyy}-${mm}-${dd}`;
-  }
-
-  editHours.value = Math.floor(props.activity.minutes / 60);
-  editMinutes.value = props.activity.minutes % 60;
-  editProjectId.value = props.activity.projectId || "";
-  editTicket.value = props.activity.ticket || "";
   isEditing.value = true;
 }
 
 function cancelEdit() {
   isEditing.value = false;
-  setTimeout(() => {
-    editName.value = "";
-    editDate.value = "";
-    editHours.value = "";
-    editMinutes.value = "";
-    editProjectId.value = "";
-    editTicket.value = "";
-  }, 300);
 }
 
-function saveEdit() {
-  if (!isValid.value) return;
-  const h = typeof editHours.value === "number" ? editHours.value : 0;
-  const m = typeof editMinutes.value === "number" ? editMinutes.value : 0;
-  const totalMinutes = h * 60 + m;
+function saveEdit(
+  name: string,
+  minutesLogged: number,
+  date: string,
+  projectId?: string,
+  ticket?: string,
+  ticketTitle?: string,
+) {
   emit("update", props.activity.id, {
-    name: editName.value.trim(),
-    date: editDate.value,
-    minutes: totalMinutes,
-    seconds: totalMinutes * 60,
-    projectId: editProjectId.value || undefined,
-    ticket: editTicket.value.trim() || undefined,
+    name,
+    date,
+    minutes: minutesLogged,
+    seconds: minutesLogged * 60,
+    projectId: projectId || undefined,
+    ticket: ticket || undefined,
+    ticketTitle: ticketTitle || undefined,
     timerSeconds: 0,
     timerState: "idle",
     timerLastStarted: undefined,
