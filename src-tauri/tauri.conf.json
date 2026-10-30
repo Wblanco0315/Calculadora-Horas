@@ -1,0 +1,50 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "PocketProject",
+  "version": "0.5.0",
+  "identifier": "com.dev.wilsonblanco",
+  "build": {
+    "beforeDevCommand": "bun run start",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "bun run build",
+    "frontendDist": "../dist/pocketproject/browser"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "PocketProject",
+        "width": 525,
+        "height": 800
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVCNTNCMzUzNDRBQUU5QTAKUldTZzZhcEVVN05UNnpEUjJKODV3STJCNTBuN1JNUTRic0o3VWkvZDlya1NLY2Ftb3RpVU8rei8K",
+      "endpoints": [
+        "https://github.com/Wblanco0315/Calculadora-Horas/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "createUpdaterArtifacts": true,
+    "targets": [
+      "nsis"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+/* Setting page styles */
+:host {
+  display: block;
+}
