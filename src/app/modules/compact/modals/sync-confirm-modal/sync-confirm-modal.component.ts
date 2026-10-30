@@ -44,14 +44,9 @@ import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
           >
             <ng-icon name="tablerCloudUpload" size="1.2rem" />
           </div>
-          <div>
-            <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-zinc-100">
-              {{ 'compact.syncModal.title' | translate }}
-            </h3>
-            <p class="text-[11px] text-slate-500 dark:text-zinc-400">
-              {{ 'compact.syncModal.subtitle' | translate }}
-            </p>
-          </div>
+          <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-zinc-100">
+            {{ 'compact.syncModal.title' | translate }}
+          </h3>
         </div>
       </ng-template>
 
@@ -69,9 +64,6 @@ import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
           <div class="p-3 rounded-xl bg-slate-50 dark:bg-zinc-850 border border-slate-200 dark:border-zinc-800">
             <span class="font-bold text-slate-800 dark:text-zinc-100 block">
               {{ 'compact.syncModal.bulkCount' | translate: { count: syncCount() } }}
-            </span>
-            <span class="text-slate-500 dark:text-zinc-400 text-[11px]">
-              {{ 'compact.syncModal.bulkDesc' | translate }}
             </span>
           </div>
         }

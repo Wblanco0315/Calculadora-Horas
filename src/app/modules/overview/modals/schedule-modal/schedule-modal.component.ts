@@ -47,14 +47,9 @@ import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
           <div class="w-8 h-8 rounded-xl bg-primary-50 dark:bg-primary-950/40 flex items-center justify-center text-primary-600 dark:text-primary-400">
             <ng-icon name="tablerCalendar" size="1.25rem" />
           </div>
-          <div>
-            <h3 class="text-base font-bold text-slate-800 dark:text-zinc-100">
-              {{ 'dashboard.editScheduleModalTitle' | translate }}
-            </h3>
-            <p class="text-xs text-slate-500 dark:text-zinc-400">
-              {{ 'setup.schedule.description' | translate }}
-            </p>
-          </div>
+          <h3 class="text-base font-bold text-slate-800 dark:text-zinc-100">
+            {{ 'dashboard.editScheduleModalTitle' | translate }}
+          </h3>
         </div>
       </ng-template>
 

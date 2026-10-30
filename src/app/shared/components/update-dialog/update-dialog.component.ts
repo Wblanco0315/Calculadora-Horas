@@ -56,14 +56,9 @@ import { UpdateService } from '../../../core/services/update.service';
           >
             <ng-icon name="tablerSparkles" size="1.25rem" />
           </div>
-          <div>
-            <h3 class="text-base font-bold text-slate-900 dark:text-zinc-100">
-              {{ 'updater.title' | translate }}
-            </h3>
-            <p class="text-xs text-slate-500 dark:text-zinc-400">
-              PocketProject
-            </p>
-          </div>
+          <h3 class="text-base font-bold text-slate-900 dark:text-zinc-100">
+            {{ 'updater.title' | translate }}
+          </h3>
         </div>
       </ng-template>
 

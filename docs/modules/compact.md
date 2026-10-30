@@ -136,5 +136,6 @@ La barra de navegación inferior (`<nav>`) de 3 posiciones permite la conmutaci�
 - **Uso estricto de `<button pButton>`**: El componente `<p-button>` se encuentra 100% erradicado de todos los componentes y modales, utilizando la directiva nativa `ButtonDirective`.
 - **Degradados y colores del tema**: Cero uso de clases rígidas (`indigo-`, `blue-`); todos los estilos interactivos, degradados y bordes se derivan de variables semánticas `primary-*`.
 - **Prioridad Absoluta de Componentes PrimeNG**: Se utilizan `SelectButton`, `DatePicker`, `Popover`, `Select`, `InputNumber`, `InputText` y `Dialog` en lugar de maquetaciones manuales o elementos HTML crudos.
+- **Modales Limpios sin Descripciones Redundantes**: Cada modal presenta un encabezado limpio y directo con solo su icono y título, omitiendo párrafos descriptivos y subtítulos innecesarios conforme a las directrices del proyecto.
 - **Soporte Completo de i18n / Bilingüe**: Todos los textos, etiquetas, placeholders, mensajes de estado y tooltips del modo compacto consumen las cadenas del diccionario a través de `TranslatePipe` (`| translate`) y `LanguageService`.
 - **Verificación**: Compilado y verificado sin errores mediante `bun run build` y `cargo check`.

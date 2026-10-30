@@ -176,6 +176,18 @@ Siguiendo la regla de oro del proyecto:
 
 ---
 
+## 2.3. Estándar Obligatorio para Modales y Diálogos (`p-dialog`): Cero Descripciones Innecesarias
+
+> [!IMPORTANT]
+> **PROHIBIDO EL ABUSO DE DESCRIPCIONES O SUBTÍTULOS EN MODALES**:
+> Salvo que el usuario lo pida expresamente, **las ventanas modales NO deben incluir subtítulos, párrafos descriptivos explicativos ni textos secundarios de relleno** en sus encabezados (`#header`) ni en su cuerpo principal.
+> 
+> - **Encabezado Minimalista y Limpio**: El `<ng-template #header>` debe contener exclusivamente el icono distintivo (si corresponde) y el título directo de la acción (`<h3>` o `<span>`). No añadir etiquetas `<p class="text-xs text-slate-500 ...">` explicando lo que hace el formulario o la pantalla.
+> - **Enfoque en el Contenido y la Acción**: El usuario ya sabe qué acción está ejecutando al abrir la modal; la interfaz debe ir directo a los controles interactivos (inputs, selectores, confirmación) ahorrando espacio vertical y evitando ruido visual innecesario.
+> - **Diálogos de Confirmación**: En diálogos de confirmación o alerta (e.g. eliminar, reiniciar), limitar el texto al mensaje puntual de la pregunta de confirmación, sin redundancias.
+
+---
+
 ## 3. Sistema Temático y Tokens de Color
 
 ### 3.1. Preset Base PrimeUI (Aura)

@@ -62,14 +62,9 @@ import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
           >
             <ng-icon name="tablerClock" size="1.15rem" />
           </div>
-          <div>
-            <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-zinc-100">
-              {{ (isEditing() ? 'compact.modal.editActivity' : 'compact.modal.newActivity') | translate }}
-            </h3>
-            <p class="text-[11px] text-slate-500 dark:text-zinc-400">
-              {{ 'compact.modal.subtitle' | translate }}
-            </p>
-          </div>
+          <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-zinc-100">
+            {{ (isEditing() ? 'compact.modal.editActivity' : 'compact.modal.newActivity') | translate }}
+          </h3>
         </div>
       </ng-template>
 

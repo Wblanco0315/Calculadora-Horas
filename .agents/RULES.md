@@ -188,6 +188,7 @@ El sistema de diseño y las reglas de interfaz se encuentran formalmente especif
 - **Tokens y Paleta Dinámica**: Los colores de acento se gestionan a través de `ThemeService` mediante `updatePrimaryPalette` de `@primeuix/themes`. Tailwind CSS v4 se encuentra vinculado mediante `tailwindcss-primeui` en `styles.css`.
 - **Modo Oscuro**: Compatibilidad nativa con selector `.dark` y esquema de color sincronizado.
 - **Tipografía y Forma**: Uso de `Inter` para cuerpo, `Plus Jakarta Sans` para titulares y `JetBrains Mono` para números, horas y contadores.
+- **Modales y Diálogos Limpios (Cero Descripciones Innecesarias)**: Queda estrictamente prohibido abusar de párrafos descriptivos, subtítulos explicativos o textos secundarios en los encabezados (`#header`) o cuerpos de las ventanas modales (`p-dialog`) a menos que el usuario lo solicite explícitamente. Las modales deben ser directas, limpias y minimalistas: el encabezado contendrá únicamente el icono (si aplica) y el título directo de la acción. No explicar lo obvio ni saturar verticalmente los diálogos.
 
 ---
 
@@ -216,5 +217,6 @@ Para garantizar la mantenibilidad y claridad del proyecto:
 | **PrimeNG** | Imports tree-shaken por componente, tema Aura de `@primeuix/themes`. Prohibido Material / Spartan. |
 | **Dashboard Layout** | Contenedor exclusivo de la barra lateral (sidebar) y menú superior. Todo contenido debe ser un componente separado cargado vía `<router-outlet />`. Prohibido contenido directo en `dashboard.page.html`. |
 | **Diseño UI** | Consultar y seguir [`docs/DESIGN_RULES.md`](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/docs/DESIGN_RULES.md). Priorizar siempre componentes oficiales de PrimeNG. |
+| **Modales y Diálogos** | Prohibido incluir subtítulos o descripciones innecesarias en encabezados/cuerpos salvo petición explícita. Encabezado directo con solo icono y título. |
 | **Documentación** | Todo módulo en `src/app/modules/<module>/` debe tener su `.md` en `docs/modules/<module>.md`. |
 | **Verificación** | Ejecutar `bun run build` tras cualquier generación o refactorización. |

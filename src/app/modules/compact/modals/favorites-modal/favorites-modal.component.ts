@@ -35,14 +35,9 @@ import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
           >
             <ng-icon name="tablerStar" class="fill-amber-500" size="1.2rem" />
           </div>
-          <div>
-            <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-zinc-100">
-              {{ 'compact.favorites' | translate }}
-            </h3>
-            <p class="text-[11px] text-slate-500 dark:text-zinc-400">
-              {{ 'compact.favoritesTitle' | translate }}
-            </p>
-          </div>
+          <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-zinc-100">
+            {{ 'compact.favorites' | translate }}
+          </h3>
         </div>
       </ng-template>
 
