@@ -1,4 +1,15 @@
 /* Setting page styles */
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
 }
+
+:host ::ng-deep p-tablist,
+:host ::ng-deep .p-tablist {
+  flex-shrink: 0 !important;
+  min-height: 44px !important;
+}
+

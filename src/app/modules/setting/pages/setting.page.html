@@ -1,7 +1,6 @@
-<div class="space-y-6 animate-fadeIn">
+<div class="animate-fadeIn flex flex-1 min-h-0 flex-col w-full">
   <!-- Page Header -->
-  <div
-    class="border-b border-slate-200 dark:border-zinc-800 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+  <div class="pb-4 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
     <div>
       <h1
         class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-zinc-100 flex items-center gap-2.5">
@@ -18,8 +17,13 @@
   </div>
 
   <!-- PrimeNG Tabs Component -->
-  <p-tabs [value]="activeTab" (valueChange)="onTabChange($event)" styleClass="w-full">
-    <p-tablist>
+  <p-tabs
+    [value]="activeTab"
+    (valueChange)="onTabChange($event)"
+    class="flex flex-1 min-h-0 flex-col border rounded-xl border-slate-200 dark:border-zinc-800 bg-white/40 dark:bg-zinc-900/40 overflow-hidden shadow-xs"
+  >
+    <!-- Tab Navigation Bar: Guaranteed Visible & Pinned at Top (Never Shrinks) -->
+    <p-tablist class="shrink-0 sticky top-0 z-10 bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
       <!-- User Tab Header -->
       <p-tab value="user" class="flex items-center gap-2 cursor-pointer py-2.5 px-4">
         <ng-icon name="tablerUser" size="1.15rem" />
@@ -33,7 +37,8 @@
       </p-tab>
     </p-tablist>
 
-    <p-tabpanels class="pt-6 flex-col overflow-y-auto w-full h-full">
+    <!-- Scrollable Tab Panels Container -->
+    <p-tabpanels class="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 w-full">
       <!-- USER TAB PANEL -->
       <p-tabpanel value="user">
         <app-user-section />
@@ -44,5 +49,6 @@
         <app-system-section />
       </p-tabpanel>
     </p-tabpanels>
+
   </p-tabs>
 </div>

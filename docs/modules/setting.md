@@ -63,3 +63,4 @@ Implementa `<p-tabs>` de PrimeNG sincronizado bidireccionalmente con la URL:
 - `/dashboard/settings?tab=user` activa la pestaña **User**.
 - `/dashboard/settings?tab=system` activa la pestaña **System**.
 - Al interactuar con las pestañas, se actualiza el parámetro de la URL mediante `onTabChange()` sin recargar la página, sincronizando de inmediato el breadcrumb en el encabezado del Dashboard.
+- **Garantía de Visualización Permanente de Navegación**: El componente `p-tablist` cuenta con protección contra colapso flex (`shrink-0` y `flex-shrink: 0 !important; min-height: 44px`) y anclaje superior (`sticky top-0 z-10`), asegurando que la barra de navegación nunca se oculte ni colapse en pantallas de computadoras portátiles (laptops) o con espacio vertical reducido; el desplazamiento vertical (`overflow-y-auto`) se aísla de forma exclusiva en `p-tabpanels`.

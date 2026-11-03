@@ -27,7 +27,7 @@ import { ScheduleEditorComponent } from '../../../../shared/components/schedule-
     }),
   ],
   template: `
-    <div class="space-y-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
       <!-- 1. User Profile & Account Data -->
       <app-user-card />
 
