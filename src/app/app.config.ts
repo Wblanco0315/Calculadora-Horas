@@ -11,10 +11,13 @@ import { providePrimeNG } from 'primeng/config';
 import Aura from '@primeuix/themes/aura';
 import { definePreset, palette } from '@primeuix/themes';
 import { StorageService } from './core/services/storage.service';
+import { getInitialStoredColor, resolvePrimaryHex } from './core/services/theme.service';
+
+const initialPrimaryHex = resolvePrimaryHex(getInitialStoredColor());
 
 const DesignSystemPreset = definePreset(Aura, {
   semantic: {
-    primary: palette('#5E4DA2'),
+    primary: palette(initialPrimaryHex),
   },
 });
 

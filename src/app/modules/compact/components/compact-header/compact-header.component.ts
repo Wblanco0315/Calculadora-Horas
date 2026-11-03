@@ -22,7 +22,7 @@ import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
   ],
   template: `
     <header
-      class="flex z-50 justify-between items-center h-8 bg-[#f3f3f3] dark:bg-[#202020] text-[#1a1a1a] dark:text-[#ffffff] select-none transition-colors shrink-0 overflow-hidden border-b border-slate-200 dark:border-zinc-800"
+      class="flex z-50 justify-between items-center h-8 bg-slate-50 dark:bg-[#202020] text-slate-800 dark:text-[#ffffff] select-none transition-colors shrink-0 overflow-hidden border-b border-slate-200/80 dark:border-zinc-800"
     >
       <!-- Draggable Area (Icon, App Name & Version) -->
       <div

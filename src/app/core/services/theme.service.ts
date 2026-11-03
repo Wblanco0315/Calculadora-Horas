@@ -2,8 +2,8 @@ import { Injectable, signal, effect, computed } from '@angular/core';
 import { updatePrimaryPalette, palette } from '@primeuix/themes';
 import { ThemeMode, PrimaryColor } from '../interfaces/config.interface';
 
-const THEME_STORAGE_KEY = 'pocketproject_theme';
-const COLOR_STORAGE_KEY = 'pocketproject_color';
+export const THEME_STORAGE_KEY = 'pocketproject_theme';
+export const COLOR_STORAGE_KEY = 'pocketproject_color';
 
 export const PRIMARY_PALETTES: Record<string, string> = {
   violet: '#5E4DA2',
@@ -14,12 +14,70 @@ export const PRIMARY_PALETTES: Record<string, string> = {
   rose: '#E11D48',
 };
 
+export function resolvePrimaryHex(color?: PrimaryColor | null): string {
+  if (!color) return PRIMARY_PALETTES['violet'];
+  if (color in PRIMARY_PALETTES) {
+    return PRIMARY_PALETTES[color];
+  }
+  const clean = color.trim();
+  if (clean.startsWith('#')) {
+    return clean;
+  }
+  if (/^[0-9A-Fa-f]{3,8}$/.test(clean)) {
+    return `#${clean}`;
+  }
+  return PRIMARY_PALETTES['violet'];
+}
+
+export function getInitialStoredTheme(): ThemeMode {
+  if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+    try {
+      const stored = localStorage.getItem(THEME_STORAGE_KEY) as ThemeMode | null;
+      if (stored === 'system' || stored === 'light' || stored === 'dark') {
+        return stored;
+      }
+      const rawConfig = localStorage.getItem('pocketproject_config_storage');
+      if (rawConfig) {
+        const parsed = JSON.parse(rawConfig);
+        if (parsed.theme_mode === 'system' || parsed.theme_mode === 'light' || parsed.theme_mode === 'dark') {
+          return parsed.theme_mode;
+        }
+      }
+    } catch {}
+  }
+  return 'system';
+}
+
+export function getInitialStoredColor(): PrimaryColor {
+  if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+    try {
+      const stored = localStorage.getItem(COLOR_STORAGE_KEY) as PrimaryColor | null;
+      if (stored) {
+        if (stored in PRIMARY_PALETTES || stored.startsWith('#') || /^[0-9A-Fa-f]{3,8}$/.test(stored)) {
+          return stored;
+        }
+      }
+      const rawConfig = localStorage.getItem('pocketproject_config_storage');
+      if (rawConfig) {
+        const parsed = JSON.parse(rawConfig);
+        if (parsed.primary_color) {
+          const col = parsed.primary_color;
+          if (col in PRIMARY_PALETTES || col.startsWith('#') || /^[0-9A-Fa-f]{3,8}$/.test(col)) {
+            return col;
+          }
+        }
+      }
+    } catch {}
+  }
+  return 'violet';
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class ThemeService {
-  readonly themeMode = signal<ThemeMode>(this.getInitialTheme());
-  readonly primaryColor = signal<PrimaryColor>(this.getInitialColor());
+  readonly themeMode = signal<ThemeMode>(getInitialStoredTheme());
+  readonly primaryColor = signal<PrimaryColor>(getInitialStoredColor());
 
   readonly isDark = computed<boolean>(() => {
     const mode = this.themeMode();
@@ -68,6 +126,10 @@ export class ThemeService {
 
   setTheme(mode: ThemeMode): void {
     this.themeMode.set(mode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(THEME_STORAGE_KEY, mode);
+    }
+    this.applyTheme(mode);
   }
 
   toggleTheme(): void {
@@ -75,48 +137,24 @@ export class ThemeService {
     this.setTheme(isDark ? 'light' : 'dark');
   }
 
-  setPrimaryColor(color: PrimaryColor): void {
+  setPrimaryColor(color: PrimaryColor, force: boolean = false): void {
+    const isSame = this.primaryColor() === color;
     this.primaryColor.set(color);
-  }
-
-  private getInitialTheme(): ThemeMode {
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(THEME_STORAGE_KEY) as ThemeMode | null;
-      if (stored === 'system' || stored === 'light' || stored === 'dark') {
-        return stored;
-      }
+      localStorage.setItem(COLOR_STORAGE_KEY, color);
     }
-    return 'system';
+    // If the signal already had this value, Angular's effect won't re-execute.
+    // Explicitly apply the primary color so PrimeNG palette stays updated.
+    if (isSame || force) {
+      this.applyPrimaryColor(color);
+    }
   }
 
   resolveHex(color: PrimaryColor): string {
-    if (!color) return PRIMARY_PALETTES['violet'];
-    if (color in PRIMARY_PALETTES) {
-      return PRIMARY_PALETTES[color];
-    }
-    const clean = color.trim();
-    if (clean.startsWith('#')) {
-      return clean;
-    }
-    if (/^[0-9A-Fa-f]{3,8}$/.test(clean)) {
-      return `#${clean}`;
-    }
-    return PRIMARY_PALETTES['violet'];
+    return resolvePrimaryHex(color);
   }
 
-  private getInitialColor(): PrimaryColor {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(COLOR_STORAGE_KEY) as PrimaryColor | null;
-      if (stored) {
-        if (stored in PRIMARY_PALETTES || stored.startsWith('#') || /^[0-9A-Fa-f]{3,8}$/.test(stored)) {
-          return stored;
-        }
-      }
-    }
-    return 'violet';
-  }
-
-  private applyTheme(mode: ThemeMode): void {
+  applyTheme(mode: ThemeMode): void {
     if (typeof document === 'undefined') return;
 
     const root = document.documentElement;
@@ -143,7 +181,7 @@ export class ThemeService {
     }
   }
 
-  private applyPrimaryColor(color: PrimaryColor): void {
+  applyPrimaryColor(color: PrimaryColor): void {
     if (typeof document === 'undefined') return;
     const isPreset = color in PRIMARY_PALETTES;
     document.documentElement.setAttribute('data-color', isPreset ? color : 'custom');

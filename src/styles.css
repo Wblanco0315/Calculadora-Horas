@@ -26,6 +26,22 @@ html.dark {
   color-scheme: dark;
 }
 
+/* Light mode: blanco hueso con fondo ambiental ultra-suave del color de acento */
+:root:not(.dark) {
+  --color-white: #fcfbf9;      /* Blanco hueso cálido para tarjetas y paneles */
+  --p-surface-0: #fcfbf9;      /* PrimeNG modales y popups en blanco hueso */
+  --p-surface-50: color-mix(in srgb, var(--p-primary-50, #f6f6f9) 60%, #f7f6f2);
+  --p-surface-100: color-mix(in srgb, var(--p-primary-100, #edeaf3) 40%, #eeebe5);
+}
+
+:root:not(.dark) body {
+  background-color: color-mix(in srgb, var(--p-primary-50, #f6f6f9) 60%, #f7f6f2);
+}
+
+:root:not(.dark) .bg-slate-50 {
+  background-color: color-mix(in srgb, var(--p-primary-50, #f6f6f9) 60%, #f7f6f2);
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -55,6 +71,11 @@ h1, h2, h3, h4 {
 /* Suppress PrimeUI license host overlay */
 #p-license-host {
   display: none !important;
+}
+
+/* Ensure router-outlet does not take up space or generate boxes in Flexbox/Grid layouts */
+router-outlet {
+  display: none;
 }
 
 /* Smooth Fade In Animation */

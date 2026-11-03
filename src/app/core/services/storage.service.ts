@@ -9,7 +9,7 @@ import {
   DaySchedule,
   DayOfWeek,
 } from '../interfaces/config.interface';
-import { ThemeService } from './theme.service';
+import { ThemeService, COLOR_STORAGE_KEY, THEME_STORAGE_KEY } from './theme.service';
 import { LanguageService } from './language.service';
 
 const CONFIG_STORAGE_KEY = 'pocketproject_config_storage';
@@ -203,6 +203,12 @@ export class StorageService {
         // Cache loaded SQLite config in localStorage
         if (typeof window !== 'undefined') {
           localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(completeConfig));
+          if (completeConfig.primary_color) {
+            localStorage.setItem(COLOR_STORAGE_KEY, completeConfig.primary_color);
+          }
+          if (completeConfig.theme_mode) {
+            localStorage.setItem(THEME_STORAGE_KEY, completeConfig.theme_mode);
+          }
         }
 
         this.config.set(completeConfig);
@@ -246,6 +252,12 @@ export class StorageService {
     // 1. Always save immediately to localStorage for instant startup retrieval
     if (typeof window !== 'undefined') {
       localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(configWithJson));
+      if (configWithJson.primary_color) {
+        localStorage.setItem(COLOR_STORAGE_KEY, configWithJson.primary_color);
+      }
+      if (configWithJson.theme_mode) {
+        localStorage.setItem(THEME_STORAGE_KEY, configWithJson.theme_mode);
+      }
     }
 
     // 2. Save persistently to SQLite database if in Tauri
