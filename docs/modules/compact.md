@@ -43,7 +43,7 @@ src/app/modules/compact/
 - **Responsabilidad y Diseño**:
   - Altura nativa de 32px (`h-8`), coincidiendo con la barra de título original de Windows.
   - Región arrastrable (`data-tauri-drag-region`) con el logo cuadrado dinámico en degradado del tema (`from-primary-500 to-primary-700`), título de la aplicación y versión actual (`v{{ version }}`).
-  - Botón de alternancia de tema claro/oscuro (`tablerSun` / `tablerMoon`) y botones nativos de minimizar y cerrar con comportamiento visual de Windows.
+  - Botón de alternancia de tema claro/oscuro (`tablerSun` / `tablerMoon`), botón de minimizar (oculta a la bandeja del sistema / iconos ocultos) y botón de cerrar que invoca el modal de confirmación `app-close-confirm-modal`.
 
 ### 2.2. Panel de Estadísticas Hero (`app-stats-hero`)
 - **Ubicación**: `components/stats-hero/stats-hero.component.ts`
@@ -82,20 +82,49 @@ src/app/modules/compact/
 - **Responsabilidad y Comportamiento**:
   - Checkbox para selección rápida cuando el modo de selección está habilitado.
   - Barra de acento lateral reactiva: verde esmeralda (`bg-emerald-500`) para tareas sincronizadas, color primario (`bg-primary-500`) para pendientes y rojo rosa (`bg-rose-500`) al confirmar eliminación.
-  - Badge de ticket `#12345` con borde temático y etiqueta de proyecto con icono de carpeta.
-  - Contador de tiempo en fuente monoespaciada formateado según el modo activo (`HH:MM` o decimal).
-  - Acciones rápidas:
-    - Copiar nombre al portapapeles con confirmación visual de copiado.
-    - Editar actividad.
-    - Eliminar actividad con **confirmación inline dentro de la propia fila** (`¿Eliminar actividad? [Aceptar] [Cancelar]`), replicando fielmente `row.vue`.
-    - Indicador/botón de sincronización con estado persistente sincronizado.
+  - **Jerarquía Visual Optimizada**:
+    - **Nombre del proyecto encima del título del ticket**: Se muestra el icono de carpeta y el nombre del proyecto en la parte superior.
+    - **Línea de Ticket y Título**: Badge de ticket `#12345` con su título en mayúsculas y acento temático.
+    - **Row inicial limpio y despejado**: Contador de duración (`HH:MM` o decimal), pill activo de cronómetro (si está en marcha o pausado), badge de sincronización y **un único botón de acciones** (`tablerDotsVertical`).
+  - **Menú de Acciones Centralizado en Popover (`<p-popover #actionPopover>`)**:
+    - Reemplaza la acumulación de múltiples botones por un único disparador contextual limpio que abre un Popover de PrimeNG.
+    - Opciones integradas:
+      1. **Cronómetro**: Iniciar / Pausar cronómetro con apertura directa de controles extendidos.
+      2. **Sincronizar a OpenProject**: Envío directo o reenvío en caso de tareas ya sincronizadas.
+      3. **Copiar descripción**: Copia al portapapeles la descripción (o título si la descripción está vacía).
+      4. **Ver / Ocultar detalles**: Alterna el panel expandible inferior.
+      5. **Editar actividad**: Abre el modal de edición `app-activity-form-modal`.
+      6. **Eliminar actividad**: Con confirmación inline dentro de la propia fila (`¿Eliminar actividad? [Aceptar] [Cancelar]`).
+  - **Detalle Expandible por Toggle (`isExpanded`) Reorganizado**:
+    - Al hacer clic en la fila o en la opción del menú, se despliega un panel de detalle estructurado en **3 columnas de metadatos**:
+      1. **Fecha**: Fecha registrada de la actividad.
+      2. **Estado**: Estado de OpenProject (si aplica) junto al pill de estado de sincronización (`Sincronizado` / `Pendiente`).
+      3. **Tipo de actividad**: Tipo de actividad de OpenProject (`activityTypeName` o `projectName`).
+    - **Sección de Descripción**: Se renderiza **únicamente** si la actividad contiene una descripción no vacía, respetando saltos de línea (`whitespace-pre-wrap`) y eliminando placeholders redundantes.
 
 ### 2.6. Modales de Negocio Totalmente Separados
 Cada modal se encuentra aislado en su propio componente standalone dentro de `modals/`:
 1. **`app-activity-form-modal`**:
    - Modal dedicado exclusivamente para la creación y edición manual de actividades.
+   - **Título de Ticket Editable y Auto-bloqueo**:
+     - Campo de entrada editable `<input pInputText>` para el título del ticket.
+     - Al ingresar un número de ticket y encontrarlo en OpenProject, el valor del input se reemplaza automáticamente con el título del ticket obtenido y el campo se deshabilita para evitar discrepancias.
+     - Si el número de ticket se borra o se cambia por uno no encontrado, el campo vuelve a habilitarse para edición manual libre.
+   - **Política de Descripción Vacía**:
+     - Si el usuario no ingresa descripción, se guarda vacía (`name = ''`), sin generar textos artificiales ni forzar la copia del título del ticket.
+   - **Selector de Tipo de Actividad OpenProject**:
+     - El campo **Tipo de Actividad OpenProject** se solicita de forma visible y destacada al registrar la actividad.
+     - Si el usuario está conectado a OpenProject, se precarga automáticamente con el primer tipo disponible para agilizar la captura.
+     - Al guardarse con su `activityTypeId`, la actividad queda lista para ser enviada a OpenProject.
+   - **Sincronización Directa sin Diálogos Redundantes**:
+     - Al hacer clic en "Sincronizar a OpenProject" en la fila o en los botones masivos ("Todos" / "Enviar"), el sistema envía las peticiones directamente a la API v3 en formato **HAL+JSON** (`_links.workPackage`, `_links.activity`, y `_links.project`) sin abrir modales innecesarios.
+     - El modal `app-sync-confirm-modal` se reserva como fallback en caso de que alguna actividad carezca de tipo asignado.
+   - **Soporte de Modo Cronómetro Directo**:
+     - Botón "Iniciar Cronómetro" en el pie de la modal para registrar la actividad e iniciar inmediatamente el conteo en tiempo real.
+     - Detección inteligente: Si el usuario pulsa "Guardar" con 0 horas y 0 minutos, despliega un diálogo limpio que consulta si desea iniciar el cronómetro o llenar el tiempo manualmente.
+   - **Incorpora el componente `Textarea` de PrimeNG (`<textarea pTextarea>`)** al final del formulario para capturar cómodamente descripciones multilínea con autoajuste de tamaño (`[autoResize]="true"`).
    - **Incorpora el componente `DatePicker` de PrimeNG (`<p-datepicker>`)** para la selección nativa de fechas con calendario emergente, eliminando inputs de fecha nativos planos.
-   - Utiliza `<p-inputnumber>` para horas y minutos, `<input pInputText>` para ticket y descripción, y `<p-select>` para la selección de proyectos.
+   - Utiliza `<p-inputnumber>` para horas y minutos, `<input pInputText>` para el número de ticket y `<p-select>` para la selección de proyectos.
 2. **`app-favorites-modal`**:
    - Modal dedicado para listar los tickets favoritos guardados.
    - Al seleccionar un ticket, transfiere los datos automáticamente y abre el formulario de actividad con los campos precargados.
@@ -105,6 +134,9 @@ Cada modal se encuentra aislado en su propio componente standalone dentro de `mo
    - Totalmente desacoplado de la plantilla principal `compact.page.html`.
 4. **`app-sync-confirm-modal`**:
    - Modal dedicado para seleccionar el tipo de actividad de OpenProject y enviar tiempos individuales o masivos.
+5. **`app-close-confirm-modal`**:
+   - Modal dedicado para confirmar el cierre de la aplicación al pulsar el botón de cerrar (`X`) o mediante solicitudes de cierre del sistema.
+   - Proporciona opciones limpias para Cancelar, Minimizar a la bandeja (guardar en los iconos ocultos) o Cerrar la aplicación definitivamente.
 
 ---
 
@@ -122,7 +154,7 @@ La barra de navegación inferior (`<nav>`) de 3 posiciones permite la conmutaci�
 
 ## 4. Estado Reactivo (Signals) e Integración de Servicios
 
-* **[`WindowService`](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/core/services/window.service.ts)**: Control de dimensiones compacta (525x800) vs completa (1150x780), minimizado, cierre y arrastre.
+* **[`WindowService`](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/core/services/window.service.ts)**: Control de dimensiones compacta (525x800) vs completa (1150x780), minimizado a la bandeja (iconos ocultos), interceptor de cierre con confirmación (`showCloseModal`) y arrastre nativo.
 * **[`ActivityService`](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/core/services/activity.service.ts)**:
   - Signals: `activities`, `selectedDate`, `projects`, `favoriteTickets`, `timeFormat`, `isSelectionMode`, `showActivityForm`, `showFavoritesModal`, `showResetModal`, `showSyncModal`, `presetActivity`.
   - Computeds: `dailyActivities`, `totalMinutes`, `progressPercentage`, `unsyncedActivities`, `selectedActivities`.

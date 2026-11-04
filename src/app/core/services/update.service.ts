@@ -12,7 +12,7 @@ export type UpdateStatus = 'idle' | 'checking' | 'available' | 'up-to-date' | 'd
 export class UpdateService {
   readonly isChecking = signal<boolean>(false);
   readonly updateAvailable = signal<boolean>(false);
-  readonly currentVersion = signal<string>('0.5.0');
+  readonly currentVersion = signal<string>('1.0.0');
   readonly availableVersion = signal<string>('');
   readonly updateBody = signal<string>('');
   readonly updateDate = signal<string>('');
