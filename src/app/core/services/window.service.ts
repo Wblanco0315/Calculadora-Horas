@@ -1,7 +1,8 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { isTauri } from '@tauri-apps/api/core';
+import { isTauri, invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
+import { listen } from '@tauri-apps/api/event';
 
 export type AppViewMode = 'compact' | 'full';
 
@@ -19,14 +20,23 @@ export class WindowService {
   private readonly router = inject(Router);
 
   readonly viewMode = signal<AppViewMode>(this.getInitialViewMode());
+  readonly showCloseModal = signal<boolean>(false);
+
+  constructor() {
+    this.initCloseListener();
+  }
+
+  private initCloseListener(): void {
+    if (isTauri()) {
+      listen('close-requested', () => {
+        this.requestClose();
+      }).catch((err) => {
+        console.warn('Error setting up close-requested listener:', err);
+      });
+    }
+  }
 
   private getInitialViewMode(): AppViewMode {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(VIEW_MODE_KEY);
-      if (saved === 'compact' || saved === 'full') {
-        return saved;
-      }
-    }
     return 'compact';
   }
 
@@ -54,56 +64,79 @@ export class WindowService {
   }
 
   /**
-   * Switch to Full Mode (Dashboard layout view: ~1150x780)
+   * Full mode is reserved for future versions; for v1.0.0 keeps compact mode
    */
-  async setFullMode(targetUrl: string = '/dashboard/overview'): Promise<void> {
-    this.viewMode.set('full');
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(VIEW_MODE_KEY, 'full');
-    }
-
-    if (isTauri()) {
-      try {
-        const win = getCurrentWindow();
-        await win.setSize(new LogicalSize(FULL_WINDOW_WIDTH, FULL_WINDOW_HEIGHT));
-        await win.center();
-      } catch (err) {
-        console.warn('Error adjusting window to full mode:', err);
-      }
-    }
-
-    await this.router.navigateByUrl(targetUrl);
+  async setFullMode(_targetUrl: string = '/compact'): Promise<void> {
+    await this.setCompactMode();
   }
 
   /**
-   * Toggle between Compact and Full modes
+   * Toggle view mode - in v1.0.0 remains in compact mode
    */
   async toggleViewMode(): Promise<void> {
-    if (this.viewMode() === 'compact') {
-      await this.setFullMode();
-    } else {
-      await this.setCompactMode();
+    await this.setCompactMode();
+  }
+
+  /**
+   * Minimizes the window into the system tray / hidden icons.
+   */
+  async minimizeToTray(): Promise<void> {
+    this.showCloseModal.set(false);
+    if (isTauri()) {
+      try {
+        const win = getCurrentWindow();
+        await win.hide();
+      } catch (err) {
+        console.warn('Error hiding window to tray:', err);
+      }
     }
   }
 
+  /**
+   * Minimizes the window. By default saves/hides into hidden icons (system tray).
+   */
   async minimize(): Promise<void> {
+    await this.minimizeToTray();
+  }
+
+  /**
+   * Opens confirmation modal before closing
+   */
+  requestClose(): void {
+    this.showCloseModal.set(true);
+  }
+
+  /**
+   * Dismisses close confirmation modal
+   */
+  cancelClose(): void {
+    this.showCloseModal.set(false);
+  }
+
+  /**
+   * Closes / terminates the application completely
+   */
+  async confirmExit(): Promise<void> {
+    this.showCloseModal.set(false);
     if (isTauri()) {
       try {
-        await getCurrentWindow().minimize();
+        await invoke('exit_app');
       } catch (err) {
-        console.warn('Error minimizing Tauri window:', err);
+        console.warn('Error invoking exit_app, attempting window destroy fallback:', err);
+        try {
+          await getCurrentWindow().destroy();
+        } catch (destroyErr) {
+          console.warn('Error destroying window:', destroyErr);
+        }
       }
     }
   }
 
-  async close(): Promise<void> {
-    if (isTauri()) {
-      try {
-        await getCurrentWindow().close();
-      } catch (err) {
-        console.warn('Error closing Tauri window:', err);
-      }
-    }
+  /**
+   * Close trigger: requests confirmation modal
+   */
+  close(): void {
+    this.requestClose();
   }
 
   async startDragging(): Promise<void> {

@@ -1,6 +1,6 @@
 [package]
 name = "pocketproject"
-version = "0.5.0"
+version = "1.0.0"
 description = "PocketProject - OpenProject Time & Schedule Tracker"
 authors = ["Wilson Blanco"]
 edition = "2024"
@@ -18,7 +18,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
