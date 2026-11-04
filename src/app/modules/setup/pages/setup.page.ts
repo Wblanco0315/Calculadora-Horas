@@ -1,16 +1,28 @@
 import { Component, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { Stepper, StepList, Step } from 'primeng/stepper';
+import { Tabs, TabList, Tab } from 'primeng/tabs';
 import { ButtonDirective } from 'primeng/button';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerArrowLeft, tablerArrowRight } from '@ng-icons/tabler-icons';
+import {
+  tablerArrowLeft,
+  tablerArrowRight,
+  tablerPalette,
+  tablerCalendar,
+  tablerCoffee,
+  tablerLink,
+  tablerCheck,
+} from '@ng-icons/tabler-icons';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { SetupService } from '../services/setup.service';
+import { StorageService } from '../../../core/services/storage.service';
 import { SetupHeaderComponent } from '../components/setup-header/setup-header.component';
 import { ScheduleStepComponent } from '../components/schedule-step/schedule-step.component';
 import { LunchStepComponent } from '../components/lunch-step/lunch-step.component';
 import { AppearanceStepComponent } from '../components/appearance-step/appearance-step.component';
 import { OpenprojectStepComponent } from '../components/openproject-step/openproject-step.component';
+import { CloseConfirmModalComponent } from '../modals/close-confirm-modal/close-confirm-modal.component';
 
 @Component({
   selector: 'app-setup-page',
@@ -20,6 +32,9 @@ import { OpenprojectStepComponent } from '../components/openproject-step/openpro
     Stepper,
     StepList,
     Step,
+    Tabs,
+    TabList,
+    Tab,
     ButtonDirective,
     NgIcon,
     TranslatePipe,
@@ -28,11 +43,17 @@ import { OpenprojectStepComponent } from '../components/openproject-step/openpro
     LunchStepComponent,
     AppearanceStepComponent,
     OpenprojectStepComponent,
+    CloseConfirmModalComponent,
   ],
   viewProviders: [
     provideIcons({
       tablerArrowLeft,
       tablerArrowRight,
+      tablerPalette,
+      tablerCalendar,
+      tablerCoffee,
+      tablerLink,
+      tablerCheck,
     }),
   ],
   templateUrl: './setup.page.html',
@@ -40,6 +61,8 @@ import { OpenprojectStepComponent } from '../components/openproject-step/openpro
 })
 export class SetupPage implements OnInit {
   readonly setupService = inject(SetupService);
+  readonly storageService = inject(StorageService);
+  private readonly router = inject(Router);
 
   readonly isNextDisabled = computed(() => {
     const step = this.setupService.activeStep();
@@ -68,5 +91,9 @@ export class SetupPage implements OnInit {
     if (current > 1) {
       this.setupService.goToStep(current - 1);
     }
+  }
+
+  closeSettings(): void {
+    this.router.navigate(['/compact']);
   }
 }

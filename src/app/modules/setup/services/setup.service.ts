@@ -225,9 +225,12 @@ export class SetupService {
     this.languageService.setLanguage(lang);
   }
 
-  goToStep(step: number | undefined): void {
+  goToStep(step: number | string | undefined): void {
     if (step !== undefined) {
-      this.activeStep.set(step);
+      const num = Number(step);
+      if (!isNaN(num)) {
+        this.activeStep.set(num);
+      }
     }
   }
 
@@ -450,7 +453,7 @@ export class SetupService {
       await this.storageService.saveConfig(configToSave);
       this.themeService.setTheme(configToSave.theme_mode);
       this.themeService.setPrimaryColor(configToSave.primary_color);
-      await this.router.navigate(['/dashboard']);
+      await this.router.navigate(['/compact']);
     } catch (err) {
       console.error('Error al guardar configuración:', err);
       alert('Error guardando la configuración en la base de datos local SQLite.');

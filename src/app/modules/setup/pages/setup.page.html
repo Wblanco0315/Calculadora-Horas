@@ -1,41 +1,84 @@
 <div
-  class="min-h-dvh w-full flex flex-col items-center justify-center p-2.5 sm:p-4 md:p-6 bg-slate-50 dark:bg-zinc-950 transition-colors duration-200 overflow-y-auto">
-  <!-- Subtle Minimal Ambient Glow -->
-  <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-    <div class="absolute -top-32 -left-32 w-80 h-80 bg-primary-500/5 dark:bg-primary-500/10 rounded-full blur-3xl">
+  [ngClass]="storageService.isConfigured()
+    ? 'h-dvh w-full flex flex-col bg-white dark:bg-zinc-900 transition-colors duration-200 overflow-hidden'
+    : 'min-h-dvh w-full flex flex-col items-center justify-center p-2.5 sm:p-4 md:p-6 bg-slate-50 dark:bg-zinc-950 transition-colors duration-200 overflow-y-auto'"
+>
+  @if (!storageService.isConfigured()) {
+    <!-- Subtle Minimal Ambient Glow (Only for initial onboarding) -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+      <div class="absolute -top-32 -left-32 w-80 h-80 bg-primary-500/5 dark:bg-primary-500/10 rounded-full blur-3xl"></div>
+      <div class="absolute -bottom-32 -right-32 w-80 h-80 bg-primary-500/5 dark:bg-primary-500/10 rounded-full blur-3xl"></div>
     </div>
-    <div class="absolute -bottom-32 -right-32 w-80 h-80 bg-primary-500/5 dark:bg-primary-500/10 rounded-full blur-3xl">
-    </div>
-  </div>
+  }
 
   <main
-    class="w-full max-w-xl md:max-w-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl sm:rounded-3xl shadow-sm overflow-hidden transition-all duration-200 my-auto flex flex-col max-h-[calc(100dvh-1.25rem)] sm:max-h-[calc(100dvh-2rem)]">
+    [ngClass]="storageService.isConfigured()
+      ? 'w-full h-full flex flex-col bg-white dark:bg-zinc-900 overflow-hidden'
+      : 'w-full max-w-xl md:max-w-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl sm:rounded-3xl shadow-sm overflow-hidden transition-all duration-200 my-auto flex flex-col max-h-[calc(100dvh-1.25rem)] sm:max-h-[calc(100dvh-2rem)]'"
+  >
     <!-- Header (fixed at top of modal) -->
     <app-setup-header class="shrink-0" />
 
-    <!-- PrimeNG Minimal Stepper (fixed under header) -->
-    <div
-      class="px-3 sm:px-8 pt-3 sm:pt-4 pb-2.5 sm:pb-3 border-b border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 shrink-0">
-      <p-stepper [value]="setupService.activeStep()" (valueChange)="setupService.goToStep($event)">
-        <p-step-list>
-          <p-step [value]="1">
-            <span class="hidden sm:inline">{{ 'setup.step1' | translate }}</span>
-          </p-step>
-          <p-step [value]="2">
-            <span class="hidden sm:inline">{{ 'setup.step2' | translate }}</span>
-          </p-step>
-          <p-step [value]="3">
-            <span class="hidden sm:inline">{{ 'setup.step3' | translate }}</span>
-          </p-step>
-          <p-step [value]="4">
-            <span class="hidden sm:inline">{{ 'setup.step4' | translate }}</span>
-          </p-step>
-        </p-step-list>
-      </p-stepper>
-    </div>
+    @if (!storageService.isConfigured()) {
+      <!-- PrimeNG Minimal Stepper (Only on Initial Setup Onboarding) -->
+      <div
+        class="px-3 sm:px-8 pt-3 sm:pt-4 pb-2.5 sm:pb-3 border-b border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 shrink-0">
+        <p-stepper [value]="setupService.activeStep()" (valueChange)="setupService.goToStep($event)">
+          <p-step-list>
+            <p-step [value]="1">
+              <span class="hidden sm:inline">{{ 'setup.step1' | translate }}</span>
+            </p-step>
+            <p-step [value]="2">
+              <span class="hidden sm:inline">{{ 'setup.step2' | translate }}</span>
+            </p-step>
+            <p-step [value]="3">
+              <span class="hidden sm:inline">{{ 'setup.step3' | translate }}</span>
+            </p-step>
+            <p-step [value]="4">
+              <span class="hidden sm:inline">{{ 'setup.step4' | translate }}</span>
+            </p-step>
+          </p-step-list>
+        </p-stepper>
+      </div>
+    } @else {
+      <!-- PrimeNG Tabs (When NOT initial setup: editing settings) -->
+      <div class="px-2 sm:px-4 pt-1.5 pb-0 border-b border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 shrink-0">
+        <p-tabs [value]="setupService.activeStep()" (valueChange)="setupService.goToStep($event)">
+          <p-tablist class="w-full flex justify-between gap-1 overflow-x-auto">
+            <p-tab [value]="1" class="cursor-pointer py-2 px-2.5 sm:px-3 text-xs sm:text-sm font-medium">
+              <span class="inline-flex items-center gap-1.5">
+                <ng-icon name="tablerPalette" size="1rem" />
+                <span>{{ 'setup.step1' | translate }}</span>
+              </span>
+            </p-tab>
+            <p-tab [value]="2" class="cursor-pointer py-2 px-2.5 sm:px-3 text-xs sm:text-sm font-medium">
+              <span class="inline-flex items-center gap-1.5">
+                <ng-icon name="tablerCalendar" size="1rem" />
+                <span>{{ 'setup.step2' | translate }}</span>
+              </span>
+            </p-tab>
+            <p-tab [value]="3" class="cursor-pointer py-2 px-2.5 sm:px-3 text-xs sm:text-sm font-medium">
+              <span class="inline-flex items-center gap-1.5">
+                <ng-icon name="tablerCoffee" size="1rem" />
+                <span>{{ 'setup.step3' | translate }}</span>
+              </span>
+            </p-tab>
+            <p-tab [value]="4" class="cursor-pointer py-2 px-2.5 sm:px-3 text-xs sm:text-sm font-medium">
+              <span class="inline-flex items-center gap-1.5">
+                <ng-icon name="tablerLink" size="1rem" />
+                <span>{{ 'setup.step4' | translate }}</span>
+              </span>
+            </p-tab>
+          </p-tablist>
+        </p-tabs>
+      </div>
+    }
 
     <!-- Step Content Switcher (scrollable body) -->
-    <div class="px-4 py-4 sm:px-8 sm:py-6 flex-1 overflow-y-auto overscroll-contain">
+    <div
+      class="flex-1 overflow-y-auto overscroll-contain"
+      [ngClass]="storageService.isConfigured() ? 'px-3.5 py-3 sm:px-5 sm:py-4' : 'px-4 py-4 sm:px-8 sm:py-6'"
+    >
       @switch (setupService.activeStep()) {
       @case (1) {
       <app-appearance-step />
@@ -53,20 +96,22 @@
     </div>
 
     <!-- Step Navigation Footer (pinned at bottom of card) -->
-    <footer
-      class="flex items-center px-4 py-3 sm:px-8 sm:py-4 border-t border-slate-100 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xs shrink-0"
-      [ngClass]="setupService.activeStep() > 1 ? 'justify-between' : 'justify-end'">
-      @if (setupService.activeStep() > 1) {
-      <button pButton (click)="prevStep()" variant="outlined" severity="secondary" class="flex items-center">
-        <ng-icon name="tablerArrowLeft" size="1rem" class="mr-1" />
-        <span>{{ 'common.back' | translate }}</span>
-      </button>
-      }
+    @if (!storageService.isConfigured()) {
+      <footer
+        class="flex items-center px-4 py-3 sm:px-8 sm:py-4 border-t border-slate-100 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xs shrink-0"
+        [ngClass]="setupService.activeStep() > 1 ? 'justify-between' : 'justify-end'">
+        @if (setupService.activeStep() > 1) {
+        <button pButton (click)="prevStep()" variant="outlined" severity="secondary" class="flex items-center">
+          <ng-icon name="tablerArrowLeft" size="1rem" class="mr-1" />
+          <span>{{ 'common.back' | translate }}</span>
+        </button>
+        }
 
-      @if (setupService.activeStep() < 4) { <button pButton (click)="nextStep()" [disabled]="isNextDisabled()"
-        class="flex items-center">
-        <span>{{ 'common.next' | translate }}</span>
-        <ng-icon name="tablerArrowRight" size="1rem" class="ml-1" />
+        @if (setupService.activeStep() < 4) {
+        <button pButton (click)="nextStep()" [disabled]="isNextDisabled()"
+          class="flex items-center">
+          <span>{{ 'common.next' | translate }}</span>
+          <ng-icon name="tablerArrowRight" size="1rem" class="ml-1" />
         </button>
         } @else {
         <button pButton (click)="setupService.completeSetup()" [disabled]="isNextDisabled()"
@@ -75,6 +120,26 @@
           <ng-icon name="tablerArrowRight" size="1rem" class="ml-1" />
         </button>
         }
-    </footer>
+      </footer>
+    } @else {
+      <!-- Footer for Settings Mode (Tabs) -->
+      <footer class="flex items-center justify-between px-4 py-2.5 sm:px-5 sm:py-3 border-t border-slate-100 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xs shrink-0">
+        <button pButton (click)="closeSettings()" variant="outlined" severity="secondary" class="flex items-center">
+          <span>{{ 'common.close' | translate }}</span>
+        </button>
+
+        <button
+          pButton
+          (click)="setupService.completeSetup()"
+          [loading]="setupService.isSaving()"
+          [disabled]="setupService.isSaving() || !setupService.isScheduleValid()"
+          class="flex items-center"
+        >
+          <ng-icon name="tablerCheck" size="1rem" class="mr-1.5" />
+          <span>{{ 'common.save' | translate }}</span>
+        </button>
+      </footer>
+    }
   </main>
+  <app-close-confirm-modal />
 </div>

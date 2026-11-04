@@ -19,6 +19,8 @@ src/app/modules/setup/
 │   └── setup-header/         # Encabezado unificado del asistente
 ├── interfaces/
 │   └── setup.interface.ts    # Modelos y contratos de UI del wizard
+├── modals/
+│   └── close-confirm-modal/  # Diálogo de confirmación al cerrar la aplicación
 ├── pages/
 │   ├── setup.page.html       # Estructura del Stepper y navegación compartida
 │   ├── setup.page.ts         # Smart component controlador del flujo
