@@ -1,6 +1,7 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ButtonDirective } from 'primeng/button';
 import { Popover } from 'primeng/popover';
 import { Select } from 'primeng/select';
@@ -32,6 +33,7 @@ import { ActivityFormModalComponent } from '../modals/activity-form-modal/activi
 import { FavoritesModalComponent } from '../modals/favorites-modal/favorites-modal.component';
 import { SyncConfirmModalComponent } from '../modals/sync-confirm-modal/sync-confirm-modal.component';
 import { ResetConfirmModalComponent } from '../modals/reset-confirm-modal/reset-confirm-modal.component';
+import { CloseConfirmModalComponent } from '../modals/close-confirm-modal/close-confirm-modal.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({
@@ -51,6 +53,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
     FavoritesModalComponent,
     SyncConfirmModalComponent,
     ResetConfirmModalComponent,
+    CloseConfirmModalComponent,
     TranslatePipe,
   ],
   viewProviders: [
@@ -74,6 +77,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
   styleUrl: './compact.page.css',
 })
 export class CompactPage implements OnInit {
+  private readonly router = inject(Router);
   readonly activityService = inject(ActivityService);
   readonly windowService = inject(WindowService);
   readonly storageService = inject(StorageService);
@@ -162,6 +166,17 @@ export class CompactPage implements OnInit {
 
   ngOnInit(): void {
     this.activityService.loadActivities(this.activityService.selectedDate()).catch(() => {});
+    if (this.storageService.isLoggedIn()) {
+      if (this.activityService.projects().length === 0) {
+        this.activityService.fetchProjects().catch(() => {});
+      }
+      if (this.activityService.timeEntryActivities().length === 0) {
+        this.activityService.fetchTimeEntryActivities().catch(() => {});
+      }
+      if (this.activityService.statuses().length === 0) {
+        this.activityService.fetchStatuses().catch(() => {});
+      }
+    }
   }
 
   clearFilters(): void {
@@ -175,11 +190,37 @@ export class CompactPage implements OnInit {
     await this.activityService.deleteActivity(id);
   }
 
-  syncAll(): void {
-    this.activityService.openSyncModal();
+  async onSingleSync(activity: Activity): Promise<void> {
+    if (!activity.ticket) return;
+    const effectiveTypeId = activity.activityTypeId || activity.activity_type_id;
+    if (effectiveTypeId) {
+      await this.activityService.syncActivity(activity.id);
+    } else {
+      this.activityService.openSyncModal(activity);
+    }
   }
 
-  syncSelected(): void {
-    this.activityService.openSyncModal();
+  async syncAll(): Promise<void> {
+    const list = this.activityService.unsyncedActivities();
+    const missingType = list.some((a) => !a.activityTypeId && !a.activity_type_id);
+    if (!missingType && list.length > 0) {
+      await this.activityService.syncAllUnsynced();
+    } else {
+      this.activityService.openSyncModal();
+    }
+  }
+
+  async syncSelected(): Promise<void> {
+    const list = this.activityService.selectedActivities();
+    const missingType = list.some((a) => !a.activityTypeId && !a.activity_type_id);
+    if (!missingType && list.length > 0) {
+      await this.activityService.syncAllUnsynced();
+    } else {
+      this.activityService.openSyncModal();
+    }
+  }
+
+  openSettings(): void {
+    this.router.navigate(['/setup'], { queryParams: { edit: 'true' } });
   }
 }
