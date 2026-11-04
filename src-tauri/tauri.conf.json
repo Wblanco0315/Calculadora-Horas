@@ -15,7 +15,9 @@
         "label": "main",
         "title": "PocketProject",
         "width": 525,
-        "height": 800
+        "height": 800,
+        "decorations": false,
+        "shadow": true
       }
     ],
     "security": {
