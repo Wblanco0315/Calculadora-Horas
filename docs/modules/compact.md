@@ -42,7 +42,7 @@ src/app/modules/compact/
 - **Ubicación**: `components/compact-header/compact-header.component.ts`
 - **Responsabilidad y Diseño**:
   - Altura nativa de 32px (`h-8`), coincidiendo con la barra de título original de Windows.
-  - Región arrastrable (`data-tauri-drag-region`) con el logo cuadrado dinámico en degradado del tema (`from-primary-500 to-primary-700`), título de la aplicación y versión actual (`v{{ version }}`).
+  - Región arrastrable (`data-tauri-drag-region`) con el isologo oficial (`app-logo`), título de la aplicación y versión actual (`v{{ version }}`).
   - Botón de alternancia de tema claro/oscuro (`tablerSun` / `tablerMoon`), botón de minimizar (oculta a la bandeja del sistema / iconos ocultos) y botón de cerrar que invoca el modal de confirmación `app-close-confirm-modal`.
 
 ### 2.2. Panel de Estadísticas Hero (`app-stats-hero`)
@@ -52,6 +52,7 @@ src/app/modules/compact/
   - Encabezado con etiqueta "TOTAL REGISTRADO" y "Meta del día: HH:MM / decimal".
   - Contador numérico prominente en fuente monoespaciada (`JetBrains Mono`) con botón "Reiniciar" (`<button pButton>` con `ButtonDirective`) que dispara el modal dedicado `app-reset-confirm-modal`.
   - **Uso Oficial de `SelectButton` de PrimeNG (`<p-selectbutton>`)** para el conmutador de formato `[ HH:MM | DECIMAL ]`, permitiendo alternar reactivamente el formato de horas en toda la aplicación.
+  - **Transiciones Fluidas y Estabilidad de Layout (`animate-timeSwap`)**: Transición suave mediante micro-animación sin saltos bruscos (`animate-timeSwap`) en el total, meta y horas restantes al cambiar de formato, manteniendo bloqueada la altura y evitando cualquier estiramiento o desplazamiento visual de la interfaz.
   - Indicador de estado reactivo: "¡Meta cumplida! X extras", "¡Meta cumplida!" o "X restantes".
   - Barra de progreso delgada (`h-1.5`) de alto contraste con fondo semitransparente y relleno blanco.
 
@@ -85,7 +86,7 @@ src/app/modules/compact/
   - **Jerarquía Visual Optimizada**:
     - **Nombre del proyecto encima del título del ticket**: Se muestra el icono de carpeta y el nombre del proyecto en la parte superior.
     - **Línea de Ticket y Título**: Badge de ticket `#12345` con su título en mayúsculas y acento temático.
-    - **Row inicial limpio y despejado**: Contador de duración (`HH:MM` o decimal), pill activo de cronómetro (si está en marcha o pausado), badge de sincronización y **un único botón de acciones** (`tablerDotsVertical`).
+    - **Row inicial limpio y despejado**: Contador de duración (`HH:MM` o decimal) con ancho estable (`min-w-[4.75rem]`) y animación fluida (`animate-timeSwap`) para evitar que el título de la tarea se estire al alternar a formato decimal, pill activo de cronómetro (si está en marcha o pausado), badge de sincronización y **un único botón de acciones** (`tablerDotsVertical`).
   - **Menú de Acciones Centralizado en Popover (`<p-popover #actionPopover>`)**:
     - Reemplaza la acumulación de múltiples botones por un único disparador contextual limpio que abre un Popover de PrimeNG.
     - Opciones integradas:

@@ -24,23 +24,44 @@ function padZero(val: number): string {
   ],
   template: `
     <div
-      class="p-4 bg-linear-to-b from-primary-500 to-primary-600 dark:from-primary-950 dark:to-zinc-900 text-white shadow-inner shrink-0"
+      class="p-4 bg-linear-to-b from-primary-500 to-primary-600 dark:from-primary-950 dark:to-zinc-900 text-white shadow-inner shrink-0 select-none"
     >
       <!-- Top Row: Total Registrado + Meta del Día -->
-      <div class="flex justify-between items-baseline mb-1">
-        <span class="text-white/80 text-xs font-medium uppercase tracking-wider">
+      <div class="flex justify-between items-baseline mb-1 text-xs">
+        <span class="text-white/80 font-medium uppercase tracking-wider">
           {{ 'compact.totalRegistered' | translate }}
         </span>
-        <span class="text-white/80 text-xs">
-          {{ 'compact.dailyGoal' | translate: { goal: formattedGoal() } }}
-        </span>
+        <div class="h-4 flex items-baseline justify-end text-white/80 font-medium">
+          @if (activityService.timeFormat() === 'decimal') {
+            <span class="animate-timeSwap">
+              {{ 'compact.dailyGoal' | translate: { goal: formattedGoal() } }}
+            </span>
+          } @else {
+            <span class="animate-timeSwap">
+              {{ 'compact.dailyGoal' | translate: { goal: formattedGoal() } }}
+            </span>
+          }
+        </div>
       </div>
 
       <!-- Main Row: Big Hours + Reiniciar Button -->
       <div class="flex justify-between items-end gap-2 mb-1">
-        <span class="text-4xl font-bold font-mono tracking-tight flex items-baseline min-w-[120px] text-white">
-          {{ formattedTotalNumber() }}@if (activityService.timeFormat() === 'decimal') {<span class="text-2xl text-white/80 ml-1 font-medium">h</span>}
-        </span>
+        <div class="h-10 flex items-baseline select-none">
+          @if (activityService.timeFormat() === 'decimal') {
+            <div class="flex items-baseline animate-timeSwap">
+              <span class="text-4xl font-bold font-mono tracking-tight text-white leading-none tabular-nums">
+                {{ formattedTotalNumber() }}
+              </span>
+              <span class="text-2xl text-white/80 ml-1 font-medium leading-none">h</span>
+            </div>
+          } @else {
+            <div class="flex items-baseline animate-timeSwap">
+              <span class="text-4xl font-bold font-mono tracking-tight text-white leading-none tabular-nums">
+                {{ formattedTotalNumber() }}
+              </span>
+            </div>
+          }
+        </div>
 
         <button
           pButton
@@ -58,7 +79,7 @@ function padZero(val: number): string {
       </div>
 
       <!-- Format Toggle with PrimeNG SelectButton + Remaining / Overtime -->
-      <div class="flex items-center justify-between gap-3 mb-3 mt-2">
+      <div class="flex items-center justify-between gap-3 mb-3 mt-2 min-h-[30px]">
         <div class="flex items-center gap-2.5">
           <span class="text-white/90 text-xs font-medium tracking-wide uppercase">
             {{ 'compact.format' | translate }}
@@ -71,18 +92,32 @@ function padZero(val: number): string {
             optionValue="value"
             [allowEmpty]="false"
             size="small"
-            styleClass="text-xs"
+            styleClass="text-xs stats-format-select"
           />
         </div>
 
         <!-- Overtime or Remaining status message -->
-        <div class="text-xs text-white/90 font-medium tracking-wide">
-          @if (activityService.totalMinutes() > storageService.maxDailyMinutes()) {
-            <span>{{ 'compact.goalAchievedExtras' | translate: { time: formattedOvertime() } }}</span>
-          } @else if (activityService.totalMinutes() === storageService.maxDailyMinutes() && storageService.maxDailyMinutes() > 0) {
-            <span>{{ 'compact.goalAchieved' | translate }}</span>
+        <div class="text-xs text-white/90 font-medium tracking-wide text-right flex items-center justify-end h-5">
+          @if (activityService.timeFormat() === 'decimal') {
+            <span class="animate-timeSwap">
+              @if (activityService.totalMinutes() > storageService.maxDailyMinutes()) {
+                {{ 'compact.goalAchievedExtras' | translate: { time: formattedOvertime() } }}
+              } @else if (activityService.totalMinutes() === storageService.maxDailyMinutes() && storageService.maxDailyMinutes() > 0) {
+                {{ 'compact.goalAchieved' | translate }}
+              } @else {
+                {{ 'compact.timeRemaining' | translate: { time: formattedRemaining() } }}
+              }
+            </span>
           } @else {
-            <span>{{ 'compact.timeRemaining' | translate: { time: formattedRemaining() } }}</span>
+            <span class="animate-timeSwap">
+              @if (activityService.totalMinutes() > storageService.maxDailyMinutes()) {
+                {{ 'compact.goalAchievedExtras' | translate: { time: formattedOvertime() } }}
+              } @else if (activityService.totalMinutes() === storageService.maxDailyMinutes() && storageService.maxDailyMinutes() > 0) {
+                {{ 'compact.goalAchieved' | translate }}
+              } @else {
+                {{ 'compact.timeRemaining' | translate: { time: formattedRemaining() } }}
+              }
+            </span>
           }
         </div>
       </div>

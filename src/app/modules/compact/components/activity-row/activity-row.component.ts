@@ -275,12 +275,16 @@ function padZero(val: number): string {
               </button>
             }
 
-            <!-- Duration Display -->
+            <!-- Duration Display (Fixed stable width so title column never stretches, with smooth swap animation) -->
             <div
-              class="flex items-center gap-1 font-mono font-bold text-xs text-slate-700 dark:text-zinc-200"
+              class="flex items-center justify-end gap-1 font-mono font-bold text-xs text-slate-700 dark:text-zinc-200 min-w-[4.75rem] shrink-0 tabular-nums select-none"
             >
-              <ng-icon name="tablerClock" size="0.85rem" class="text-slate-400 dark:text-zinc-500" />
-              <span>{{ formattedDuration() }}</span>
+              <ng-icon name="tablerClock" size="0.85rem" class="text-slate-400 dark:text-zinc-500 shrink-0" />
+              @if (activityService.timeFormat() === 'decimal') {
+                <span class="animate-timeSwap">{{ formattedDuration() }}</span>
+              } @else {
+                <span class="animate-timeSwap">{{ formattedDuration() }}</span>
+              }
             </div>
 
             <!-- Compact Synced Check Badge -->

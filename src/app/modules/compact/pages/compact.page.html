@@ -256,20 +256,11 @@
     <!-- Active View: Calculator (Compact Mode) -->
     <button
       type="button"
-      class="flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/40 cursor-default"
+      class="cursor-default flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl text-slate-400 dark:text-zinc-600 transition-colors"
       [title]="'compact.title' | translate"
+      disabled
     >
       <ng-icon name="tablerLayoutDashboard" size="1.25rem" />
-    </button>
-
-    <!-- History (inactive / disabled) -->
-    <button
-      type="button"
-      disabled
-      class="cursor-not-allowed flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl text-slate-400 dark:text-zinc-600 opacity-40"
-      [title]="'compact.comingSoon' | translate"
-    >
-      <ng-icon name="tablerHistory" size="1.25rem" />
     </button>
 
     <!-- Settings -->
