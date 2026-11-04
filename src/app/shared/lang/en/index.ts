@@ -23,6 +23,7 @@ export const en = {
     step2: 'Schedule',
     step3: 'Lunch',
     step4: 'OpenProject',
+    step5: 'Updates',
     schedule: {
       title: 'Define your Work Schedule',
       description: 'Set up your working days and your entry and exit times.',

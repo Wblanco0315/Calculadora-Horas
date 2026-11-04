@@ -121,6 +121,21 @@
 
         <!-- Right: Actions -->
         <div class="flex items-center gap-2 shrink-0 xs:hidden">
+          @if (updateService.updateAvailable()) {
+            <button
+              pButton
+              (click)="updateService.openModal()"
+              size="small"
+              severity="secondary"
+              variant="outlined"
+              class="flex items-center gap-1.5 text-xs font-semibold"
+              [title]="'updater.newVersionFound' | translate: { version: updateService.availableVersion() }"
+            >
+              <ng-icon name="tablerDownload" size="1rem" class="text-primary-600 dark:text-primary-400" />
+              <span>v{{ updateService.availableVersion() }}</span>
+            </button>
+          }
+
           <!-- Refresh with Skeleton reload -->
           <button pButton (click)="reloadWithSkeleton()" iconOnly rounded severity="secondary"
             [title]="'dashboard.refresh' | translate">

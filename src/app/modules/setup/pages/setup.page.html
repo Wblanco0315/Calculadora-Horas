@@ -69,6 +69,12 @@
                 <span>{{ 'setup.step4' | translate }}</span>
               </span>
             </p-tab>
+            <p-tab [value]="5" class="cursor-pointer py-2 px-2.5 sm:px-3 text-xs sm:text-sm font-medium">
+              <span class="inline-flex items-center gap-1.5">
+                <ng-icon name="tablerDownload" size="1rem" />
+                <span>{{ 'setup.step5' | translate }}</span>
+              </span>
+            </p-tab>
           </p-tablist>
         </p-tabs>
       </div>
@@ -91,6 +97,9 @@
       }
       @case (4) {
       <app-openproject-step />
+      }
+      @case (5) {
+      <app-update-section />
       }
       }
     </div>

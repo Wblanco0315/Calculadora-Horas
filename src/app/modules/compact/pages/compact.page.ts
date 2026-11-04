@@ -26,6 +26,7 @@ import { ActivityService } from '../../../core/services/activity.service';
 import { WindowService } from '../../../core/services/window.service';
 import { StorageService } from '../../../core/services/storage.service';
 import { LanguageService } from '../../../core/services/language.service';
+import { UpdateService } from '../../../core/services/update.service';
 import { CompactHeaderComponent } from '../components/compact-header/compact-header.component';
 import { StatsHeroComponent } from '../components/stats-hero/stats-hero.component';
 import { ActivityRowComponent } from '../components/activity-row/activity-row.component';
@@ -78,6 +79,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 })
 export class CompactPage implements OnInit {
   private readonly router = inject(Router);
+  readonly updateService = inject(UpdateService);
   readonly activityService = inject(ActivityService);
   readonly windowService = inject(WindowService);
   readonly storageService = inject(StorageService);

@@ -19,11 +19,13 @@ import {
   tablerUser,
   tablerChevronRight,
   tablerAppWindow,
+  tablerDownload,
 } from '@ng-icons/tabler-icons';
 import { StorageService } from '../../../core/services/storage.service';
 import { ThemeService } from '../../../core/services/theme.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { WindowService } from '../../../core/services/window.service';
+import { UpdateService } from '../../../core/services/update.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 export interface NavItem {
@@ -65,6 +67,7 @@ export interface NavGroup {
       tablerUser,
       tablerChevronRight,
       tablerAppWindow,
+      tablerDownload,
     }),
   ],
   templateUrl: './dashboard.page.html',
@@ -75,6 +78,7 @@ export class DashboardPage implements OnInit, OnDestroy {
   readonly themeService = inject(ThemeService);
   readonly languageService = inject(LanguageService);
   readonly windowService = inject(WindowService);
+  readonly updateService = inject(UpdateService);
   private readonly router = inject(Router);
 
   readonly isMobile = signal<boolean>(false);

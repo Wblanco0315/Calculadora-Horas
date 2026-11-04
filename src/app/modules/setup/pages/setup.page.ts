@@ -13,15 +13,18 @@ import {
   tablerCoffee,
   tablerLink,
   tablerCheck,
+  tablerDownload,
 } from '@ng-icons/tabler-icons';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { SetupService } from '../services/setup.service';
 import { StorageService } from '../../../core/services/storage.service';
+import { UpdateService } from '../../../core/services/update.service';
 import { SetupHeaderComponent } from '../components/setup-header/setup-header.component';
 import { ScheduleStepComponent } from '../components/schedule-step/schedule-step.component';
 import { LunchStepComponent } from '../components/lunch-step/lunch-step.component';
 import { AppearanceStepComponent } from '../components/appearance-step/appearance-step.component';
 import { OpenprojectStepComponent } from '../components/openproject-step/openproject-step.component';
+import { UpdateSectionComponent } from '../../../shared/components/update-section/update-section.component';
 import { CloseConfirmModalComponent } from '../modals/close-confirm-modal/close-confirm-modal.component';
 
 @Component({
@@ -43,6 +46,7 @@ import { CloseConfirmModalComponent } from '../modals/close-confirm-modal/close-
     LunchStepComponent,
     AppearanceStepComponent,
     OpenprojectStepComponent,
+    UpdateSectionComponent,
     CloseConfirmModalComponent,
   ],
   viewProviders: [
@@ -54,6 +58,7 @@ import { CloseConfirmModalComponent } from '../modals/close-confirm-modal/close-
       tablerCoffee,
       tablerLink,
       tablerCheck,
+      tablerDownload,
     }),
   ],
   templateUrl: './setup.page.html',
@@ -62,6 +67,7 @@ import { CloseConfirmModalComponent } from '../modals/close-confirm-modal/close-
 export class SetupPage implements OnInit {
   readonly setupService = inject(SetupService);
   readonly storageService = inject(StorageService);
+  readonly updateService = inject(UpdateService);
   private readonly router = inject(Router);
 
   readonly isNextDisabled = computed(() => {

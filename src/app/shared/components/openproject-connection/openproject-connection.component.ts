@@ -50,9 +50,6 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
             <ng-icon name="tablerServer" size="1.25rem" class="text-primary-600 dark:text-primary-400" />
             {{ 'setup.openproject.title' | translate }}
           </h2>
-          <p class="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-            {{ 'setup.openproject.description' | translate }}
-          </p>
         </div>
       }
 

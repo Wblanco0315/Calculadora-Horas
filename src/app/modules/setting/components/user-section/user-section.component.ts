@@ -34,19 +34,12 @@ import { ScheduleEditorComponent } from '../../../../shared/components/schedule-
       <!-- 2. Work Schedule Management -->
       <div class="p-5 sm:p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 space-y-5">
         <!-- Section Header -->
-          <div class="flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-xl bg-primary-50 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400 flex items-center justify-center shrink-0">
-              <ng-icon name="tablerCalendar" size="1.2rem" />
-            </div>
-            <div>
-              <h3 class="text-sm sm:text-base font-bold text-slate-800 dark:text-zinc-100">
-                {{ 'settings.scheduleSection' | translate }}
-              </h3>
-              <p class="text-xs text-slate-500 dark:text-zinc-400">
-                {{ 'settings.scheduleSectionDesc' | translate }}
-              </p>
-            </div>
-          </div>
+        <div class="flex items-center gap-2">
+          <ng-icon name="tablerCalendar" size="1.25rem" class="text-primary-600 dark:text-primary-400 shrink-0" />
+          <h3 class="text-sm sm:text-base font-bold text-slate-800 dark:text-zinc-100">
+            {{ 'settings.scheduleSection' | translate }}
+          </h3>
+        </div>
 
 
         <!-- Reusable Schedule Editor with Lunch Adjustment -->

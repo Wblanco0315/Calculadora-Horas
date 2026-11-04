@@ -3,11 +3,9 @@ import { CommonModule } from '@angular/common';
 import { Dialog } from 'primeng/dialog';
 import { ButtonDirective } from 'primeng/button';
 import { ProgressBar } from 'primeng/progressbar';
-import { Tag } from 'primeng/tag';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   tablerDownload,
-  tablerSparkles,
   tablerRefresh,
   tablerCheck,
   tablerAlertCircle,
@@ -24,14 +22,12 @@ import { UpdateService } from '../../../core/services/update.service';
     Dialog,
     ButtonDirective,
     ProgressBar,
-    Tag,
     NgIcon,
     TranslatePipe,
   ],
   viewProviders: [
     provideIcons({
       tablerDownload,
-      tablerSparkles,
       tablerRefresh,
       tablerCheck,
       tablerAlertCircle,
@@ -50,12 +46,8 @@ import { UpdateService } from '../../../core/services/update.service';
       styleClass="p-dialog-rounded"
     >
       <ng-template #header>
-        <div class="flex items-center gap-3">
-          <div
-            class="w-10 h-10 rounded-2xl bg-linear-to-br from-primary-500 to-primary-700 text-white flex items-center justify-center shadow-md shadow-primary-500/20"
-          >
-            <ng-icon name="tablerSparkles" size="1.25rem" />
-          </div>
+        <div class="flex items-center gap-2.5">
+          <ng-icon name="tablerDownload" size="1.35rem" class="text-primary-600 dark:text-primary-400" />
           <h3 class="text-base font-bold text-slate-900 dark:text-zinc-100">
             {{ 'updater.title' | translate }}
           </h3>
@@ -65,7 +57,7 @@ import { UpdateService } from '../../../core/services/update.service';
       <div class="space-y-4 py-2">
         <!-- Version comparison card -->
         <div
-          class="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-800"
+          class="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-800"
         >
           <div class="flex flex-col">
             <span class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
@@ -84,11 +76,9 @@ import { UpdateService } from '../../../core/services/update.service';
             <span class="text-[11px] font-medium text-primary-600 dark:text-primary-400 uppercase tracking-wider">
               {{ 'updater.title' | translate }}
             </span>
-            <p-tag
-              [value]="'v' + updateService.availableVersion()"
-              severity="success"
-              styleClass="font-mono font-bold text-xs"
-            />
+            <span class="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
+              v{{ updateService.availableVersion() }}
+            </span>
           </div>
         </div>
 

@@ -189,6 +189,9 @@ El sistema de diseño y las reglas de interfaz se encuentran formalmente especif
 - **Modo Oscuro**: Compatibilidad nativa con selector `.dark` y esquema de color sincronizado.
 - **Tipografía y Forma**: Uso de `Inter` para cuerpo, `Plus Jakarta Sans` para titulares y `JetBrains Mono` para números, horas y contadores.
 - **Modales y Diálogos Limpios (Cero Descripciones Innecesarias)**: Queda estrictamente prohibido abusar de párrafos descriptivos, subtítulos explicativos o textos secundarios en los encabezados (`#header`) o cuerpos de las ventanas modales (`p-dialog`) a menos que el usuario lo solicite explícitamente. Las modales deben ser directas, limpias y minimalistas: el encabezado contendrá únicamente el icono (si aplica) y el título directo de la acción. No explicar lo obvio ni saturar verticalmente los diálogos.
+- **Cero Descripciones en Steps, Secciones y Módulos**: Queda estrictamente prohibido colocar descripciones, subtítulos explicativos o párrafos secundarios bajo los encabezados o títulos de steps (asistentes, onboarding, steppers, pestañas de configuración), módulos, tarjetas o secciones a menos que el usuario lo indique explícitamente. Los encabezados deben contener únicamente el título directo y su icono.
+- **Prohibido el Abuso de Badges y Envoltorios de Iconos**: Queda prohibido el abuso de badges y envoltorios decorativos tipo caja/contenedor alrededor de los iconos (e.g. `w-8 h-8 rounded-xl bg-primary-100...`). Los iconos deben ubicarse de forma directa y limpia junto al texto sin cajas de fondo coloreadas innecesarias. Tampoco abusar de badges de texto o puntos pulsantes en la interfaz.
+- **Iconografía Obligatoria para Actualizaciones**: Para cualquier funcionalidad, botón, diálogo, pestaña o sección de actualizaciones de la aplicación se debe utilizar **única y exclusivamente el icono de descargar (`tablerDownload`)**. Queda prohibido usar destellos (`tablerSparkles`), estrellas o iconos ambiguos.
 
 ---
 
@@ -218,5 +221,8 @@ Para garantizar la mantenibilidad y claridad del proyecto:
 | **Dashboard Layout** | Contenedor exclusivo de la barra lateral (sidebar) y menú superior. Todo contenido debe ser un componente separado cargado vía `<router-outlet />`. Prohibido contenido directo en `dashboard.page.html`. |
 | **Diseño UI** | Consultar y seguir [`docs/DESIGN_RULES.md`](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/docs/DESIGN_RULES.md). Priorizar siempre componentes oficiales de PrimeNG. |
 | **Modales y Diálogos** | Prohibido incluir subtítulos o descripciones innecesarias en encabezados/cuerpos salvo petición explícita. Encabezado directo con solo icono y título. |
+| **Descripciones en Steps/Módulos** | Prohibido colocar párrafos o textos descriptivos bajo los títulos en steps, secciones o módulos sin petición explícita. |
+| **Uso de Badges e Iconos** | Prohibido abusar de badges y envoltorios contenedores de fondo (`bg-primary-100`) para iconos. Iconos limpios y directos. |
+| **Icono de Actualizaciones** | Obligatorio usar el icono de descargar (`tablerDownload`). Prohibido destellos/estrellas. |
 | **Documentación** | Todo módulo en `src/app/modules/<module>/` debe tener su `.md` en `docs/modules/<module>.md`. |
 | **Verificación** | Ejecutar `bun run build` tras cualquier generación o refactorización. |

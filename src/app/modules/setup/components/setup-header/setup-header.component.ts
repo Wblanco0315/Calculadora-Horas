@@ -31,8 +31,8 @@ import { AppLogoComponent } from '../../../../shared/components/app-logo/app-log
           {{ (storageService.isConfigured() ? 'compact.settings' : 'setup.title') | translate }}
         </h1>
         @if (!storageService.isConfigured()) {
-          <span class="text-[11px] sm:text-xs font-semibold px-2 py-0.5 rounded-full bg-primary-50 dark:bg-primary-950/60 text-primary-700 dark:text-primary-300 border border-primary-200/50 dark:border-primary-800/50 pointer-events-none">
-            {{ setupService.activeStep() }}/4
+          <span class="text-xs text-slate-400 dark:text-zinc-500 font-mono font-medium pointer-events-none">
+            ({{ setupService.activeStep() }}/4)
           </span>
         }
       </div>

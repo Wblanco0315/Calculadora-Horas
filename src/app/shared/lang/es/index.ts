@@ -23,6 +23,7 @@ export const es = {
     step2: 'Horario',
     step3: 'Almuerzo',
     step4: 'OpenProject',
+    step5: 'Actualizaciones',
     schedule: {
       title: 'Define tu Horario Laboral',
       description: 'Configura tus días de trabajo y las horas de entrada y salida.',

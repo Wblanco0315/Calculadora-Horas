@@ -71,9 +71,6 @@ export const PRESET_COLORS: ColorOption[] = [
             <ng-icon name="tablerPalette" size="1.25rem" class="text-primary-600 dark:text-primary-400" />
             {{ 'setup.appearance.title' | translate }}
           </h2>
-          <p class="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-            {{ 'setup.appearance.description' | translate }}
-          </p>
         </div>
       }
 
