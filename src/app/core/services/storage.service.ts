@@ -8,11 +8,14 @@ import {
   calculateWorkMinutes,
   DaySchedule,
   DayOfWeek,
+  WorkScheduleConfig,
 } from '../interfaces/config.interface';
 import { ThemeService, COLOR_STORAGE_KEY, THEME_STORAGE_KEY } from './theme.service';
 import { LanguageService } from './language.service';
 
 const CONFIG_STORAGE_KEY = 'pocketproject_config_storage';
+const LEGACY_STORAGE_KEY = 'calculadora_horas_data';
+const LEGACY_THEME_KEY = 'calculadora_horas_theme';
 
 @Injectable({
   providedIn: 'root',
@@ -115,6 +118,74 @@ export class StorageService {
     }
   }
 
+  /**
+   * Attempts to parse and migrate legacy V1 (Vue) storage if present
+   */
+  private getMigratedLegacyConfig(): AppConfig | null {
+    if (typeof window === 'undefined') return null;
+
+    try {
+      const rawLegacy = localStorage.getItem(LEGACY_STORAGE_KEY);
+      if (!rawLegacy) return null;
+
+      const legacy = JSON.parse(rawLegacy);
+      const userConfig = legacy.userConfig;
+      const openprojectToken = userConfig?.openProjectToken?.trim() || '';
+
+      if (!openprojectToken && !userConfig?.isConfigured) {
+        return null;
+      }
+
+      const entryTime = userConfig?.entryTime || '08:00';
+      const exitTime = userConfig?.exitTime || '17:00';
+      const lunchMinutes = typeof userConfig?.lunchMinutes === 'number' ? userConfig.lunchMinutes : 60;
+
+      const days: DaySchedule[] = [
+        { day: 1, name: 'Lunes', short_name: 'Lun', enabled: true, entry_time: entryTime, exit_time: exitTime, lunch_minutes: lunchMinutes },
+        { day: 2, name: 'Martes', short_name: 'Mar', enabled: true, entry_time: entryTime, exit_time: exitTime, lunch_minutes: lunchMinutes },
+        { day: 3, name: 'Miércoles', short_name: 'Mié', enabled: true, entry_time: entryTime, exit_time: exitTime, lunch_minutes: lunchMinutes },
+        { day: 4, name: 'Jueves', short_name: 'Jue', enabled: true, entry_time: entryTime, exit_time: exitTime, lunch_minutes: lunchMinutes },
+        { day: 5, name: 'Viernes', short_name: 'Vie', enabled: true, entry_time: entryTime, exit_time: exitTime, lunch_minutes: lunchMinutes },
+        { day: 6, name: 'Sábado', short_name: 'Sáb', enabled: false, entry_time: '08:00', exit_time: '12:00', lunch_minutes: 0 },
+        { day: 7, name: 'Domingo', short_name: 'Dom', enabled: false, entry_time: '08:00', exit_time: '12:00', lunch_minutes: 0 },
+      ];
+
+      const schedule: WorkScheduleConfig = {
+        mode: 'group',
+        groups: [
+          {
+            id: 'legacy-mon-fri',
+            name: 'Lunes a Viernes',
+            days: [1, 2, 3, 4, 5],
+            entry_time: entryTime,
+            exit_time: exitTime,
+            lunch_minutes: lunchMinutes,
+          },
+        ],
+        days,
+      };
+
+      const legacyTheme = localStorage.getItem(LEGACY_THEME_KEY);
+      const themeMode = legacyTheme === 'dark' || legacyTheme === 'light' ? legacyTheme : 'system';
+
+      return {
+        ...DEFAULT_APP_CONFIG,
+        openproject_url: userConfig?.openProjectUrl || DEFAULT_APP_CONFIG.openproject_url,
+        openproject_token: openprojectToken,
+        entry_time: entryTime,
+        exit_time: exitTime,
+        lunch_minutes: lunchMinutes,
+        theme_mode: themeMode,
+        is_configured: true,
+        schedule,
+        schedule_json: JSON.stringify(schedule),
+      };
+    } catch (e) {
+      console.warn('Error migrating legacy config from localStorage:', e);
+      return null;
+    }
+  }
+
   private getInitialConfig(): AppConfig {
     if (typeof window !== 'undefined') {
       try {
@@ -124,10 +195,18 @@ export class StorageService {
           if (parsed.schedule_json && !parsed.schedule) {
             parsed.schedule = JSON.parse(parsed.schedule_json);
           }
-          return {
-            ...DEFAULT_APP_CONFIG,
-            ...parsed,
-          };
+          if (parsed.is_configured && parsed.openproject_token) {
+            return {
+              ...DEFAULT_APP_CONFIG,
+              ...parsed,
+            };
+          }
+        }
+
+        // Fallback: check legacy config from V1
+        const legacyMigrated = this.getMigratedLegacyConfig();
+        if (legacyMigrated) {
+          return legacyMigrated;
         }
       } catch (e) {
         console.warn('Could not parse localStorage config:', e);
@@ -183,7 +262,7 @@ export class StorageService {
         loaded = await invoke<AppConfig | null>('get_app_config');
       }
 
-      if (loaded) {
+      if (loaded && loaded.is_configured && loaded.openproject_token) {
         // Parse schedule_json if present
         if (loaded.schedule_json && !loaded.schedule) {
           try {
@@ -225,6 +304,17 @@ export class StorageService {
         }
 
         return completeConfig;
+      }
+
+      // If SQLite is empty or unconfigured, check for legacy v1 data
+      const legacyMigrated = this.getMigratedLegacyConfig();
+      if (legacyMigrated) {
+        console.info('Migrating legacy v1 user configuration to SQLite...');
+        await this.saveConfig(legacyMigrated);
+        if (legacyMigrated.openproject_token && !legacyMigrated.user_name) {
+          this.fetchAndSaveUserProfile(legacyMigrated.openproject_url, legacyMigrated.openproject_token).catch(() => {});
+        }
+        return legacyMigrated;
       }
     } catch (err) {
       console.error('Error loading config from backend SQLite:', err);
@@ -289,10 +379,13 @@ export class StorageService {
     const cleanUrl = url.trim().replace(/\/+$/, '').replace(/\/api\/v3$/, '');
     const endpoint = `${cleanUrl}/api/v3/users/me`;
     try {
-      const basicAuth = btoa(`apikey:${token.trim()}`);
+      const trimmed = token.trim();
+      const authHeader = trimmed.startsWith('Bearer ') || trimmed.startsWith('opapi-')
+        ? (trimmed.startsWith('Bearer ') ? trimmed : `Bearer ${trimmed}`)
+        : `Basic ${btoa(`apikey:${trimmed}`)}`;
       const res = await fetch(endpoint, {
         headers: {
-          Authorization: `Basic ${basicAuth}`,
+          Authorization: authHeader,
           Accept: 'application/json',
         },
       });

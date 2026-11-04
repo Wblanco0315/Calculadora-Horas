@@ -48,6 +48,7 @@ impl Default for AppConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ActivityRecord {
     pub id: String,
     pub name: String,
@@ -55,37 +56,41 @@ pub struct ActivityRecord {
     #[serde(default)]
     pub seconds: Option<i32>,
     pub date: String,
-    #[serde(default)]
+    #[serde(default, alias = "project_id")]
     pub project_id: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "project_name")]
     pub project_name: Option<String>,
     #[serde(default)]
     pub ticket: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "ticket_title")]
     pub ticket_title: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "status_id")]
     pub status_id: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "status_name")]
     pub status_name: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "status_color")]
     pub status_color: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "version_id")]
     pub version_id: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "version_name")]
     pub version_name: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "board_id")]
     pub board_id: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "board_column_id")]
     pub board_column_id: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "board_column_name")]
     pub board_column_name: Option<String>,
     #[serde(default)]
     pub synced: Option<bool>,
-    #[serde(default)]
+    #[serde(default, alias = "timer_seconds")]
     pub timer_seconds: Option<i32>,
-    #[serde(default)]
+    #[serde(default, alias = "timer_state")]
     pub timer_state: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "activity_type_id")]
+    pub activity_type_id: Option<String>,
+    #[serde(default, alias = "activity_type_name")]
+    pub activity_type_name: Option<String>,
+    #[serde(default, alias = "created_at")]
     pub created_at: Option<String>,
 }
 
@@ -172,6 +177,8 @@ fn init_tables(conn: &Connection) -> Result<()> {
     )?;
 
     let _ = conn.execute("ALTER TABLE activities ADD COLUMN project_name TEXT", []);
+    let _ = conn.execute("ALTER TABLE activities ADD COLUMN activity_type_id TEXT", []);
+    let _ = conn.execute("ALTER TABLE activities ADD COLUMN activity_type_name TEXT", []);
 
     Ok(())
 }
@@ -265,14 +272,14 @@ pub fn load_activities(conn: &Connection, date: Option<&str>) -> Result<Vec<Acti
             "SELECT id, name, minutes, seconds, date, project_id, project_name,
                     ticket, ticket_title, status_id, status_name, status_color,
                     version_id, version_name, board_id, board_column_id, board_column_name,
-                    synced, timer_seconds, timer_state, created_at
+                    synced, timer_seconds, timer_state, created_at, activity_type_id, activity_type_name
              FROM activities WHERE date = ?1 ORDER BY created_at ASC"
         }
         None => {
             "SELECT id, name, minutes, seconds, date, project_id, project_name,
                     ticket, ticket_title, status_id, status_name, status_color,
                     version_id, version_name, board_id, board_column_id, board_column_name,
-                    synced, timer_seconds, timer_state, created_at
+                    synced, timer_seconds, timer_state, created_at, activity_type_id, activity_type_name
              FROM activities ORDER BY date DESC, created_at ASC"
         }
     };
@@ -308,6 +315,8 @@ pub fn load_activities(conn: &Connection, date: Option<&str>) -> Result<Vec<Acti
             timer_seconds: row.get(18).ok(),
             timer_state: row.get(19).ok(),
             created_at: row.get(20).ok(),
+            activity_type_id: row.get(21).ok(),
+            activity_type_name: row.get(22).ok(),
         });
     }
 
@@ -324,8 +333,8 @@ pub fn save_activity(conn: &Connection, act: &ActivityRecord) -> Result<()> {
             id, name, minutes, seconds, date, project_id, project_name, ticket, ticket_title,
             status_id, status_name, status_color, version_id, version_name,
             board_id, board_column_id, board_column_name, synced, timer_seconds,
-            timer_state, created_at
-        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21)
+            timer_state, created_at, activity_type_id, activity_type_name
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23)
         ON CONFLICT(id) DO UPDATE SET
             name = excluded.name,
             minutes = excluded.minutes,
@@ -345,12 +354,14 @@ pub fn save_activity(conn: &Connection, act: &ActivityRecord) -> Result<()> {
             board_column_name = excluded.board_column_name,
             synced = excluded.synced,
             timer_seconds = excluded.timer_seconds,
-            timer_state = excluded.timer_state",
+            timer_state = excluded.timer_state,
+            activity_type_id = excluded.activity_type_id,
+            activity_type_name = excluded.activity_type_name",
         params![
             act.id,
             act.name,
             act.minutes,
-            act.seconds.unwrap_or(0),
+            act.seconds,
             act.date,
             act.project_id,
             act.project_name,
@@ -365,12 +376,13 @@ pub fn save_activity(conn: &Connection, act: &ActivityRecord) -> Result<()> {
             act.board_column_id,
             act.board_column_name,
             is_synced,
-            act.timer_seconds.unwrap_or(0),
-            act.timer_state.as_deref().unwrap_or("idle"),
+            act.timer_seconds,
+            act.timer_state,
             created,
+            act.activity_type_id,
+            act.activity_type_name,
         ],
     )?;
-
     Ok(())
 }
 
