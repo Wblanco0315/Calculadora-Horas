@@ -7,11 +7,13 @@ import { tablerX } from '@ng-icons/tabler-icons';
 import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 import { SetupService } from '../../services/setup.service';
 import { StorageService } from '../../../../core/services/storage.service';
+import { ThemeService } from '../../../../core/services/theme.service';
+import { AppLogoComponent } from '../../../../shared/components/app-logo/app-logo.component';
 
 @Component({
   selector: 'app-setup-header',
   standalone: true,
-  imports: [CommonModule, ButtonDirective, NgIcon, TranslatePipe],
+  imports: [CommonModule, ButtonDirective, NgIcon, TranslatePipe, AppLogoComponent],
   viewProviders: [
     provideIcons({
       tablerX,
@@ -24,6 +26,7 @@ import { StorageService } from '../../../../core/services/storage.service';
       [ngClass]="storageService.isConfigured() ? 'px-4 py-2.5 sm:px-5 sm:py-3' : 'px-4 sm:px-8 py-3.5 sm:py-4'"
     >
       <div class="flex items-center gap-2.5" data-tauri-drag-region>
+        <app-logo [variant]="'icon'" [size]="'sm'" class="pointer-events-none drop-shadow-xs" />
         <h1 class="text-sm sm:text-base font-bold text-slate-900 dark:text-zinc-100 tracking-tight pointer-events-none">
           {{ (storageService.isConfigured() ? 'compact.settings' : 'setup.title') | translate }}
         </h1>
@@ -52,6 +55,7 @@ import { StorageService } from '../../../../core/services/storage.service';
 export class SetupHeaderComponent {
   readonly setupService = inject(SetupService);
   readonly storageService = inject(StorageService);
+  readonly themeService = inject(ThemeService);
   private readonly router = inject(Router);
 
   closeSetup(): void {

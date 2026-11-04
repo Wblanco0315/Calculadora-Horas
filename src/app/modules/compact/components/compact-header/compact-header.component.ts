@@ -9,11 +9,12 @@ import { WindowService } from '../../../../core/services/window.service';
 import { ThemeService } from '../../../../core/services/theme.service';
 import { UpdateService } from '../../../../core/services/update.service';
 import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
+import { AppLogoComponent } from '../../../../shared/components/app-logo/app-logo.component';
 
 @Component({
   selector: 'app-compact-header',
   standalone: true,
-  imports: [CommonModule, NgIcon, TranslatePipe],
+  imports: [CommonModule, NgIcon, TranslatePipe, AppLogoComponent],
   viewProviders: [
     provideIcons({
       tablerSun,
@@ -28,13 +29,9 @@ import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
       <div
         data-tauri-drag-region
         (mousedown)="onMouseDown($event)"
-        class="flex items-center px-3 gap-2.5 h-full flex-1 cursor-default"
+        class="flex items-center px-3 gap-2 h-full flex-1 cursor-default"
       >
-        <div
-          class="size-4.5 rounded bg-linear-to-br from-primary-500 to-primary-700 text-white flex items-center justify-center text-[10px] font-bold shadow-xs pointer-events-none"
-        >
-          P
-        </div>
+        <app-logo [variant]="'icon'" [size]="'xs'" class="pointer-events-none drop-shadow-xs" />
         <span class="text-xs font-bold text-slate-700 dark:text-zinc-200 pointer-events-none tracking-tight">
           PocketProject
         </span>
