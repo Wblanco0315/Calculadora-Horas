@@ -277,6 +277,16 @@ export class ActivityService {
     const ticket = raw.ticket ? String(raw.ticket).replace(/^#/, '').trim() : undefined;
     const fav = ticket ? this.favoriteTickets().find((f) => f.ticket === ticket) : undefined;
     const title = (raw.ticketTitle || raw.ticket_title || fav?.title || '').trim();
+    const timerState = (raw.timerState || raw.timer_state || 'idle') as 'idle' | 'running' | 'paused';
+    let timerLastStarted = raw.timerLastStarted !== undefined && raw.timerLastStarted !== null
+      ? Number(raw.timerLastStarted)
+      : (raw.timer_last_started !== undefined && raw.timer_last_started !== null
+        ? Number(raw.timer_last_started)
+        : undefined);
+
+    if (timerState === 'running' && (!timerLastStarted || isNaN(timerLastStarted))) {
+      timerLastStarted = Date.now();
+    }
 
     return {
       id: raw.id,
@@ -299,7 +309,8 @@ export class ActivityService {
       synced: Boolean(raw.synced),
       selected: Boolean(raw.selected),
       timerSeconds: Number(raw.timerSeconds ?? raw.timer_seconds) || 0,
-      timerState: raw.timerState || raw.timer_state || 'idle',
+      timerState,
+      timerLastStarted,
       activityTypeId: raw.activityTypeId || raw.activity_type_id || undefined,
       activityTypeName: raw.activityTypeName || raw.activity_type_name || undefined,
       createdAt: raw.createdAt || raw.created_at || new Date().toISOString(),
@@ -387,12 +398,32 @@ export class ActivityService {
   }
 
   async addActivity(data: Omit<Activity, 'id' | 'createdAt'>): Promise<Activity> {
+    const isRunning = data.timerState === 'running';
+    if (isRunning) {
+      const runningAct = this.activities().find((a) => a.timerState === 'running');
+      if (runningAct) {
+        const baseSecs = runningAct.timerSeconds || 0;
+        const diff = runningAct.timerLastStarted
+          ? Math.max(0, Math.floor((Date.now() - runningAct.timerLastStarted) / 1000))
+          : 0;
+        await this.updateActivity(runningAct.id, {
+          timerState: 'paused',
+          timerSeconds: baseSecs + diff,
+          timerLastStarted: undefined,
+        });
+      }
+    }
+
+    const timerLastStarted = isRunning ? (data.timerLastStarted || Date.now()) : undefined;
+
     const newActivity: Activity = {
       ...data,
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
       synced: false,
       selected: false,
+      timerState: data.timerState || 'idle',
+      timerLastStarted,
     };
 
     if (isTauri()) {

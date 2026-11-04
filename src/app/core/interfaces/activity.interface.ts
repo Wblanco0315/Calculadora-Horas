@@ -42,6 +42,7 @@ export interface Activity {
   timerState?: 'idle' | 'running' | 'paused';
   timer_state?: 'idle' | 'running' | 'paused';
   timerLastStarted?: number;
+  timer_last_started?: number;
   activityTypeId?: string;
   activity_type_id?: string;
   activityTypeName?: string;

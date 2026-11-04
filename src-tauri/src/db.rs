@@ -86,6 +86,8 @@ pub struct ActivityRecord {
     pub timer_seconds: Option<i32>,
     #[serde(default, alias = "timer_state")]
     pub timer_state: Option<String>,
+    #[serde(default, alias = "timer_last_started")]
+    pub timer_last_started: Option<i64>,
     #[serde(default, alias = "activity_type_id")]
     pub activity_type_id: Option<String>,
     #[serde(default, alias = "activity_type_name")]
@@ -179,6 +181,7 @@ fn init_tables(conn: &Connection) -> Result<()> {
     let _ = conn.execute("ALTER TABLE activities ADD COLUMN project_name TEXT", []);
     let _ = conn.execute("ALTER TABLE activities ADD COLUMN activity_type_id TEXT", []);
     let _ = conn.execute("ALTER TABLE activities ADD COLUMN activity_type_name TEXT", []);
+    let _ = conn.execute("ALTER TABLE activities ADD COLUMN timer_last_started INTEGER", []);
 
     Ok(())
 }
@@ -272,14 +275,16 @@ pub fn load_activities(conn: &Connection, date: Option<&str>) -> Result<Vec<Acti
             "SELECT id, name, minutes, seconds, date, project_id, project_name,
                     ticket, ticket_title, status_id, status_name, status_color,
                     version_id, version_name, board_id, board_column_id, board_column_name,
-                    synced, timer_seconds, timer_state, created_at, activity_type_id, activity_type_name
+                    synced, timer_seconds, timer_state, created_at, activity_type_id, activity_type_name,
+                    timer_last_started
              FROM activities WHERE date = ?1 ORDER BY created_at ASC"
         }
         None => {
             "SELECT id, name, minutes, seconds, date, project_id, project_name,
                     ticket, ticket_title, status_id, status_name, status_color,
                     version_id, version_name, board_id, board_column_id, board_column_name,
-                    synced, timer_seconds, timer_state, created_at, activity_type_id, activity_type_name
+                    synced, timer_seconds, timer_state, created_at, activity_type_id, activity_type_name,
+                    timer_last_started
              FROM activities ORDER BY date DESC, created_at ASC"
         }
     };
@@ -317,6 +322,7 @@ pub fn load_activities(conn: &Connection, date: Option<&str>) -> Result<Vec<Acti
             created_at: row.get(20).ok(),
             activity_type_id: row.get(21).ok(),
             activity_type_name: row.get(22).ok(),
+            timer_last_started: row.get(23).ok(),
         });
     }
 
@@ -333,8 +339,8 @@ pub fn save_activity(conn: &Connection, act: &ActivityRecord) -> Result<()> {
             id, name, minutes, seconds, date, project_id, project_name, ticket, ticket_title,
             status_id, status_name, status_color, version_id, version_name,
             board_id, board_column_id, board_column_name, synced, timer_seconds,
-            timer_state, created_at, activity_type_id, activity_type_name
-        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23)
+            timer_state, created_at, activity_type_id, activity_type_name, timer_last_started
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24)
         ON CONFLICT(id) DO UPDATE SET
             name = excluded.name,
             minutes = excluded.minutes,
@@ -356,7 +362,8 @@ pub fn save_activity(conn: &Connection, act: &ActivityRecord) -> Result<()> {
             timer_seconds = excluded.timer_seconds,
             timer_state = excluded.timer_state,
             activity_type_id = excluded.activity_type_id,
-            activity_type_name = excluded.activity_type_name",
+            activity_type_name = excluded.activity_type_name,
+            timer_last_started = excluded.timer_last_started",
         params![
             act.id,
             act.name,
@@ -381,6 +388,7 @@ pub fn save_activity(conn: &Connection, act: &ActivityRecord) -> Result<()> {
             created,
             act.activity_type_id,
             act.activity_type_name,
+            act.timer_last_started,
         ],
     )?;
     Ok(())

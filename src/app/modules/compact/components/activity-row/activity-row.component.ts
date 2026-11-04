@@ -538,8 +538,10 @@ export class ActivityRowComponent implements OnDestroy {
     const act = this.activity();
     const state = act.timerState;
     const baseSecs = act.timerSeconds || 0;
-    if (state === 'running' && act.timerLastStarted) {
-      const diff = Math.max(0, Math.floor((this.currentTimeTick() - act.timerLastStarted) / 1000));
+    if (state === 'running') {
+      const now = this.currentTimeTick();
+      const started = act.timerLastStarted || now;
+      const diff = Math.max(0, Math.floor((now - started) / 1000));
       return baseSecs + diff;
     }
     return baseSecs;
@@ -609,6 +611,20 @@ export class ActivityRowComponent implements OnDestroy {
         timerLastStarted: undefined,
       });
     } else {
+      // Pause any other running activity
+      const runningAct = this.activityService.activities().find((a) => a.id !== act.id && a.timerState === 'running');
+      if (runningAct) {
+        const baseSecs = runningAct.timerSeconds || 0;
+        const diff = runningAct.timerLastStarted
+          ? Math.max(0, Math.floor((Date.now() - runningAct.timerLastStarted) / 1000))
+          : 0;
+        await this.activityService.updateActivity(runningAct.id, {
+          timerState: 'paused',
+          timerSeconds: baseSecs + diff,
+          timerLastStarted: undefined,
+        });
+      }
+
       await this.activityService.updateActivity(act.id, {
         timerState: 'running',
         timerLastStarted: Date.now(),
