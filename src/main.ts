@@ -1,7 +1,9 @@
-import { createApp } from "vue";
-import App from "./App.vue";
-import { attachConsole } from "@tauri-apps/plugin-log";
+import { bootstrapApplication } from "@angular/platform-browser";
+import { AppComponent } from "./app/app.component";
+import { appConfig } from "./app/app.config";
 
-attachConsole().catch(console.error);
+bootstrapApplication(AppComponent, appConfig).catch((err) =>
+  console.error(err),
+);
+// reload trigger
 
-createApp(App).mount("#app");

@@ -1,0 +1,283 @@
+<div class="h-screen w-screen bg-slate-50 dark:bg-zinc-950 flex flex-col overflow-hidden text-slate-800 dark:text-zinc-100 transition-colors">
+  <!-- Top Draggable Window Header -->
+  <app-compact-header />
+
+  <!-- Stats Hero Area -->
+  <app-stats-hero />
+
+  <!-- Greeting Bar -->
+  <div
+    class="flex items-center justify-between px-4 py-2.5 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0"
+  >
+    <div>
+      <p
+        class="text-[10px] uppercase tracking-widest text-slate-400 dark:text-zinc-500 font-semibold"
+      >
+        {{ 'compact.dayLog' | translate }}
+      </p>
+      <h2
+        class="text-sm font-display font-semibold text-slate-700 dark:text-zinc-200 leading-tight"
+      >
+        {{ 'compact.helloUser' | translate: { user: currentUserName() } }}
+      </h2>
+    </div>
+    <div class="flex gap-2 items-center">
+      <!-- Favoritos Button -->
+      <button
+        pButton
+        type="button"
+        (click)="activityService.openFavoritesModal()"
+        variant="text"
+        severity="secondary"
+        size="small"
+        class="text-slate-700 dark:text-zinc-200 !px-2.5 !py-1 text-xs cursor-pointer"
+        [title]="'compact.favoritesTitle' | translate"
+      >
+        <ng-icon name="tablerStar" size="1.1rem" class="mr-1 text-yellow-500 fill-yellow-500" />
+        <span>{{ 'compact.favorites' | translate }}</span>
+      </button>
+
+      <!-- Añadir Button -->
+      <button
+        pButton
+        type="button"
+        (click)="activityService.openAddModal()"
+        size="small"
+        class="!px-3 !py-1 text-xs font-semibold cursor-pointer"
+        [title]="'compact.addTitle' | translate"
+      >
+        <ng-icon name="tablerPlus" size="1rem" strokeWidth="2.5" class="mr-1" />
+        <span>{{ 'compact.add' | translate }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter & Sync Controls Bar -->
+  <div
+    class="px-4 py-2 bg-slate-50 dark:bg-zinc-900/60 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between gap-2.5 shrink-0 transition-all duration-300"
+  >
+    <!-- Search Input -->
+    <div class="relative flex-1 min-w-0">
+      <input
+        type="text"
+        [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event)"
+        [placeholder]="'compact.searchPlaceholder' | translate"
+        class="w-full pl-8 pr-3 py-1.5 text-xs bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400"
+      />
+      <ng-icon
+        name="tablerSearch"
+        size="0.95rem"
+        class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+      />
+    </div>
+
+    <!-- Toggle Filters Popover Button -->
+    <button
+      pButton
+      type="button"
+      iconOnly
+      variant="outlined"
+      severity="secondary"
+      (click)="filterPopover.toggle($event)"
+      [class.bg-slate-200]="hasActiveFilters()"
+      [class.dark:bg-zinc-800]="hasActiveFilters()"
+      [title]="'compact.advancedFilters' | translate"
+    >
+      <ng-icon name="tablerFilter" size="0.95rem" />
+    </button>
+
+    <!-- PrimeNG Popover for Advanced Filters -->
+    <p-popover #filterPopover styleClass="p-popover-sm shadow-xl">
+      <div class="flex flex-col gap-3 p-3 w-64 text-xs">
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-2">
+          <span class="font-bold text-slate-800 dark:text-zinc-100">
+            {{ 'compact.advancedFilters' | translate }}
+          </span>
+          @if (hasActiveFilters()) {
+            <button
+              pButton
+              type="button"
+              variant="text"
+              severity="danger"
+              size="small"
+              (click)="clearFilters()"
+              class="!p-0 text-[11px]"
+            >
+              {{ 'compact.clear' | translate }}
+            </button>
+          }
+        </div>
+
+        <!-- Project Filter with p-select -->
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-500 dark:text-zinc-400 mb-1">
+            {{ 'compact.modal.projectLabel' | translate }}
+          </label>
+          <p-select
+            [ngModel]="filterProject()"
+            (ngModelChange)="filterProject.set($event)"
+            [options]="projectFilterOptions()"
+            optionLabel="label"
+            optionValue="value"
+            styleClass="w-full text-xs"
+            appendTo="body"
+          />
+        </div>
+
+        <!-- Sort Filter with p-select -->
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-500 dark:text-zinc-400 mb-1">
+            {{ 'compact.sortDefault' | translate }}
+          </label>
+          <p-select
+            [ngModel]="sortBy()"
+            (ngModelChange)="sortBy.set($event)"
+            [options]="sortOptions()"
+            optionLabel="label"
+            optionValue="value"
+            styleClass="w-full text-xs"
+            appendTo="body"
+          />
+        </div>
+
+        <!-- Status Filter with p-select -->
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-500 dark:text-zinc-400 mb-1">
+            {{ 'compact.statusAll' | translate }}
+          </label>
+          <p-select
+            [ngModel]="filterStatus()"
+            (ngModelChange)="filterStatus.set($event)"
+            [options]="statusFilterOptions()"
+            optionLabel="label"
+            optionValue="value"
+            styleClass="w-full text-xs"
+            appendTo="body"
+          />
+        </div>
+      </div>
+    </p-popover>
+
+    <!-- Sync Controls -->
+    @if (activityService.unsyncedActivities().length > 0 && hasToken()) {
+      <div class="flex items-center gap-1.5 shrink-0">
+        @if (!activityService.isSelectionMode()) {
+          <!-- Todos Button -->
+          <button
+            pButton
+            type="button"
+            size="small"
+            severity="secondary"
+            variant="outlined"
+            (click)="syncAll()"
+            [disabled]="isSyncingAll()"
+            [loading]="isSyncingAll()"
+            class="text-xs !px-2.5 !py-1 text-slate-600 dark:text-zinc-300 hover:!text-primary-600 dark:hover:!text-primary-400"
+            [title]="'compact.syncAllTitle' | translate"
+          >
+            <ng-icon name="tablerCloudUpload" size="1rem" class="mr-1" />
+            <span class="font-semibold text-xs">{{ 'compact.all' | translate }}</span>
+          </button>
+
+          <!-- Seleccionar Mode Button -->
+          <button
+            pButton
+            type="button"
+            size="small"
+            severity="secondary"
+            variant="outlined"
+            (click)="activityService.toggleSelectionMode()"
+            class="text-xs !px-2.5 !py-1 text-slate-600 dark:text-zinc-300"
+            [title]="'compact.selectionModeTitle' | translate"
+          >
+            <ng-icon name="tablerSelect" size="1rem" class="mr-1" />
+            <span class="font-semibold text-xs">{{ 'compact.select' | translate }}</span>
+          </button>
+        } @else {
+          <!-- Cancel Selection Button -->
+          <button
+            pButton
+            type="button"
+            size="small"
+            variant="text"
+            severity="secondary"
+            (click)="activityService.cancelSelection()"
+            class="text-xs !px-2 !py-1"
+          >
+            {{ 'compact.cancel' | translate }}
+          </button>
+
+          <!-- Send Selected Button -->
+          <button
+            pButton
+            type="button"
+            size="small"
+            severity="primary"
+            (click)="syncSelected()"
+            [disabled]="activityService.selectedActivities().length === 0 || isSyncingAll()"
+            [loading]="isSyncingAll()"
+            class="text-xs !px-2.5 !py-1 font-bold"
+          >
+            <span>{{ 'compact.send' | translate }} {{ activityService.selectedActivities().length ? '(' + activityService.selectedActivities().length + ')' : '' }}</span>
+          </button>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Scrollable Activity List -->
+  <main class="flex-1 overflow-y-auto w-full bg-slate-50 dark:bg-zinc-950/50">
+    @if (filteredActivities().length === 0) {
+      <div class="h-full flex flex-col items-center justify-center p-6 text-center select-none">
+        <ng-icon name="tablerClock" size="2.5rem" class="text-slate-300 dark:text-zinc-700 mb-2" />
+        <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-zinc-600 whitespace-pre-line">
+          {{ 'compact.noMoreRecordsToday' | translate }}
+        </p>
+      </div>
+    } @else {
+      <div class="bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 divide-y divide-slate-100 dark:divide-zinc-800/80 shadow-xs">
+        @for (act of filteredActivities(); track act.id) {
+          <app-activity-row
+            [activity]="act"
+            (editClicked)="activityService.openEditModal($event)"
+            (deleteClicked)="onDeleteActivity($event)"
+            (syncClicked)="onSingleSync($event)"
+          />
+        }
+      </div>
+    }
+  </main>
+
+  <!-- Bottom Navigation Bar -->
+  <nav
+    class="shrink-0 flex items-center justify-around px-4 py-2 border-t border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 select-none shadow-md z-20"
+  >
+    <!-- Active View: Calculator (Compact Mode) -->
+    <button
+      type="button"
+      class="cursor-default flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl text-slate-400 dark:text-zinc-600 transition-colors"
+      [title]="'compact.title' | translate"
+      disabled
+    >
+      <ng-icon name="tablerLayoutDashboard" size="1.25rem" />
+    </button>
+
+    <!-- Settings -->
+    <button
+      type="button"
+      (click)="openSettings()"
+      class="cursor-pointer flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl text-slate-400 dark:text-zinc-600 hover:text-slate-700 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+      [title]="'compact.settings' | translate"
+    >
+      <ng-icon name="tablerSettings" size="1.25rem" />
+    </button>
+  </nav>
+
+  <!-- Modals (Each isolated into its own dedicated component) -->
+  <app-activity-form-modal />
+  <app-favorites-modal />
+  <app-sync-confirm-modal />
+  <app-reset-confirm-modal />
+  <app-close-confirm-modal />
+</div>

@@ -1,0 +1,30 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+/* Active sidebar item styling */
+.p-sidebar-menu-button[data-active="true"],
+button[pSidebarMenuButton][data-active="true"] {
+  background-color: var(--p-primary-50, #f5f3ff) !important;
+  color: var(--p-primary-700, #5b21b6) !important;
+  font-weight: 600 !important;
+}
+
+:host-context(.dark) .p-sidebar-menu-button[data-active="true"],
+:host-context(.dark) button[pSidebarMenuButton][data-active="true"] {
+  background-color: rgba(94, 77, 162, 0.22) !important;
+  color: var(--p-primary-300, #c4b5fd) !important;
+}
+
+/* Breadcrumb reset styling */
+:host ::ng-deep .p-breadcrumb {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+:host ::ng-deep .p-breadcrumb ol {
+  align-items: center;
+  gap: 0.375rem;
+}
