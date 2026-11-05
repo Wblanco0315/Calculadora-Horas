@@ -1,0 +1,13 @@
+@defer (when isLoaded) {
+<router-outlet />
+<app-update-dialog />
+} @loading {
+<div class="w-full h-screen flex justify-center items-center">
+    <p>Cargando...</p>
+</div>
+}
+@error {
+<div class="w-full h-screen flex justify-center items-center">
+    <p>Error al cargar la aplicación.</p>
+</div>
+}

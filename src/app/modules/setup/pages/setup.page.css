@@ -1,0 +1,55 @@
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+::ng-deep .p-stepper {
+  width: 100%;
+}
+
+::ng-deep .p-stepper .p-step-list {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+::ng-deep .p-step-header {
+  padding: 0.25rem 0.5rem !important;
+}
+
+/* Smooth unobtrusive scrollbar for modal body */
+.overscroll-contain::-webkit-scrollbar {
+  width: 5px;
+}
+
+.overscroll-contain::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.overscroll-contain::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.3);
+  border-radius: 9999px;
+}
+
+:host-context(.dark) .overscroll-contain::-webkit-scrollbar-thumb {
+  background-color: rgba(113, 113, 122, 0.4);
+}
