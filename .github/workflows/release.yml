@@ -38,7 +38,7 @@ jobs:
           workspaces: './src-tauri -> target'
 
       - name: install frontend dependencies
-        run: bun install --frozen-lockfile
+        run: bun install
 
       - uses: tauri-apps/tauri-action@v0
         id: tauri
