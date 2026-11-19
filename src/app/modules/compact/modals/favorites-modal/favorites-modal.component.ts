@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Dialog } from 'primeng/dialog';
 import { ButtonDirective } from 'primeng/button';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerStar, tablerX } from '@ng-icons/tabler-icons';
+import { tablerStar, tablerX, tablerFileText } from '@ng-icons/tabler-icons';
 import { FavoriteTicket } from '../../../../core/interfaces/activity.interface';
 import { ActivityService } from '../../../../core/services/activity.service';
 import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
@@ -16,6 +16,7 @@ import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
     provideIcons({
       tablerStar,
       tablerX,
+      tablerFileText,
     }),
   ],
   template: `
@@ -68,14 +69,24 @@ import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
                   {{ fav.title }}
                 </p>
               </div>
-              <button
-                type="button"
-                (click)="$event.stopPropagation(); removeFavorite(fav)"
-                class="cursor-pointer text-slate-400 hover:text-red-500 p-1"
-                [title]="'compact.modal.removeFavorite' | translate"
-              >
-                <ng-icon name="tablerStar" class="text-amber-500 fill-amber-500" size="1.1rem" />
-              </button>
+              <div class="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  (click)="$event.stopPropagation(); activityService.openTicketContextModal(fav.ticket)"
+                  class="cursor-pointer text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 p-1"
+                  [title]="'ticketContext.title' | translate"
+                >
+                  <ng-icon name="tablerFileText" size="1.1rem" />
+                </button>
+                <button
+                  type="button"
+                  (click)="$event.stopPropagation(); removeFavorite(fav)"
+                  class="cursor-pointer text-slate-400 hover:text-red-500 p-1"
+                  [title]="'compact.modal.removeFavorite' | translate"
+                >
+                  <ng-icon name="tablerStar" class="text-amber-500 fill-amber-500" size="1.1rem" />
+                </button>
+              </div>
             </div>
           }
         }

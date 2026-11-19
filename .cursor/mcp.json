@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "pocketproject": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "pocketproject-mcp"
+      ],
+      "disabled": false
+    }
+  }
+}

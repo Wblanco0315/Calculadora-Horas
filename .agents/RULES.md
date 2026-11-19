@@ -226,3 +226,20 @@ Para garantizar la mantenibilidad y claridad del proyecto:
 | **Icono de Actualizaciones** | Obligatorio usar el icono de descargar (`tablerDownload`). Prohibido destellos/estrellas. |
 | **Documentación** | Todo módulo en `src/app/modules/<module>/` debe tener su `.md` en `docs/modules/<module>.md`. |
 | **Verificación** | Ejecutar `bun run build` tras cualquier generación o refactorización. |
+
+---
+
+## 8. Directrices Obligatorias de PocketProject Time Tracker (MCP)
+
+Todo agente o asistente que opere con el servidor MCP de PocketProject debe cumplir estrictamente:
+- **Interpretación de Modismos**: Expresiones como "necesito llenar el ticket 11111", "cargar horas a 11111", "imputar tiempo en 11111" significan registrar una actividad (`add_activity`) asociada al ticket 11111.
+- **Prohibido Inventar Tickets**: Jamás inventar o asumir un número de ticket que el usuario no haya escrito textualmente. Si no hay ticket, el campo debe ser omitido o `null`.
+- **Protocolo de Validación en Cascada**:
+  1. Ejecutar primero `get_ticket_context(ticket: "11111")` (resolución local ➔ OpenProject API en vivo).
+  2. Si `found: true`: usar título oficial (`subject`) y proyecto.
+  3. Si `found: false`: preguntar al usuario si el PM o encargado ya creó el ticket en el sistema. Si aún no está creado, registrarlo localmente con `ticket: null` indicando que queda pendiente de ticket.
+- **Lectura Progresiva de Contexto y Banderas del Ticket**:
+  - `get_ticket_context` incluye por defecto la descripción del ticket (`include_description: true`). El agente debe leer la descripción para comprender el requerimiento.
+  - **Sugerir lectura de comentarios**: Tras leer la descripción, el agente debe sugerir de forma proactiva al usuario si desea que consulte los comentarios o notas: *"He leído la descripción del ticket. ¿Deseas que revise los comentarios para obtener más detalles?"*. Solo si el usuario lo pide o autoriza, se ejecuta con `include_comments: true`.
+  - **Permisos Obligatorios para Archivos y Adjuntos**: NUNCA descargar ni leer un archivo adjunto o imagen sin pedir confirmación explícita al usuario: *"El ticket contiene el archivo adjunto [nombre]. ¿Me autorizas a descargarlo y revisar su contenido?"*. Solo con autorización se ejecuta `get_ticket_attachment`.
+

@@ -20,6 +20,8 @@ import {
   tablerPlayerPause,
   tablerDotsVertical,
   tablerCategory,
+  tablerRobot,
+  tablerFileText,
 } from '@ng-icons/tabler-icons';
 import { Activity } from '../../../../core/interfaces/activity.interface';
 import { ActivityService } from '../../../../core/services/activity.service';
@@ -52,6 +54,8 @@ function padZero(val: number): string {
       tablerPlayerPause,
       tablerDotsVertical,
       tablerCategory,
+      tablerRobot,
+      tablerFileText,
     }),
   ],
   template: `
@@ -114,10 +118,21 @@ function padZero(val: number): string {
           <!-- Ticket line + Title -->
           <div class="flex items-center gap-1.5">
             @if (activity().ticket) {
-              <span
-                class="shrink-0 text-[10px] font-mono text-slate-500 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-zinc-700 font-semibold"
+              <button
+                type="button"
+                (click)="$event.stopPropagation(); activityService.openTicketContextModal(activity().ticket!)"
+                class="shrink-0 text-[10px] font-mono text-slate-500 dark:text-zinc-400 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 px-1.5 py-0.5 rounded border border-slate-200 dark:border-zinc-700 font-semibold cursor-pointer transition-colors"
+                [title]="'ticketContext.title' | translate"
               >
                 #{{ activity().ticket }}
+              </button>
+            }
+            @if (activity().createdByAi) {
+              <span
+                class="shrink-0 text-primary-500 dark:text-primary-400 flex items-center"
+                [title]="'compact.createdByAiTooltip' | translate"
+              >
+                <ng-icon name="tablerRobot" size="0.85rem" />
               </span>
             }
             <h3
@@ -343,6 +358,18 @@ function padZero(val: number): string {
                       class="shrink-0"
                     />
                     <span>{{ (activity().synced ? 'compact.syncedClickResend' : 'compact.syncToOpenProject') | translate }}</span>
+                  </button>
+                }
+
+                <!-- Ver contexto del ticket -->
+                @if (activity().ticket) {
+                  <button
+                    type="button"
+                    (click)="actionPopover.hide(); activityService.openTicketContextModal(activity().ticket!)"
+                    class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-md text-left text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer font-medium"
+                  >
+                    <ng-icon name="tablerFileText" size="1rem" class="text-primary-500 shrink-0" />
+                    <span>{{ 'ticketContext.title' | translate }}</span>
                   </button>
                 }
 

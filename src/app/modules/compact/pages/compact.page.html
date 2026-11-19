@@ -13,7 +13,7 @@
       <p
         class="text-[10px] uppercase tracking-widest text-slate-400 dark:text-zinc-500 font-semibold"
       >
-        {{ 'compact.dayLog' | translate }}
+        {{ (activityService.isToday() ? 'compact.dayLog' : 'compact.historicalLog') | translate }}
       </p>
       <h2
         class="text-sm font-display font-semibold text-slate-700 dark:text-zinc-200 leading-tight"
@@ -49,6 +49,93 @@
         <ng-icon name="tablerPlus" size="1rem" strokeWidth="2.5" class="mr-1" />
         <span>{{ 'compact.add' | translate }}</span>
       </button>
+    </div>
+  </div>
+
+  <!-- Date Navigation Bar -->
+  <div
+    class="px-4 py-2 bg-slate-100/70 dark:bg-zinc-900/70 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between gap-2 shrink-0 select-none transition-colors"
+  >
+    <!-- Left: Prev Day, DatePicker, Next Day, Today Quick Button -->
+    <div class="flex items-center gap-1.5 min-w-0">
+      <button
+        pButton
+        type="button"
+        (click)="activityService.setPreviousDay()"
+        iconOnly
+        size="small"
+        variant="outlined"
+        severity="secondary"
+        class="!size-7.5 !rounded-lg"
+        [title]="'compact.prevDay' | translate"
+      >
+        <ng-icon name="tablerChevronLeft" size="1rem" />
+      </button>
+
+      <div class="relative flex items-center">
+        <p-datepicker
+          [ngModel]="selectedDateObj()"
+          (ngModelChange)="onDatePicked($event)"
+          dateFormat="yy-mm-dd"
+          [showIcon]="true"
+          iconDisplay="input"
+          styleClass="p-datepicker-sm"
+          inputStyleClass="!py-1 !px-2.5 !text-xs !font-bold text-slate-800 dark:text-zinc-100 !w-32 text-center cursor-pointer !bg-white dark:!bg-zinc-800 !border-slate-200 dark:!border-zinc-700 rounded-lg shadow-xs"
+          appendTo="body"
+          size="small"
+        />
+
+        @if (activityService.isToday()) {
+          <div
+            class="absolute inset-y-0.5 left-0.5 right-7 flex items-center justify-center pointer-events-none text-xs font-bold text-primary-600 dark:text-primary-400 bg-white dark:bg-zinc-800 rounded-l-lg select-none"
+          >
+            {{ 'compact.today' | translate }}
+          </div>
+        }
+      </div>
+
+      @if (!activityService.isToday()) {
+        <button
+          pButton
+          type="button"
+          (click)="activityService.setNextDay()"
+          iconOnly
+          size="small"
+          variant="outlined"
+          severity="secondary"
+          class="!size-7.5 !rounded-lg"
+          [title]="'compact.nextDay' | translate"
+        >
+          <ng-icon name="tablerChevronRight" size="1rem" />
+        </button>
+
+        <button
+          pButton
+          type="button"
+          (click)="activityService.setToday()"
+          size="small"
+          variant="outlined"
+          severity="primary"
+          class="!px-2.5 !py-1 !text-xs font-semibold !rounded-lg ml-0.5"
+          [title]="'compact.goToToday' | translate"
+        >
+          <ng-icon name="tablerCalendarEvent" size="0.95rem" class="mr-1 text-primary-500" />
+          <span>{{ 'compact.today' | translate }}</span>
+        </button>
+      }
+    </div>
+
+    <!-- Right: Context Label (e.g. 'Vie, 6 nov.' or 'Hoy · Mié, 18 nov.') -->
+    <div class="flex items-center gap-1.5 truncate text-right">
+      <span
+        class="text-xs font-semibold truncate"
+        [class.text-primary-600]="activityService.isToday()"
+        [class.dark:text-primary-400]="activityService.isToday()"
+        [class.text-amber-600]="!activityService.isToday()"
+        [class.dark:text-amber-400]="!activityService.isToday()"
+      >
+        {{ formattedDateLabel() }}
+      </span>
     </div>
   </div>
 
@@ -232,7 +319,7 @@
       <div class="h-full flex flex-col items-center justify-center p-6 text-center select-none">
         <ng-icon name="tablerClock" size="2.5rem" class="text-slate-300 dark:text-zinc-700 mb-2" />
         <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-zinc-600 whitespace-pre-line">
-          {{ 'compact.noMoreRecordsToday' | translate }}
+          {{ (activityService.isToday() ? 'compact.noMoreRecordsToday' : 'compact.noMoreRecordsDate') | translate }}
         </p>
       </div>
     } @else {
@@ -280,4 +367,5 @@
   <app-sync-confirm-modal />
   <app-reset-confirm-modal />
   <app-close-confirm-modal />
+  <app-ticket-context-modal />
 </div>

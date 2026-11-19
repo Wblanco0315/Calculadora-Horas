@@ -75,6 +75,12 @@
                 <span>{{ 'setup.step5' | translate }}</span>
               </span>
             </p-tab>
+            <p-tab [value]="6" class="cursor-pointer py-2 px-2.5 sm:px-3 text-xs sm:text-sm font-medium">
+              <span class="inline-flex items-center gap-1.5">
+                <ng-icon name="tablerRobot" size="1rem" />
+                <span>{{ 'setup.step6' | translate }}</span>
+              </span>
+            </p-tab>
           </p-tablist>
         </p-tabs>
       </div>
@@ -100,6 +106,9 @@
       }
       @case (5) {
       <app-update-section />
+      }
+      @case (6) {
+      <app-mcp-section />
       }
       }
     </div>

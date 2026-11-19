@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Dialog } from 'primeng/dialog';
@@ -20,6 +20,7 @@ import {
   tablerMinus,
   tablerEdit,
   tablerClockPlay,
+  tablerFileText,
 } from '@ng-icons/tabler-icons';
 import { ActivityService, getTodayDateString } from '../../../../core/services/activity.service';
 import { StorageService } from '../../../../core/services/storage.service';
@@ -54,6 +55,7 @@ import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
       tablerClockPlay,
       tablerPlus,
       tablerMinus,
+      tablerFileText,
     }),
   ],
   template: `
@@ -144,6 +146,18 @@ import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
                 </div>
               }
             </div>
+
+            <!-- View Context Button -->
+            @if (ticketNumber.trim()) {
+              <button
+                type="button"
+                (click)="activityService.openTicketContextModal(ticketNumber)"
+                class="cursor-pointer size-8 rounded-lg border border-slate-200 dark:border-zinc-700 hover:border-primary-500 text-slate-500 hover:text-primary-600 dark:text-zinc-400 dark:hover:text-primary-400 flex items-center justify-center transition-colors shrink-0"
+                [title]="'ticketContext.title' | translate"
+              >
+                <ng-icon name="tablerFileText" size="1rem" />
+              </button>
+            }
 
             <!-- Toggle Favorite Button -->
             @if (ticketNumber.trim()) {
@@ -379,6 +393,9 @@ export class ActivityFormModalComponent {
   readonly activityService = inject(ActivityService);
   readonly storageService = inject(StorageService);
   readonly languageService = inject(LanguageService);
+  private readonly cdr = inject(ChangeDetectorRef);
+
+  private ticketSearchTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly isEditing = signal<boolean>(false);
   readonly showStopwatchConfirm = signal<boolean>(false);
@@ -422,35 +439,45 @@ export class ActivityFormModalComponent {
     });
 
     effect(() => {
+      const isVisible = this.activityService.showActivityForm();
       const editing = this.activityService.editingActivity();
       const preset = this.activityService.presetActivity();
 
-      if (editing) {
-        this.isEditing.set(true);
-        this.ticketNumber = editing.ticket || '';
-        this.ticketTitle = editing.ticketTitle || '';
-        this.isTicketFound.set(!!editing.ticket && !!editing.ticketTitle);
-        const opts = this.activityTypeOptions();
-        this.selectedActivityTypeId =
-          editing.activityTypeId || editing.activity_type_id || (opts.length > 0 ? opts[0].value : '');
-        this.activityName = editing.name || '';
-        this.hours = Math.floor(editing.minutes / 60);
-        this.minutes = editing.minutes % 60;
-        this.selectedProjectId = editing.projectId || '';
-        this.activityDate = editing.date;
-        this.dateValue = new Date(editing.date + 'T00:00:00');
-      } else if (preset) {
-        this.isEditing.set(false);
-        this.resetForm();
-        this.ticketNumber = preset.ticket || '';
-        this.ticketTitle = preset.title || '';
-        this.isTicketFound.set(!!preset.ticket && !!preset.title);
-        this.activityName = '';
-        this.selectedProjectId = preset.projectId || '';
-      } else {
-        this.isEditing.set(false);
-        this.resetForm();
-      }
+      untracked(() => {
+        if (!isVisible) {
+          return;
+        }
+
+        if (editing) {
+          this.isEditing.set(true);
+          this.ticketNumber = editing.ticket || '';
+          this.ticketTitle = editing.ticketTitle || '';
+          this.isTicketFound.set(!!editing.ticket && !!editing.ticketTitle);
+          const opts = this.activityTypeOptions();
+          this.selectedActivityTypeId =
+            editing.activityTypeId || editing.activity_type_id || (opts.length > 0 ? opts[0].value : '');
+          this.activityName = editing.name || '';
+          this.hours = Math.floor(editing.minutes / 60);
+          this.minutes = editing.minutes % 60;
+          this.selectedProjectId = editing.projectId || '';
+          this.activityDate = editing.date;
+          this.dateValue = new Date(editing.date + 'T00:00:00');
+          this.cdr.markForCheck();
+        } else if (preset) {
+          this.isEditing.set(false);
+          this.resetForm();
+          this.ticketNumber = preset.ticket || '';
+          this.ticketTitle = preset.title || '';
+          this.isTicketFound.set(!!preset.ticket && !!preset.title);
+          this.activityName = '';
+          this.selectedProjectId = preset.projectId || '';
+          this.cdr.markForCheck();
+        } else {
+          this.isEditing.set(false);
+          this.resetForm();
+          this.cdr.markForCheck();
+        }
+      });
     });
   }
 
@@ -493,9 +520,26 @@ export class ActivityFormModalComponent {
   }
 
   onTicketNumberChange(val: string): void {
-    this.isTicketFound.set(false);
-    if (!val.trim()) {
+    if (this.ticketSearchTimer) {
+      clearTimeout(this.ticketSearchTimer);
+      this.ticketSearchTimer = null;
+    }
+
+    const clean = (val || '').trim().replace(/^#/, '');
+    if (!clean) {
+      this.isTicketFound.set(false);
       this.ticketTitle = '';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.isTicketFound.set(false);
+
+    // Auto-fetch ticket after 450ms when at least 3 digits/characters are entered
+    if (clean.length >= 3) {
+      this.ticketSearchTimer = setTimeout(() => {
+        this.onTicketBlur();
+      }, 450);
     }
   }
 
@@ -509,16 +553,23 @@ export class ActivityFormModalComponent {
   }
 
   async onTicketBlur(): Promise<void> {
+    if (this.ticketSearchTimer) {
+      clearTimeout(this.ticketSearchTimer);
+      this.ticketSearchTimer = null;
+    }
+
     const raw = this.ticketNumber.trim().replace(/^#/, '');
     if (!raw) return;
 
     this.isSearchingTicket.set(true);
+    this.cdr.markForCheck();
+
     try {
       const res = await this.activityService.fetchTicketSubject(raw);
       if (res.success && res.subject) {
         this.ticketTitle = res.subject;
         this.isTicketFound.set(true);
-        if (res.project_id && !this.selectedProjectId) {
+        if (res.project_id) {
           this.selectedProjectId = res.project_id;
         }
       } else {
@@ -533,6 +584,7 @@ export class ActivityFormModalComponent {
       }
     } finally {
       this.isSearchingTicket.set(false);
+      this.cdr.markForCheck();
     }
   }
 
