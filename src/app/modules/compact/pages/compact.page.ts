@@ -32,7 +32,7 @@ import { WindowService } from '../../../core/services/window.service';
 import { StorageService } from '../../../core/services/storage.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { UpdateService } from '../../../core/services/update.service';
-import { CompactHeaderComponent } from '../components/compact-header/compact-header.component';
+import { AppHeaderComponent } from '../../../shared/components/app-header/app-header.component';
 import { StatsHeroComponent } from '../components/stats-hero/stats-hero.component';
 import { ActivityRowComponent } from '../components/activity-row/activity-row.component';
 import { ActivityFormModalComponent } from '../modals/activity-form-modal/activity-form-modal.component';
@@ -54,7 +54,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
     Popover,
     Select,
     NgIcon,
-    CompactHeaderComponent,
+    AppHeaderComponent,
     StatsHeroComponent,
     ActivityRowComponent,
     ActivityFormModalComponent,

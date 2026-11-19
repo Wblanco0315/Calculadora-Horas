@@ -12,8 +12,6 @@ El módulo `compact` replica fielmente la vista original de la **Calculadora de 
 ```
 src/app/modules/compact/
 ├── components/
-│   ├── compact-header/
-│   │   └── compact-header.component.ts       # Barra de título nativa arrastrable con controles de ventana
 │   ├── stats-hero/
 │   │   └── stats-hero.component.ts           # Panel de estadísticas con SelectButton y degradado dinámico de tema
 │   └── activity-row/
@@ -38,12 +36,12 @@ src/app/modules/compact/
 
 ## 2. Componentes Clave y Réplica Fiel
 
-### 2.1. Barra de Título (`app-compact-header`)
-- **Ubicación**: `components/compact-header/compact-header.component.ts`
+### 2.1. Barra de Título Reutilizable (`app-header`)
+- **Ubicación**: `shared/components/app-header/app-header.component.ts`
 - **Responsabilidad y Diseño**:
   - Altura nativa de 32px (`h-8`), coincidiendo con la barra de título original de Windows.
-  - Barra de título con arrastre programático fluido (`WindowService.startDragging`) en todo el encabezado con exclusión automática de controles interactivos, isologo oficial (`app-logo`), título de la aplicación y versión actual (`v{{ version }}`).
-  - Botón de alternancia de tema claro/oscuro (`tablerSun` / `tablerMoon`), botón de minimizar (oculta a la bandeja del sistema / iconos ocultos) y botón de cerrar que invoca el modal de confirmación `app-close-confirm-modal`.
+  - Barra de título unificada y reutilizable con arrastre programático fluido (`WindowService.startDragging`) en todo el encabezado con exclusión automática de controles interactivos, isologo oficial (`app-logo`), título de la aplicación y versión actual (`v{{ version }}`).
+  - Botón de alternancia de tema claro/oscuro (`tablerSun` / `tablerMoon`), botón de minimizar (oculta a la bandeja del sistema / iconos ocultos), botón de maximizar / restaurar y botón de cerrar que invoca el modal de confirmación `app-close-confirm-modal`.
 
 ### 2.2. Panel de Estadísticas Hero (`app-stats-hero`)
 - **Ubicación**: `components/stats-hero/stats-hero.component.ts`

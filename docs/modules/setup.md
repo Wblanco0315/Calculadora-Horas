@@ -15,8 +15,7 @@ src/app/modules/setup/
 │   ├── appearance-step/      # Paso 1: Apariencia, Tema y Color de Acento
 │   ├── schedule-step/        # Paso 2: Configuración de Jornada y Horario
 │   ├── lunch-step/           # Paso 3: Tiempo de Almuerzo / Descanso
-│   ├── openproject-step/     # Paso 4: Conexión con la API de OpenProject
-│   └── setup-header/         # Encabezado unificado del asistente
+│   └── openproject-step/     # Paso 4: Conexión con la API de OpenProject
 ├── interfaces/
 │   └── setup.interface.ts    # Modelos y contratos de UI del wizard
 ├── modals/
@@ -87,5 +86,5 @@ El asistente solo se muestra cuando es la primera vez que se ejecuta la aplicaci
 4. **Diseño a Pantalla Completa y Ventana Maximizada**:
    - **Modo Pantalla Completa en Onboarding Inicial**: Para permitir completar los formularios de horario, almuerzo y OpenProject de manera cómoda y sin restricciones de espacio, la aplicación maximiza automáticamente la ventana nativa de Tauri al iniciar el setup inicial (`!is_configured`).
    - **Contenedor Principal de Ancho Completo**: Ocupa el 100% de la ventana (`h-dvh w-full overflow-hidden`) con el encabezado y el stepper fijados en la parte superior, el contenido central centrado en un ancho ergonómico (`max-w-4xl mx-auto w-full`) con scroll vertical independiente, y el pie de navegación inferior fijo.
-   - **Barra de Acciones Superior (`SetupHeaderComponent`)**: Soporta arrastre suave de ventana (`startDragging`), doble clic para maximizar/restaurar, y controles nativos de Windows (Minimizar, Maximizar / Restaurar y Cerrar con modal de confirmación en setup inicial).
+   - **Barra de Acciones Superior Unificada (`<app-header>`)**: Componente transversal reutilizable con arrastre suave de ventana (`startDragging`), doble clic para maximizar/restaurar, y controles nativos de Windows (Minimizar, Maximizar / Restaurar y Cerrar con modal de confirmación en setup inicial).
    - **Retorno a Modo Compacto**: Al completar exitosamente la configuración (`completeSetup()`) o al cerrar los ajustes, la aplicación desmaximiza y reajusta la ventana al tamaño compacto original (525x800) centrado en pantalla.

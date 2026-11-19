@@ -21,7 +21,7 @@ import { SetupService } from '../services/setup.service';
 import { StorageService } from '../../../core/services/storage.service';
 import { UpdateService } from '../../../core/services/update.service';
 import { WindowService } from '../../../core/services/window.service';
-import { SetupHeaderComponent } from '../components/setup-header/setup-header.component';
+import { AppHeaderComponent } from '../../../shared/components/app-header/app-header.component';
 import { ScheduleStepComponent } from '../components/schedule-step/schedule-step.component';
 import { LunchStepComponent } from '../components/lunch-step/lunch-step.component';
 import { AppearanceStepComponent } from '../components/appearance-step/appearance-step.component';
@@ -44,7 +44,7 @@ import { CloseConfirmModalComponent } from '../modals/close-confirm-modal/close-
     ButtonDirective,
     NgIcon,
     TranslatePipe,
-    SetupHeaderComponent,
+    AppHeaderComponent,
     ScheduleStepComponent,
     LunchStepComponent,
     AppearanceStepComponent,
@@ -85,6 +85,14 @@ export class SetupPage implements OnInit {
       return this.setupService.isSaving() || !this.setupService.isScheduleValid();
     }
     return false;
+  });
+
+  readonly headerContextLabel = computed(() => {
+    if (this.storageService.isConfigured()) {
+      return this.setupService.languageService.t('compact.settings');
+    }
+    const step = this.setupService.activeStep();
+    return `${this.setupService.languageService.t('setup.title')} (${step}/4)`;
   });
 
   async ngOnInit(): Promise<void> {

@@ -1,7 +1,7 @@
 <div class="h-dvh w-full flex flex-col bg-white dark:bg-zinc-900 transition-colors duration-200 overflow-hidden">
   <main class="w-full h-full flex flex-col bg-white dark:bg-zinc-900 overflow-hidden">
-    <!-- Header (fixed at top of modal) -->
-    <app-setup-header class="shrink-0" />
+    <!-- Unified Top Draggable Application Header -->
+    <app-header [contextLabel]="headerContextLabel()" class="shrink-0" />
 
     @if (!storageService.isConfigured()) {
       <!-- PrimeNG Minimal Stepper (Only on Initial Setup Onboarding) -->
