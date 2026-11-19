@@ -3,6 +3,7 @@ import { RouterOutlet } from '@angular/router';
 import { StorageService } from './core/services/storage.service';
 import { ThemeService } from './core/services/theme.service';
 import { UpdateService } from './core/services/update.service';
+import { WindowService } from './core/services/window.service';
 import { UpdateDialogComponent } from './shared/components/update-dialog/update-dialog.component';
 
 @Component({
@@ -16,11 +17,16 @@ export class AppComponent implements OnInit {
   private readonly storageService = inject(StorageService);
   private readonly themeService = inject(ThemeService);
   private readonly updateService = inject(UpdateService);
+  private readonly windowService = inject(WindowService);
 
   async ngOnInit(): Promise<void> {
     const config = await this.storageService.loadConfig();
     this.themeService.setTheme(config.theme_mode || 'system');
     this.themeService.setPrimaryColor(config.primary_color || 'violet');
+
+    if (!config.is_configured) {
+      await this.windowService.maximize();
+    }
 
     // Check for updates in the background on startup
     this.updateService.checkForUpdates(true).catch((err) => {

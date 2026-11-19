@@ -100,6 +100,64 @@ export class WindowService {
   }
 
   /**
+   * Maximizes the application window.
+   */
+  async maximize(): Promise<void> {
+    if (isTauri()) {
+      try {
+        const win = getCurrentWindow();
+        await win.maximize();
+      } catch (err) {
+        console.warn('Error maximizing window:', err);
+      }
+    }
+  }
+
+  /**
+   * Unmaximizes / restores the window to its non-maximized state.
+   */
+  async unmaximize(): Promise<void> {
+    if (isTauri()) {
+      try {
+        const win = getCurrentWindow();
+        await win.unmaximize();
+      } catch (err) {
+        console.warn('Error unmaximizing window:', err);
+      }
+    }
+  }
+
+  /**
+   * Toggles the window between maximized and restored states.
+   */
+  async toggleMaximize(): Promise<void> {
+    if (isTauri()) {
+      try {
+        const win = getCurrentWindow();
+        await win.toggleMaximize();
+      } catch (err) {
+        console.warn('Error toggling maximize state:', err);
+      }
+    }
+  }
+
+  /**
+   * Checks whether the window is currently maximized.
+   */
+  async isMaximized(): Promise<boolean> {
+    if (isTauri()) {
+      try {
+        const win = getCurrentWindow();
+        return await win.isMaximized();
+      } catch (err) {
+        console.warn('Error checking isMaximized:', err);
+        return false;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Opens confirmation modal before closing
    */
   requestClose(): void {
@@ -139,10 +197,29 @@ export class WindowService {
     this.requestClose();
   }
 
-  async startDragging(): Promise<void> {
+  /**
+   * Safe window dragging handler.
+   * Can accept a MouseEvent to validate mouse button and filter out interactive targets.
+   * Also unmaximizes if dragged while maximized, matching native Windows behavior.
+   */
+  async startDragging(event?: MouseEvent): Promise<void> {
+    if (event) {
+      if (event.button !== 0) {
+        return;
+      }
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('button, a, input, select, textarea, [data-no-drag]')) {
+        return;
+      }
+    }
+
     if (isTauri()) {
       try {
-        await getCurrentWindow().startDragging();
+        const win = getCurrentWindow();
+        if (await win.isMaximized()) {
+          await win.unmaximize();
+        }
+        await win.startDragging();
       } catch (err) {
         console.warn('Error starting Tauri window drag:', err);
       }

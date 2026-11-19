@@ -42,7 +42,7 @@ src/app/modules/compact/
 - **Ubicación**: `components/compact-header/compact-header.component.ts`
 - **Responsabilidad y Diseño**:
   - Altura nativa de 32px (`h-8`), coincidiendo con la barra de título original de Windows.
-  - Región arrastrable (`data-tauri-drag-region`) con el isologo oficial (`app-logo`), título de la aplicación y versión actual (`v{{ version }}`).
+  - Barra de título con arrastre programático fluido (`WindowService.startDragging`) en todo el encabezado con exclusión automática de controles interactivos, isologo oficial (`app-logo`), título de la aplicación y versión actual (`v{{ version }}`).
   - Botón de alternancia de tema claro/oscuro (`tablerSun` / `tablerMoon`), botón de minimizar (oculta a la bandeja del sistema / iconos ocultos) y botón de cerrar que invoca el modal de confirmación `app-close-confirm-modal`.
 
 ### 2.2. Panel de Estadísticas Hero (`app-stats-hero`)

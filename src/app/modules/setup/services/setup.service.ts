@@ -4,6 +4,7 @@ import { StorageService } from '../../../core/services/storage.service';
 import { ThemeService } from '../../../core/services/theme.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { ScheduleService } from '../../../core/services/schedule.service';
+import { WindowService } from '../../../core/services/window.service';
 import {
   AppConfig,
   AppLanguage,
@@ -29,6 +30,7 @@ export class SetupService {
   private readonly themeService = inject(ThemeService);
   readonly languageService = inject(LanguageService);
   readonly scheduleService = inject(ScheduleService);
+  private readonly windowService = inject(WindowService);
   private readonly router = inject(Router);
 
   // Stepper State
@@ -453,7 +455,7 @@ export class SetupService {
       await this.storageService.saveConfig(configToSave);
       this.themeService.setTheme(configToSave.theme_mode);
       this.themeService.setPrimaryColor(configToSave.primary_color);
-      await this.router.navigate(['/compact']);
+      await this.windowService.setCompactMode();
     } catch (err) {
       console.error('Error al guardar configuración:', err);
       alert('Error guardando la configuración en la base de datos local SQLite.');

@@ -266,6 +266,7 @@ export const en = {
     title: 'Hours Calculator',
     theme: 'Theme',
     minimize: 'Minimize',
+    toggleMaximize: 'Maximize / Restore',
     close: 'Close',
     totalRegistered: 'Total Registered',
     dailyGoal: 'Daily goal: {goal}',

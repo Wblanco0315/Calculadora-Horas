@@ -27,13 +27,12 @@ import { AppLogoComponent } from '../../../../shared/components/app-logo/app-log
   ],
   template: `
     <header
-      class="flex z-50 justify-between items-center h-8 bg-slate-50 dark:bg-[#202020] text-slate-800 dark:text-[#ffffff] select-none transition-colors shrink-0 overflow-hidden border-b border-slate-200/80 dark:border-zinc-800"
+      (mousedown)="onMouseDown($event)"
+      class="flex z-50 justify-between items-center h-8 bg-slate-50 dark:bg-[#202020] text-slate-800 dark:text-[#ffffff] select-none transition-colors shrink-0 overflow-hidden border-b border-slate-200/80 dark:border-zinc-800 cursor-default"
     >
       <!-- Draggable Area (Icon, App Name & Version) -->
       <div
-        data-tauri-drag-region
-        (mousedown)="onMouseDown($event)"
-        class="flex items-center px-3 gap-2 h-full flex-1 cursor-default min-w-0"
+        class="flex items-center px-3 gap-2 h-full flex-1 min-w-0"
       >
         <app-logo [variant]="'icon'" [size]="'xs'" class="pointer-events-none drop-shadow-xs shrink-0" />
         <span class="text-xs font-bold text-slate-700 dark:text-zinc-200 pointer-events-none tracking-tight shrink-0">
@@ -131,9 +130,6 @@ export class CompactHeaderComponent {
   readonly updateService = inject(UpdateService);
 
   onMouseDown(event: MouseEvent): void {
-    if ((event.target as HTMLElement).closest('button')) {
-      return;
-    }
-    this.windowService.startDragging();
+    this.windowService.startDragging(event);
   }
 }

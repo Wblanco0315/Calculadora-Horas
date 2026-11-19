@@ -20,6 +20,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { SetupService } from '../services/setup.service';
 import { StorageService } from '../../../core/services/storage.service';
 import { UpdateService } from '../../../core/services/update.service';
+import { WindowService } from '../../../core/services/window.service';
 import { SetupHeaderComponent } from '../components/setup-header/setup-header.component';
 import { ScheduleStepComponent } from '../components/schedule-step/schedule-step.component';
 import { LunchStepComponent } from '../components/lunch-step/lunch-step.component';
@@ -72,6 +73,7 @@ export class SetupPage implements OnInit {
   readonly setupService = inject(SetupService);
   readonly storageService = inject(StorageService);
   readonly updateService = inject(UpdateService);
+  readonly windowService = inject(WindowService);
   private readonly router = inject(Router);
 
   readonly isNextDisabled = computed(() => {
@@ -87,6 +89,9 @@ export class SetupPage implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.setupService.init();
+    if (!this.storageService.isConfigured()) {
+      await this.windowService.maximize();
+    }
   }
 
   nextStep(): void {
@@ -103,7 +108,7 @@ export class SetupPage implements OnInit {
     }
   }
 
-  closeSettings(): void {
-    this.router.navigate(['/compact']);
+  async closeSettings(): Promise<void> {
+    await this.windowService.setCompactMode();
   }
 }

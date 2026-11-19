@@ -84,8 +84,8 @@ El asistente solo se muestra cuando es la primera vez que se ejecuta la aplicaci
 3. **Control por Guards**:
    - `configGuard`: Si `is_configured` es `false`, redirige automáticamente hacia `/setup`. Si es `true`, permite el acceso al `/dashboard`.
    - `setupGuard`: Si `is_configured` es `true` y no se incluye el parámetro de consulta `?edit=true`, bloquea el acceso a `/setup` y redirige a `/dashboard`. Permite acceder únicamente si el programa aún no está configurado o si el usuario pulsa deliberadamente "Configuración" desde el dashboard (`/setup?edit=true`).
-4. **Diseño Responsivo Adaptable**:
-   - **Contenedor Principal**: Modal estructurado con encabezado y barra de pasos superiores fijos (`shrink-0`), área de contenido con scroll vertical interno suave (`overflow-y-auto overscroll-contain`) y pie de navegación inferior fijo (`shrink-0`).
-   - **Stepper Adaptativo**: En pantallas móviles o ventanas pequeñas (`< 640px`), los títulos de paso se ocultan dejando los círculos numerados compactos, mientras que el encabezado muestra el indicador de avance (e.g. `2/4`).
-   - **Controles de Horario y Tarjetas**: En pantallas pequeñas, los selectores de día y las tarjetas de reglas configuradas se apilan limpiamente en dos filas (nombre arriba, horario y acciones abajo) sin desbordamientos horizontales.
-   - **Selector de Temas y Almuerzo**: Botones y campos numéricos con proporciones escalables aptos para ventanas desde 320px de ancho y alturas reducidas (600px en ventana nativa Tauri).
+4. **Diseño a Pantalla Completa y Ventana Maximizada**:
+   - **Modo Pantalla Completa en Onboarding Inicial**: Para permitir completar los formularios de horario, almuerzo y OpenProject de manera cómoda y sin restricciones de espacio, la aplicación maximiza automáticamente la ventana nativa de Tauri al iniciar el setup inicial (`!is_configured`).
+   - **Contenedor Principal de Ancho Completo**: Ocupa el 100% de la ventana (`h-dvh w-full overflow-hidden`) con el encabezado y el stepper fijados en la parte superior, el contenido central centrado en un ancho ergonómico (`max-w-4xl mx-auto w-full`) con scroll vertical independiente, y el pie de navegación inferior fijo.
+   - **Barra de Acciones Superior (`SetupHeaderComponent`)**: Soporta arrastre suave de ventana (`startDragging`), doble clic para maximizar/restaurar, y controles nativos de Windows (Minimizar, Maximizar / Restaurar y Cerrar con modal de confirmación en setup inicial).
+   - **Retorno a Modo Compacto**: Al completar exitosamente la configuración (`completeSetup()`) o al cerrar los ajustes, la aplicación desmaximiza y reajusta la ventana al tamaño compacto original (525x800) centrado en pantalla.
