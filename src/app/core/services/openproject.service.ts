@@ -316,7 +316,7 @@ export class OpenprojectService {
       const descHtml = wpData.description?.html || null;
       const description = (descRaw || descHtml) ? { raw: descRaw, html: descHtml } : null;
 
-      // 2. Comments
+      // 2. Comments / Activities
       let comments: TicketComment[] | null = null;
       if (options?.includeComments ?? true) {
         try {
@@ -324,15 +324,77 @@ export class OpenprojectService {
           if (actRes.ok) {
             const actData: any = await actRes.json();
             const elements: any[] = actData._embedded?.elements || [];
-            comments = elements
-              .filter((a: any) => a.comment && (a.comment.raw || a.comment.html))
-              .map((a: any) => ({
-                id: String(a.id),
-                commentRaw: a.comment.raw || '',
-                commentHtml: a.comment.html || a.comment.raw || '',
-                createdAt: a.createdAt || '',
-                userName: a._links?.user?.title || 'Desconocido',
-              }));
+
+            // Pre-populate known users from work package links
+            const knownUsers = new Map<string, string>();
+            if (wpData._links?.author?.href && wpData._links?.author?.title) {
+              const uid = wpData._links.author.href.split('/').pop();
+              if (uid) knownUsers.set(uid, wpData._links.author.title);
+            }
+            if (wpData._links?.assignee?.href && wpData._links?.assignee?.title) {
+              const uid = wpData._links.assignee.href.split('/').pop();
+              if (uid) knownUsers.set(uid, wpData._links.assignee.title);
+            }
+            if (wpData._links?.responsible?.href && wpData._links?.responsible?.title) {
+              const uid = wpData._links.responsible.href.split('/').pop();
+              if (uid) knownUsers.set(uid, wpData._links.responsible.title);
+            }
+
+            // Fetch any missing user names
+            const missingUids = new Set<string>();
+            for (const a of elements) {
+              const uHref = a._links?.user?.href;
+              if (uHref) {
+                const uid = uHref.split('/').pop();
+                if (uid && !knownUsers.has(uid)) {
+                  missingUids.add(uid);
+                }
+              }
+            }
+
+            for (const uid of missingUids) {
+              try {
+                const uRes = await fetch(`${url}/api/v3/users/${uid}`, { headers });
+                if (uRes.ok) {
+                  const uData: any = await uRes.json();
+                  if (uData.name) {
+                    knownUsers.set(uid, uData.name);
+                  }
+                }
+              } catch {}
+            }
+
+            comments = [];
+            for (const a of elements) {
+              const commentRaw = a.comment?.raw || '';
+              const commentHtml = a.comment?.html || a.comment?.raw || '';
+
+              const details: Array<{ raw: string; html: string }> = [];
+              if (Array.isArray(a.details)) {
+                for (const d of a.details) {
+                  const dRaw = d.raw || '';
+                  const dHtml = d.html || d.raw || '';
+                  if (dRaw || dHtml) {
+                    details.push({ raw: dRaw, html: dHtml });
+                  }
+                }
+              }
+
+              if (commentRaw || commentHtml || details.length > 0) {
+                const uHref = a._links?.user?.href || '';
+                const uid = uHref.split('/').pop() || '';
+                const userName = knownUsers.get(uid) || a._links?.user?.title || (uid ? `Usuario #${uid}` : 'Desconocido');
+
+                comments.push({
+                  id: String(a.id),
+                  commentRaw,
+                  commentHtml: commentHtml || commentRaw,
+                  createdAt: a.createdAt || '',
+                  userName,
+                  details,
+                });
+              }
+            }
           }
         } catch {
           comments = [];

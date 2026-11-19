@@ -67,23 +67,45 @@ pub struct TicketDescriptionItem {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct TicketCommentItem {
-    pub id: String,
-    pub comment_raw: String,
-    pub comment_html: String,
-    pub created_at: String,
-    pub user_name: String,
+#[serde(rename_all = "camelCase")]
+pub struct TicketActivityDetailItem {
+    pub raw: String,
+    pub html: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct TicketCommentItem {
+    pub id: String,
+    #[serde(alias = "comment_raw")]
+    pub comment_raw: String,
+    #[serde(alias = "comment_html")]
+    pub comment_html: String,
+    #[serde(alias = "created_at")]
+    pub created_at: String,
+    #[serde(alias = "user_name")]
+    pub user_name: String,
+    #[serde(default)]
+    pub details: Vec<TicketActivityDetailItem>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct TicketAttachmentItem {
     pub id: String,
+    #[serde(alias = "file_name")]
     pub file_name: String,
+    #[serde(alias = "file_size")]
     pub file_size: i64,
+    #[serde(alias = "content_type")]
     pub content_type: String,
+    #[serde(alias = "download_url")]
     pub download_url: String,
+    #[serde(alias = "is_image")]
     pub is_image: bool,
+    #[serde(alias = "created_at")]
     pub created_at: Option<String>,
+    #[serde(alias = "author_name")]
     pub author_name: Option<String>,
 }
 
@@ -215,27 +237,37 @@ fn install_mcp_to_client(client: String) -> Result<McpInstallResult, String> {
 
     let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
 
+    let is_opencode = client.as_str() == "opencode";
     let (target_file, command, args) = match client.as_str() {
         "antigravity" => {
             let config_dir = home_path.join(".gemini").join("config");
             let file = config_dir.join("mcp_config.json");
-            (file, "npx".to_string(), vec!["-y".to_string(), "pocketproject-mcp".to_string()])
+            (file, "npx".to_string(), vec!["-y".to_string(), "pocketproject-mcp@latest".to_string()])
         }
         "antigravity_workspace" => {
             let config_dir = cwd.join(".gemini");
             let file = config_dir.join("mcp_config.json");
-            (file, "npx".to_string(), vec!["-y".to_string(), "pocketproject-mcp".to_string()])
+            (file, "npx".to_string(), vec!["-y".to_string(), "pocketproject-mcp@latest".to_string()])
         }
         "cursor" => {
             let config_dir = cwd.join(".cursor");
             let file = config_dir.join("mcp.json");
-            (file, "npx".to_string(), vec!["-y".to_string(), "pocketproject-mcp".to_string()])
+            (file, "npx".to_string(), vec!["-y".to_string(), "pocketproject-mcp@latest".to_string()])
+        }
+        "claude_code" => {
+            let file = home_path.join(".claude.json");
+            (file, "npx".to_string(), vec!["-y".to_string(), "pocketproject-mcp@latest".to_string()])
         }
         "claude_desktop" => {
             let app_data = std::env::var("APPDATA").unwrap_or_else(|_| home.clone());
             let config_dir = PathBuf::from(app_data).join("Claude");
             let file = config_dir.join("claude_desktop_config.json");
-            (file, "npx".to_string(), vec!["-y".to_string(), "pocketproject-mcp".to_string()])
+            (file, "npx".to_string(), vec!["-y".to_string(), "pocketproject-mcp@latest".to_string()])
+        }
+        "opencode" => {
+            let config_dir = home_path.join(".config").join("opencode");
+            let file = config_dir.join("opencode.json");
+            (file, "npx".to_string(), vec!["-y".to_string(), "pocketproject-mcp@latest".to_string()])
         }
         _ => return Err(format!("Cliente no soportado: {}", client)),
     };
@@ -255,22 +287,42 @@ fn install_mcp_to_client(client: String) -> Result<McpInstallResult, String> {
         root_val = serde_json::json!({});
     }
 
-    let servers = root_val
-        .as_object_mut()
-        .unwrap()
-        .entry("mcpServers")
-        .or_insert_with(|| serde_json::json!({}));
+    if is_opencode {
+        let mcp = root_val
+            .as_object_mut()
+            .unwrap()
+            .entry("mcp")
+            .or_insert_with(|| serde_json::json!({}));
 
-    if !servers.is_object() {
-        *servers = serde_json::json!({});
+        if !mcp.is_object() {
+            *mcp = serde_json::json!({});
+        }
+
+        let pocketproject_config = serde_json::json!({
+            "type": "local",
+            "command": vec!["npx".to_string(), "-y".to_string(), "pocketproject-mcp@latest".to_string()],
+            "enabled": true
+        });
+
+        mcp.as_object_mut().unwrap().insert("pocketproject".to_string(), pocketproject_config);
+    } else {
+        let servers = root_val
+            .as_object_mut()
+            .unwrap()
+            .entry("mcpServers")
+            .or_insert_with(|| serde_json::json!({}));
+
+        if !servers.is_object() {
+            *servers = serde_json::json!({});
+        }
+
+        let pocketproject_config = serde_json::json!({
+            "command": command,
+            "args": args
+        });
+
+        servers.as_object_mut().unwrap().insert("pocketproject".to_string(), pocketproject_config);
     }
-
-    let pocketproject_config = serde_json::json!({
-        "command": command,
-        "args": args
-    });
-
-    servers.as_object_mut().unwrap().insert("pocketproject".to_string(), pocketproject_config);
 
     let formatted = serde_json::to_string_pretty(&root_val).map_err(|e| e.to_string())?;
     std::fs::write(&target_file, formatted).map_err(|e| e.to_string())?;
@@ -762,21 +814,111 @@ async fn fetch_ticket_context(
                 if let Ok(act_json) = act_res.json::<serde_json::Value>().await {
                     let elements = act_json["_embedded"]["elements"].as_array();
                     if let Some(arr) = elements {
+                        // Pre-populate known users from work package fields
+                        let mut known_users: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+                        if let (Some(href), Some(title)) = (
+                            json_val["_links"]["author"]["href"].as_str(),
+                            json_val["_links"]["author"]["title"].as_str(),
+                        ) {
+                            let uid = href.split('/').last().unwrap_or("");
+                            if !uid.is_empty() {
+                                known_users.insert(uid.to_string(), title.to_string());
+                            }
+                        }
+                        if let (Some(href), Some(title)) = (
+                            json_val["_links"]["assignee"]["href"].as_str(),
+                            json_val["_links"]["assignee"]["title"].as_str(),
+                        ) {
+                            let uid = href.split('/').last().unwrap_or("");
+                            if !uid.is_empty() {
+                                known_users.insert(uid.to_string(), title.to_string());
+                            }
+                        }
+                        if let (Some(href), Some(title)) = (
+                            json_val["_links"]["responsible"]["href"].as_str(),
+                            json_val["_links"]["responsible"]["title"].as_str(),
+                        ) {
+                            let uid = href.split('/').last().unwrap_or("");
+                            if !uid.is_empty() {
+                                known_users.insert(uid.to_string(), title.to_string());
+                            }
+                        }
+
+                        // Collect unique user IDs from activities that aren't known yet
+                        let mut missing_uids = std::collections::HashSet::new();
+                        for a in arr {
+                            if let Some(href) = a["_links"]["user"]["href"].as_str() {
+                                let uid = href.split('/').last().unwrap_or("");
+                                if !uid.is_empty() && !known_users.contains_key(uid) {
+                                    missing_uids.insert(uid.to_string());
+                                }
+                            }
+                        }
+
+                        // Fetch names for missing user IDs
+                        for uid in missing_uids {
+                            let user_endpoint = format!("{}/api/v3/users/{}", clean_url, uid);
+                            if let Ok(u_res) = client
+                                .get(&user_endpoint)
+                                .header("Authorization", &auth_value)
+                                .header("Accept", "application/hal+json, application/json")
+                                .send()
+                                .await
+                            {
+                                if u_res.status().is_success() {
+                                    if let Ok(u_json) = u_res.json::<serde_json::Value>().await {
+                                        if let Some(name) = u_json["name"].as_str() {
+                                            known_users.insert(uid.clone(), name.to_string());
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         let mut list = Vec::new();
                         for a in arr {
                             let comment_obj = &a["comment"];
                             let raw_c = comment_obj["raw"].as_str().unwrap_or("").trim();
                             let html_c = comment_obj["html"].as_str().unwrap_or("").trim();
-                            if !raw_c.is_empty() || !html_c.is_empty() {
+
+                            let mut details_list = Vec::new();
+                            if let Some(d_arr) = a["details"].as_array() {
+                                for d in d_arr {
+                                    let raw_d = d["raw"].as_str().unwrap_or("").trim();
+                                    let html_d = d["html"].as_str().unwrap_or("").trim();
+                                    if !raw_d.is_empty() || !html_d.is_empty() {
+                                        details_list.push(TicketActivityDetailItem {
+                                            raw: raw_d.to_string(),
+                                            html: if html_d.is_empty() { raw_d.to_string() } else { html_d.to_string() },
+                                        });
+                                    }
+                                }
+                            }
+
+                            // Keep activity if it has a note OR details
+                            if !raw_c.is_empty() || !html_c.is_empty() || !details_list.is_empty() {
                                 let id = a["id"].as_i64().map(|i| i.to_string()).unwrap_or_default();
                                 let created_at = a["createdAt"].as_str().unwrap_or("").to_string();
-                                let user_name = a["_links"]["user"]["title"].as_str().unwrap_or("Desconocido").to_string();
+
+                                let user_href = a["_links"]["user"]["href"].as_str().unwrap_or("");
+                                let uid = user_href.split('/').last().unwrap_or("");
+                                let user_name = if let Some(known) = known_users.get(uid) {
+                                    known.clone()
+                                } else if let Some(title) = a["_links"]["user"]["title"].as_str() {
+                                    title.to_string()
+                                } else if !uid.is_empty() {
+                                    format!("Usuario #{}", uid)
+                                } else {
+                                    "Desconocido".to_string()
+                                };
+
                                 list.push(TicketCommentItem {
                                     id,
                                     comment_raw: raw_c.to_string(),
                                     comment_html: if html_c.is_empty() { raw_c.to_string() } else { html_c.to_string() },
                                     created_at,
                                     user_name,
+                                    details: details_list,
                                 });
                             }
                         }

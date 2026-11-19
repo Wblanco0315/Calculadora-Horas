@@ -20,10 +20,41 @@ html {
   color-scheme: light;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--p-primary-500, #3b82f6) 40%, rgba(148, 163, 184, 0.4)) transparent;
 }
 
 html.dark {
   color-scheme: dark;
+  scrollbar-color: color-mix(in srgb, var(--p-primary-400, #60a5fa) 35%, rgba(100, 116, 139, 0.4)) transparent;
+}
+
+/* Custom Global Theme Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--p-primary-500, #3b82f6) 35%, rgba(148, 163, 184, 0.4));
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--p-primary-500, #3b82f6);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--p-primary-400, #60a5fa) 30%, rgba(100, 116, 139, 0.4));
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: var(--p-primary-400, #60a5fa);
 }
 
 /* Light mode: blanco hueso con fondo ambiental ultra-suave del color de acento */

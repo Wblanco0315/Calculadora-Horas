@@ -25,6 +25,9 @@ import {
   tablerX,
   tablerAlertCircle,
   tablerPlus,
+  tablerFilter,
+  tablerArrowsSort,
+  tablerHistory,
 } from '@ng-icons/tabler-icons';
 import { ActivityService } from '../../../core/services/activity.service';
 import { OpenprojectService } from '../../../core/services/openproject.service';
@@ -71,7 +74,111 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
       tablerX,
       tablerAlertCircle,
       tablerPlus,
+      tablerFilter,
+      tablerArrowsSort,
+      tablerHistory,
     }),
+  ],
+  styles: [
+    `
+      :host ::ng-deep {
+        .op-comment-body {
+          .op-uc-p {
+            margin-top: 0.25rem;
+            margin-bottom: 0.25rem;
+            line-height: 1.5;
+          }
+          .op-uc-p:first-child {
+            margin-top: 0;
+          }
+          .op-uc-p:last-child {
+            margin-bottom: 0;
+          }
+          .user-mention {
+            font-weight: 600;
+            color: var(--p-primary-600, #2563eb);
+            background-color: var(--p-primary-50, #eff6ff);
+            padding: 0.05rem 0.35rem;
+            border-radius: 0.375rem;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 0.75rem;
+          }
+          figure.op-uc-figure {
+            margin: 0.5rem 0;
+          }
+          img.op-uc-image,
+          figure.op-uc-figure img {
+            border-radius: 0.5rem;
+            max-width: 100%;
+            max-height: 220px;
+            object-fit: contain;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            cursor: pointer;
+            transition: transform 0.15s ease;
+            background-color: rgba(248, 250, 252, 0.8);
+          }
+          img.op-uc-image:hover,
+          figure.op-uc-figure img:hover {
+            transform: scale(1.02);
+          }
+          .op-uc-list {
+            list-style-type: disc;
+            padding-left: 1.25rem;
+            margin: 0.35rem 0;
+          }
+          .op-uc-list--item {
+            margin-bottom: 0.2rem;
+          }
+          a.op-uc-link {
+            color: var(--p-primary-600, #2563eb);
+            text-decoration: underline;
+          }
+        }
+        .op-detail-content {
+          strong {
+            font-weight: 600;
+            color: inherit;
+          }
+          i {
+            font-style: normal;
+            font-weight: 500;
+            color: var(--p-primary-600, #2563eb);
+          }
+          a.diff-details {
+            color: var(--p-primary-600, #2563eb);
+            text-decoration: underline;
+            margin-left: 0.25rem;
+          }
+        }
+        /* Dynamic Theme Scrollbar for Modal Panels */
+        .overflow-y-auto {
+          scrollbar-width: thin;
+          scrollbar-color: color-mix(in srgb, var(--p-primary-500, #3b82f6) 40%, rgba(148, 163, 184, 0.35)) transparent;
+        }
+        .overflow-y-auto::-webkit-scrollbar {
+          width: 5px;
+          height: 5px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .overflow-y-auto::-webkit-scrollbar-thumb {
+          background-color: color-mix(in srgb, var(--p-primary-500, #3b82f6) 35%, rgba(148, 163, 184, 0.4));
+          border-radius: 9999px;
+          transition: background-color 0.2s ease;
+        }
+        .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+          background-color: var(--p-primary-500, #3b82f6);
+        }
+        .dark .overflow-y-auto::-webkit-scrollbar-thumb {
+          background-color: color-mix(in srgb, var(--p-primary-400, #60a5fa) 30%, rgba(100, 116, 139, 0.4));
+        }
+        .dark .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+          background-color: var(--p-primary-400, #60a5fa);
+        }
+      }
+    `,
   ],
   template: `
     <p-dialog
@@ -229,32 +336,124 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
               <!-- Tab 2: Comments Panel -->
               <p-tabpanel value="comments">
                 <div class="space-y-2.5 max-h-80 overflow-y-auto pr-1">
-                  @if ((ticketData()?.comments || []).length === 0) {
+                  @if (processedComments().length === 0) {
                     <div class="py-8 text-center text-slate-400 dark:text-zinc-500 text-xs">
                       <ng-icon name="tablerMessages" size="1.75rem" class="mx-auto mb-1.5 opacity-40" />
                       <p>{{ 'ticketContext.noComments' | translate }}</p>
                     </div>
                   } @else {
-                    @for (comment of ticketData()?.comments; track comment.id) {
-                      <div
-                        class="p-3 rounded-xl bg-slate-50/80 dark:bg-zinc-900/60 border border-slate-200/70 dark:border-zinc-800 space-y-1.5"
+                    <!-- Filter and Sort Controls -->
+                    <div class="flex items-center justify-between gap-2 pb-1.5 border-b border-slate-100 dark:border-zinc-800/80">
+                      <div class="flex items-center gap-1">
+                        <!-- All -->
+                        <button
+                          type="button"
+                          (click)="commentFilter.set('all')"
+                          class="px-2 py-0.5 rounded text-[10px] font-semibold transition-colors cursor-pointer"
+                          [class.bg-primary-500]="commentFilter() === 'all'"
+                          [class.text-white]="commentFilter() === 'all'"
+                          [class.bg-slate-100]="commentFilter() !== 'all'"
+                          [class.dark:bg-zinc-800]="commentFilter() !== 'all'"
+                          [class.text-slate-600]="commentFilter() !== 'all'"
+                          [class.dark:text-zinc-400]="commentFilter() !== 'all'"
+                        >
+                          {{ 'ticketContext.filterAll' | translate }} ({{ processedComments().length }})
+                        </button>
+                        <!-- Only Comments -->
+                        @if (onlyCommentsCount() > 0) {
+                          <button
+                            type="button"
+                            (click)="commentFilter.set('comments')"
+                            class="px-2 py-0.5 rounded text-[10px] font-semibold transition-colors cursor-pointer"
+                            [class.bg-primary-500]="commentFilter() === 'comments'"
+                            [class.text-white]="commentFilter() === 'comments'"
+                            [class.bg-slate-100]="commentFilter() !== 'comments'"
+                            [class.dark:bg-zinc-800]="commentFilter() !== 'comments'"
+                            [class.text-slate-600]="commentFilter() !== 'comments'"
+                            [class.dark:text-zinc-400]="commentFilter() !== 'comments'"
+                          >
+                            {{ 'ticketContext.filterComments' | translate }} ({{ onlyCommentsCount() }})
+                          </button>
+                        }
+                        <!-- Only Changes -->
+                        @if (onlyChangesCount() > 0) {
+                          <button
+                            type="button"
+                            (click)="commentFilter.set('changes')"
+                            class="px-2 py-0.5 rounded text-[10px] font-semibold transition-colors cursor-pointer"
+                            [class.bg-primary-500]="commentFilter() === 'changes'"
+                            [class.text-white]="commentFilter() === 'changes'"
+                            [class.bg-slate-100]="commentFilter() !== 'changes'"
+                            [class.dark:bg-zinc-800]="commentFilter() !== 'changes'"
+                            [class.text-slate-600]="commentFilter() !== 'changes'"
+                            [class.dark:text-zinc-400]="commentFilter() !== 'changes'"
+                          >
+                            {{ 'ticketContext.filterChanges' | translate }} ({{ onlyChangesCount() }})
+                          </button>
+                        }
+                      </div>
+
+                      <!-- Sort order toggle -->
+                      <button
+                        type="button"
+                        (click)="toggleCommentSort()"
+                        class="flex items-center gap-1 text-[10px] text-slate-500 dark:text-zinc-400 hover:text-primary-600 dark:hover:text-primary-400 cursor-pointer font-medium px-1.5 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+                        [title]="(commentSort() === 'desc' ? 'ticketContext.sortNewest' : 'ticketContext.sortOldest') | translate"
                       >
-                        <div class="flex items-center justify-between text-[11px] gap-2">
-                          <div class="flex items-center gap-1.5 font-bold text-slate-800 dark:text-zinc-200 truncate">
-                            <ng-icon name="tablerUser" size="0.85rem" class="text-primary-500 shrink-0" />
-                            <span class="truncate">{{ comment.userName }}</span>
+                        <ng-icon name="tablerArrowsSort" size="0.85rem" />
+                        <span>{{ (commentSort() === 'desc' ? 'ticketContext.sortNewest' : 'ticketContext.sortOldest') | translate }}</span>
+                      </button>
+                    </div>
+
+                    <!-- Items list -->
+                    @if (filteredComments().length === 0) {
+                      <div class="py-6 text-center text-slate-400 dark:text-zinc-500 text-xs">
+                        <p>{{ 'ticketContext.noComments' | translate }}</p>
+                      </div>
+                    } @else {
+                      @for (comment of filteredComments(); track comment.id) {
+                        <div
+                          class="p-3 rounded-xl bg-slate-50/80 dark:bg-zinc-900/60 border border-slate-200/70 dark:border-zinc-800 space-y-2"
+                        >
+                          <!-- User & Time Header -->
+                          <div class="flex items-center justify-between text-[11px] gap-2">
+                            <div class="flex items-center gap-1.5 font-bold text-slate-800 dark:text-zinc-200 truncate">
+                              <span class="size-5 rounded-full bg-primary-100 dark:bg-primary-950/60 text-primary-700 dark:text-primary-300 flex items-center justify-center text-[9px] font-bold shrink-0">
+                                {{ getUserInitials(getCommentUserName(comment)) }}
+                              </span>
+                              <span class="truncate">{{ getCommentUserName(comment) }}</span>
+                            </div>
+                            @if (getCommentDate(comment)) {
+                              <span class="text-[10px] text-slate-400 dark:text-zinc-500 shrink-0 font-medium">
+                                {{ formatDate(getCommentDate(comment)) }}
+                              </span>
+                            }
                           </div>
-                          @if (comment.createdAt) {
-                            <span class="text-[10px] text-slate-400 dark:text-zinc-500 shrink-0">
-                              {{ formatDate(comment.createdAt) }}
-                            </span>
+
+                          <!-- Comment Note Text (Rich formatting, handles inline images) -->
+                          @if (getCommentHtml(comment).trim()) {
+                            <div
+                              class="op-comment-body prose prose-sm dark:prose-invert max-w-none text-xs text-slate-700 dark:text-zinc-300 leading-relaxed break-words select-text font-normal font-sans"
+                              (click)="onCommentContentClick($event)"
+                              [innerHTML]="sanitizeHtml(getCommentHtml(comment))"
+                            ></div>
+                          }
+
+                          <!-- Detail changes list (if any) -->
+                          @if (getCommentDetails(comment).length > 0) {
+                            <div
+                              class="rounded-lg bg-slate-100/70 dark:bg-zinc-950/40 p-2 space-y-1 border border-slate-200/50 dark:border-zinc-800/50"
+                            >
+                              @for (detail of getCommentDetails(comment); track $index) {
+                                <div class="text-[11px] text-slate-600 dark:text-zinc-400 flex items-start gap-1.5 leading-snug">
+                                  <span class="text-primary-500 shrink-0 mt-0.5">•</span>
+                                  <span class="op-detail-content" [innerHTML]="sanitizeHtml(detail.html || detail.raw)"></span>
+                                </div>
+                              }
+                            </div>
                           }
                         </div>
-                        <div
-                          class="text-xs text-slate-700 dark:text-zinc-300 leading-relaxed break-words whitespace-pre-wrap select-text font-normal"
-                          [innerHTML]="sanitizeHtml(comment.commentHtml || comment.commentRaw)"
-                        ></div>
-                      </div>
+                      }
                     }
                   }
                 </div>
@@ -514,6 +713,9 @@ export class TicketContextModalComponent {
 
   readonly activeTab = signal<string>('description');
   readonly ticketData = signal<TicketContextResult | null>(null);
+  readonly processedComments = signal<TicketComment[]>([]);
+  readonly commentFilter = signal<'all' | 'comments' | 'changes'>('all');
+  readonly commentSort = signal<'desc' | 'asc'>('desc');
   readonly isLoading = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
   readonly copiedDesc = signal<boolean>(false);
@@ -539,11 +741,45 @@ export class TicketContextModalComponent {
   });
 
   readonly commentsCount = computed<number>(() => {
-    return (this.ticketData()?.comments || []).length;
+    return this.processedComments().length;
+  });
+
+  readonly onlyCommentsCount = computed<number>(() => {
+    return this.processedComments().filter((c) => !!this.getCommentHtml(c).trim()).length;
+  });
+
+  readonly onlyChangesCount = computed<number>(() => {
+    return this.processedComments().filter((c) => this.getCommentDetails(c).length > 0).length;
+  });
+
+  readonly filteredComments = computed<TicketComment[]>(() => {
+    const list = this.processedComments();
+    const filter = this.commentFilter();
+    let res = list;
+    if (filter === 'comments') {
+      res = list.filter((c) => !!this.getCommentHtml(c).trim());
+    } else if (filter === 'changes') {
+      res = list.filter((c) => this.getCommentDetails(c).length > 0);
+    }
+
+    const sort = this.commentSort();
+    return [...res].sort((a, b) => {
+      const dateA = new Date(this.getCommentDate(a)).getTime() || 0;
+      const dateB = new Date(this.getCommentDate(b)).getTime() || 0;
+      return sort === 'desc' ? dateB - dateA : dateA - dateB;
+    });
   });
 
   readonly allAttachments = computed<TicketAttachment[]>(() => {
-    return this.ticketData()?.attachments || [];
+    return (this.ticketData()?.attachments || []).map((a) => ({
+      ...a,
+      fileName: a.fileName || a.file_name || 'archivo',
+      downloadUrl: a.downloadUrl || a.download_url || '',
+      isImage: a.isImage ?? a.is_image ?? false,
+      fileSize: a.fileSize ?? a.file_size ?? 0,
+      authorName: a.authorName || a.author_name || undefined,
+      createdAt: a.createdAt || a.created_at || undefined,
+    }));
   });
 
   readonly imageAttachments = computed<TicketAttachment[]>(() => {
@@ -577,8 +813,40 @@ export class TicketContextModalComponent {
     }
   }
 
+  toggleCommentSort(): void {
+    this.commentSort.update((s) => (s === 'desc' ? 'asc' : 'desc'));
+  }
+
+  getCommentUserName(comment: TicketComment): string {
+    return (comment.userName || comment.user_name || '').trim() || 'Desconocido';
+  }
+
+  getCommentDate(comment: TicketComment): string {
+    return comment.createdAt || comment.created_at || '';
+  }
+
+  getCommentHtml(comment: TicketComment): string {
+    return comment.commentHtml || comment.comment_html || comment.commentRaw || comment.comment_raw || '';
+  }
+
+  getCommentDetails(comment: TicketComment) {
+    return comment.details || [];
+  }
+
+  getUserInitials(name: string): string {
+    if (!name || name === 'Desconocido') return '?';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  }
+
   private resetState(): void {
     this.ticketData.set(null);
+    this.processedComments.set([]);
+    this.commentFilter.set('all');
+    this.commentSort.set('desc');
     this.errorMessage.set(null);
     this.activeTab.set('description');
     this.copiedDesc.set(false);
@@ -598,6 +866,18 @@ export class TicketContextModalComponent {
 
       if (res.success) {
         this.ticketData.set(res);
+
+        const commentsList: TicketComment[] = (res.comments || []).map((c) => ({
+          ...c,
+          userName: c.userName || c.user_name || 'Desconocido',
+          commentHtml: c.commentHtml || c.comment_html || c.commentRaw || c.comment_raw || '',
+          commentRaw: c.commentRaw || c.comment_raw || '',
+          createdAt: c.createdAt || c.created_at || '',
+          details: c.details || [],
+        }));
+        this.processedComments.set(commentsList);
+        this.preloadInlineImages(commentsList);
+
         // Pre-load images for gallery preview
         if (res.attachments && res.attachments.length > 0) {
           this.preloadImages(res.attachments);
@@ -612,12 +892,53 @@ export class TicketContextModalComponent {
     }
   }
 
+  private async preloadInlineImages(comments: TicketComment[]): Promise<void> {
+    const regex = /(?:src=["'])([^"']*\/attachments\/(\d+)\/content[^"']*)(?:["'])/gi;
+    const urlsToFetch = new Set<string>();
+
+    for (const c of comments) {
+      const html = c.commentHtml || c.comment_html || '';
+      let match: RegExpExecArray | null;
+      while ((match = regex.exec(html)) !== null) {
+        urlsToFetch.add(match[1]);
+      }
+    }
+
+    if (urlsToFetch.size === 0) return;
+
+    const urlToDataUrl = new Map<string, string>();
+    for (const url of urlsToFetch) {
+      try {
+        const dataUrl = await this.openprojectService.fetchAttachmentContent(url);
+        urlToDataUrl.set(url, dataUrl);
+      } catch (e) {
+        console.warn('Could not load inline image:', url, e);
+      }
+    }
+
+    if (urlToDataUrl.size > 0) {
+      const updated = this.processedComments().map((c) => {
+        let html = c.commentHtml || c.comment_html || '';
+        for (const [url, dataUrl] of urlToDataUrl.entries()) {
+          html = html.split(url).join(dataUrl);
+        }
+        return {
+          ...c,
+          commentHtml: html,
+          comment_html: html,
+        };
+      });
+      this.processedComments.set(updated);
+    }
+  }
+
   private preloadImages(attachments: TicketAttachment[]): void {
-    const images = attachments.filter((a) => a.isImage && a.downloadUrl && !a.dataUrl);
+    const images = attachments.filter((a) => (a.isImage ?? a.is_image) && (a.downloadUrl || a.download_url) && !a.dataUrl);
     for (const img of images) {
       img.isLoading = true;
+      const downloadUrl = img.downloadUrl || img.download_url || '';
       this.openprojectService
-        .fetchAttachmentContent(img.downloadUrl)
+        .fetchAttachmentContent(downloadUrl)
         .then((dataUrl) => {
           img.dataUrl = dataUrl;
           img.isLoading = false;
@@ -625,6 +946,17 @@ export class TicketContextModalComponent {
         .catch(() => {
           img.isLoading = false;
         });
+    }
+  }
+
+  onCommentContentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (target && target.tagName === 'IMG') {
+      const img = target as HTMLImageElement;
+      if (img.src) {
+        this.selectedAttachmentName.set(img.alt || 'Imagen adjunta');
+        this.previewImage.set(img.src);
+      }
     }
   }
 
@@ -668,7 +1000,9 @@ export class TicketContextModalComponent {
   }
 
   async openImagePreview(att: TicketAttachment): Promise<void> {
-    this.selectedAttachmentName.set(att.fileName);
+    const fileName = att.fileName || att.file_name || 'imagen';
+    const downloadUrl = att.downloadUrl || att.download_url || '';
+    this.selectedAttachmentName.set(fileName);
     if (att.dataUrl) {
       this.previewImage.set(att.dataUrl);
       return;
@@ -676,7 +1010,7 @@ export class TicketContextModalComponent {
 
     try {
       att.isLoading = true;
-      const dataUrl = await this.openprojectService.fetchAttachmentContent(att.downloadUrl);
+      const dataUrl = await this.openprojectService.fetchAttachmentContent(downloadUrl);
       att.dataUrl = dataUrl;
       this.previewImage.set(dataUrl);
     } catch (e) {
@@ -688,10 +1022,12 @@ export class TicketContextModalComponent {
 
   async downloadAttachment(att: TicketAttachment): Promise<void> {
     try {
-      const dataUrl = att.dataUrl || (await this.openprojectService.fetchAttachmentContent(att.downloadUrl));
+      const fileName = att.fileName || att.file_name || 'archivo';
+      const downloadUrl = att.downloadUrl || att.download_url || '';
+      const dataUrl = att.dataUrl || (await this.openprojectService.fetchAttachmentContent(downloadUrl));
       const a = document.createElement('a');
       a.href = dataUrl;
-      a.download = att.fileName;
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

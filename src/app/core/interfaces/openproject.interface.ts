@@ -47,12 +47,23 @@ export interface TicketDescription {
   format?: string | null;
 }
 
+export interface TicketActivityDetail {
+  raw: string;
+  html: string;
+}
+
 export interface TicketComment {
   id: string;
   commentRaw: string;
   commentHtml: string;
   createdAt: string;
   userName: string;
+  details?: TicketActivityDetail[];
+  // Resilient fallback properties for snake_case IPC
+  comment_raw?: string;
+  comment_html?: string;
+  created_at?: string;
+  user_name?: string;
 }
 
 export interface TicketAttachment {
@@ -66,6 +77,14 @@ export interface TicketAttachment {
   authorName?: string;
   dataUrl?: string;
   isLoading?: boolean;
+  // Resilient fallback properties for snake_case IPC
+  file_name?: string;
+  file_size?: number;
+  content_type?: string;
+  download_url?: string;
+  is_image?: boolean;
+  author_name?: string;
+  created_at?: string;
 }
 
 export interface TicketContextOptions {
