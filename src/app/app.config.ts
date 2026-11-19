@@ -12,6 +12,7 @@ import Aura from '@primeuix/themes/aura';
 import { definePreset, palette } from '@primeuix/themes';
 import { StorageService } from './core/services/storage.service';
 import { getInitialStoredColor, resolvePrimaryHex } from './core/services/theme.service';
+import { PRIMENG_ES } from './shared/lang/primeng-locale';
 
 const initialPrimaryHex = resolvePrimaryHex(getInitialStoredColor());
 
@@ -37,6 +38,7 @@ export const appConfig: ApplicationConfig = {
         },
       },
       overlayAppendTo: 'body',
+      translation: PRIMENG_ES,
     }),
   ],
 };

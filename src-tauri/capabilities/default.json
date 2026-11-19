@@ -22,6 +22,7 @@
     "core:window:allow-show",
     "core:window:allow-destroy",
     "core:window:allow-is-visible",
-    "core:event:default"
+    "core:event:default",
+    "autostart:default"
   ]
 }

@@ -14,6 +14,7 @@ import {
   tablerLink,
   tablerCheck,
   tablerDownload,
+  tablerRobot,
 } from '@ng-icons/tabler-icons';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { SetupService } from '../services/setup.service';
@@ -25,6 +26,7 @@ import { LunchStepComponent } from '../components/lunch-step/lunch-step.componen
 import { AppearanceStepComponent } from '../components/appearance-step/appearance-step.component';
 import { OpenprojectStepComponent } from '../components/openproject-step/openproject-step.component';
 import { UpdateSectionComponent } from '../../../shared/components/update-section/update-section.component';
+import { McpSectionComponent } from '../../../shared/components/mcp-section/mcp-section.component';
 import { CloseConfirmModalComponent } from '../modals/close-confirm-modal/close-confirm-modal.component';
 
 @Component({
@@ -47,6 +49,7 @@ import { CloseConfirmModalComponent } from '../modals/close-confirm-modal/close-
     AppearanceStepComponent,
     OpenprojectStepComponent,
     UpdateSectionComponent,
+    McpSectionComponent,
     CloseConfirmModalComponent,
   ],
   viewProviders: [
@@ -59,6 +62,7 @@ import { CloseConfirmModalComponent } from '../modals/close-confirm-modal/close-
       tablerLink,
       tablerCheck,
       tablerDownload,
+      tablerRobot,
     }),
   ],
   templateUrl: './setup.page.html',

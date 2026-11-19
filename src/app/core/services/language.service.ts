@@ -1,7 +1,9 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
+import { PrimeNG } from 'primeng/config';
 import { AppLanguage } from '../interfaces/config.interface';
 import { es } from '../../shared/lang/es';
 import { en } from '../../shared/lang/en';
+import { PRIMENG_ES, PRIMENG_EN } from '../../shared/lang/primeng-locale';
 
 const LANG_STORAGE_KEY = 'pocketproject_lang';
 
@@ -15,6 +17,8 @@ export interface LanguageOption {
   providedIn: 'root',
 })
 export class LanguageService {
+  private readonly primeNG = inject(PrimeNG);
+
   readonly currentLang = signal<AppLanguage>(this.getInitialLanguage());
 
   readonly availableLanguages: LanguageOption[] = [
@@ -31,6 +35,10 @@ export class LanguageService {
     return this.dictionaries[this.currentLang()] || this.dictionaries.es;
   });
 
+  constructor() {
+    this.applyPrimeNGTranslation(this.currentLang());
+  }
+
   setLanguage(lang: AppLanguage): void {
     if (this.currentLang() !== lang) {
       this.currentLang.set(lang);
@@ -38,6 +46,12 @@ export class LanguageService {
         localStorage.setItem(LANG_STORAGE_KEY, lang);
       }
     }
+    this.applyPrimeNGTranslation(lang);
+  }
+
+  private applyPrimeNGTranslation(lang: AppLanguage): void {
+    const translation = lang === 'es' ? PRIMENG_ES : PRIMENG_EN;
+    this.primeNG.setTranslation(translation);
   }
 
   t(path: string, params?: Record<string, string | number>): string {

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonDirective } from 'primeng/button';
+import { DatePicker } from 'primeng/datepicker';
 import { Popover } from 'primeng/popover';
 import { Select } from 'primeng/select';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -20,6 +21,10 @@ import {
   tablerTrash,
   tablerCheck,
   tablerX,
+  tablerChevronLeft,
+  tablerChevronRight,
+  tablerCalendar,
+  tablerCalendarEvent,
 } from '@ng-icons/tabler-icons';
 import { Activity } from '../../../core/interfaces/activity.interface';
 import { ActivityService } from '../../../core/services/activity.service';
@@ -35,6 +40,7 @@ import { FavoritesModalComponent } from '../modals/favorites-modal/favorites-mod
 import { SyncConfirmModalComponent } from '../modals/sync-confirm-modal/sync-confirm-modal.component';
 import { ResetConfirmModalComponent } from '../modals/reset-confirm-modal/reset-confirm-modal.component';
 import { CloseConfirmModalComponent } from '../modals/close-confirm-modal/close-confirm-modal.component';
+import { TicketContextModalComponent } from '../../../shared/components/ticket-context-modal/ticket-context-modal.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({
@@ -44,6 +50,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
     CommonModule,
     FormsModule,
     ButtonDirective,
+    DatePicker,
     Popover,
     Select,
     NgIcon,
@@ -55,6 +62,7 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
     SyncConfirmModalComponent,
     ResetConfirmModalComponent,
     CloseConfirmModalComponent,
+    TicketContextModalComponent,
     TranslatePipe,
   ],
   viewProviders: [
@@ -72,6 +80,10 @@ import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
       tablerTrash,
       tablerCheck,
       tablerX,
+      tablerChevronLeft,
+      tablerChevronRight,
+      tablerCalendar,
+      tablerCalendarEvent,
     }),
   ],
   templateUrl: './compact.page.html',
@@ -90,7 +102,7 @@ export class CompactPage implements OnInit {
   readonly filterProject = signal<string>('');
   readonly sortBy = signal<'none' | 'time-desc' | 'time-asc'>('none');
   readonly filterStatus = signal<'all' | 'synced' | 'unsynced'>('all');
-  readonly isSyncingAll = signal<boolean>(false);
+  readonly isSyncingAll = computed<boolean>(() => this.activityService.isSyncing());
 
   readonly currentUserName = computed<string>(() => {
     return this.storageService.userName() || 'Usuario';
@@ -99,6 +111,32 @@ export class CompactPage implements OnInit {
   readonly hasToken = computed<boolean>(() => {
     return this.storageService.isLoggedIn();
   });
+
+  readonly selectedDateObj = computed<Date>(() => {
+    const raw = this.activityService.selectedDate();
+    return new Date(raw + 'T00:00:00');
+  });
+
+  readonly formattedDateLabel = computed<string>(() => {
+    const dateStr = this.activityService.selectedDate();
+    const d = new Date(dateStr + 'T00:00:00');
+    const lang = this.languageService.currentLang();
+    const locale = lang === 'en' ? 'en-US' : 'es-ES';
+
+    const weekday = new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(d);
+    const dayAndMonth = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(d);
+    const capitalizedWeekday = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+
+    return `${capitalizedWeekday}, ${dayAndMonth}`;
+  });
+
+  onDatePicked(val: Date | null): void {
+    if (!val) return;
+    const year = val.getFullYear();
+    const month = String(val.getMonth() + 1).padStart(2, '0');
+    const day = String(val.getDate()).padStart(2, '0');
+    this.activityService.setDate(`${year}-${month}-${day}`);
+  }
 
   readonly hasActiveFilters = computed<boolean>(() => {
     return !!this.filterProject() || this.sortBy() !== 'none' || this.filterStatus() !== 'all' || !!this.searchQuery().trim();
@@ -192,34 +230,17 @@ export class CompactPage implements OnInit {
     await this.activityService.deleteActivity(id);
   }
 
-  async onSingleSync(activity: Activity): Promise<void> {
+  onSingleSync(activity: Activity): void {
     if (!activity.ticket) return;
-    const effectiveTypeId = activity.activityTypeId || activity.activity_type_id;
-    if (effectiveTypeId) {
-      await this.activityService.syncActivity(activity.id);
-    } else {
-      this.activityService.openSyncModal(activity);
-    }
+    this.activityService.openSyncModal(activity);
   }
 
-  async syncAll(): Promise<void> {
-    const list = this.activityService.unsyncedActivities();
-    const missingType = list.some((a) => !a.activityTypeId && !a.activity_type_id);
-    if (!missingType && list.length > 0) {
-      await this.activityService.syncAllUnsynced();
-    } else {
-      this.activityService.openSyncModal();
-    }
+  syncAll(): void {
+    this.activityService.openSyncModal();
   }
 
-  async syncSelected(): Promise<void> {
-    const list = this.activityService.selectedActivities();
-    const missingType = list.some((a) => !a.activityTypeId && !a.activity_type_id);
-    if (!missingType && list.length > 0) {
-      await this.activityService.syncAllUnsynced();
-    } else {
-      this.activityService.openSyncModal();
-    }
+  syncSelected(): void {
+    this.activityService.openSyncModal();
   }
 
   openSettings(): void {

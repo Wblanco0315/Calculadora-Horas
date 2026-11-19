@@ -47,6 +47,8 @@ export interface Activity {
   activity_type_id?: string;
   activityTypeName?: string;
   activity_type_name?: string;
+  createdByAi?: boolean;
+  created_by_ai?: boolean;
   createdAt?: string;
   created_at?: string;
 }

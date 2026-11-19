@@ -1,15 +1,19 @@
 mod db;
+mod ipc;
 
 use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine;
 use db::{open_connection, ActivityRecord, AppConfig};
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use std::time::Duration;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, Manager,
 };
+use tauri_plugin_autostart::MacosLauncher;
+use tauri_plugin_autostart::ManagerExt;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ConnectionTestResult {
@@ -50,6 +54,61 @@ pub struct TicketInfoResult {
     pub status_color: Option<String>,
     pub version_id: Option<String>,
     pub version_name: Option<String>,
+    pub lock_version: Option<i64>,
+    pub available_statuses: Option<Vec<StatusOptionItem>>,
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TicketDescriptionItem {
+    pub raw: Option<String>,
+    pub html: Option<String>,
+    pub format: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TicketCommentItem {
+    pub id: String,
+    pub comment_raw: String,
+    pub comment_html: String,
+    pub created_at: String,
+    pub user_name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TicketAttachmentItem {
+    pub id: String,
+    pub file_name: String,
+    pub file_size: i64,
+    pub content_type: String,
+    pub download_url: String,
+    pub is_image: bool,
+    pub created_at: Option<String>,
+    pub author_name: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TicketContextResult {
+    pub success: bool,
+    pub ticket: String,
+    pub subject: Option<String>,
+    pub description: Option<TicketDescriptionItem>,
+    pub comments: Option<Vec<TicketCommentItem>>,
+    pub attachments: Option<Vec<TicketAttachmentItem>>,
+    pub project_id: Option<String>,
+    pub project_name: Option<String>,
+    pub status_id: Option<String>,
+    pub status_name: Option<String>,
+    pub status_color: Option<String>,
+    pub version_id: Option<String>,
+    pub version_name: Option<String>,
+    pub priority_name: Option<String>,
+    pub assignee_name: Option<String>,
+    pub responsible_name: Option<String>,
+    pub start_date: Option<String>,
+    pub due_date: Option<String>,
+    pub estimated_time: Option<String>,
+    pub spent_time: Option<String>,
     pub lock_version: Option<i64>,
     pub available_statuses: Option<Vec<StatusOptionItem>>,
     pub message: String,
@@ -108,6 +167,199 @@ fn delete_activity(app: AppHandle, id: String) -> Result<(), String> {
 fn clear_activities(app: AppHandle, date: String) -> Result<(), String> {
     let conn = open_connection(&app).map_err(|e| e.to_string())?;
     db::clear_activities_for_date(&conn, &date).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn get_database_path(app: AppHandle) -> Result<String, String> {
+    let path = db::get_db_path(&app);
+    Ok(path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+fn get_ai_stats(app: AppHandle) -> Result<i32, String> {
+    let conn = open_connection(&app).map_err(|e| e.to_string())?;
+    db::count_ai_activities(&conn).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn get_favorite_tickets(app: AppHandle) -> Result<Vec<db::FavoriteTicketRecord>, String> {
+    let conn = open_connection(&app).map_err(|e| e.to_string())?;
+    db::load_favorite_tickets(&conn).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn save_favorite_ticket(app: AppHandle, ticket: db::FavoriteTicketRecord) -> Result<(), String> {
+    let conn = open_connection(&app).map_err(|e| e.to_string())?;
+    db::save_favorite_ticket(&conn, &ticket).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn delete_favorite_ticket(app: AppHandle, ticket: String) -> Result<(), String> {
+    let conn = open_connection(&app).map_err(|e| e.to_string())?;
+    db::delete_favorite_ticket(&conn, &ticket).map_err(|e| e.to_string())
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct McpInstallResult {
+    pub success: bool,
+    pub path: String,
+    pub message: String,
+}
+
+#[tauri::command]
+fn install_mcp_to_client(client: String) -> Result<McpInstallResult, String> {
+    let home = std::env::var("USERPROFILE")
+        .or_else(|_| std::env::var("HOME"))
+        .unwrap_or_else(|_| ".".to_string());
+    let home_path = PathBuf::from(&home);
+
+    let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+
+    let (target_file, command, args) = match client.as_str() {
+        "antigravity" => {
+            let config_dir = home_path.join(".gemini").join("config");
+            let file = config_dir.join("mcp_config.json");
+            (file, "npx".to_string(), vec!["-y".to_string(), "pocketproject-mcp".to_string()])
+        }
+        "antigravity_workspace" => {
+            let config_dir = cwd.join(".gemini");
+            let file = config_dir.join("mcp_config.json");
+            (file, "npx".to_string(), vec!["-y".to_string(), "pocketproject-mcp".to_string()])
+        }
+        "cursor" => {
+            let config_dir = cwd.join(".cursor");
+            let file = config_dir.join("mcp.json");
+            (file, "npx".to_string(), vec!["-y".to_string(), "pocketproject-mcp".to_string()])
+        }
+        "claude_desktop" => {
+            let app_data = std::env::var("APPDATA").unwrap_or_else(|_| home.clone());
+            let config_dir = PathBuf::from(app_data).join("Claude");
+            let file = config_dir.join("claude_desktop_config.json");
+            (file, "npx".to_string(), vec!["-y".to_string(), "pocketproject-mcp".to_string()])
+        }
+        _ => return Err(format!("Cliente no soportado: {}", client)),
+    };
+
+    if let Some(parent) = target_file.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+
+    let mut root_val: serde_json::Value = if target_file.exists() {
+        let content = std::fs::read_to_string(&target_file).unwrap_or_else(|_| "{}".to_string());
+        serde_json::from_str(&content).unwrap_or_else(|_| serde_json::json!({}))
+    } else {
+        serde_json::json!({})
+    };
+
+    if !root_val.is_object() {
+        root_val = serde_json::json!({});
+    }
+
+    let servers = root_val
+        .as_object_mut()
+        .unwrap()
+        .entry("mcpServers")
+        .or_insert_with(|| serde_json::json!({}));
+
+    if !servers.is_object() {
+        *servers = serde_json::json!({});
+    }
+
+    let pocketproject_config = serde_json::json!({
+        "command": command,
+        "args": args
+    });
+
+    servers.as_object_mut().unwrap().insert("pocketproject".to_string(), pocketproject_config);
+
+    let formatted = serde_json::to_string_pretty(&root_val).map_err(|e| e.to_string())?;
+    std::fs::write(&target_file, formatted).map_err(|e| e.to_string())?;
+
+    Ok(McpInstallResult {
+        success: true,
+        path: target_file.to_string_lossy().to_string(),
+        message: format!("Configuración inyectada con éxito en {}", target_file.to_string_lossy()),
+    })
+}
+
+#[tauri::command]
+fn inject_ai_rules() -> Result<McpInstallResult, String> {
+    let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let agents_rules = cwd.join(".agents").join("RULES.md");
+    let cursor_rules = cwd.join(".cursorrules");
+
+    let rule_content = r#"
+
+<!-- POCKETPROJECT MCP RULES START -->
+## Directrices Obligatorias de PocketProject Time Tracker (MCP):
+Eres un asistente de software conectado a PocketProject vía Model Context Protocol (MCP).
+Tu objetivo es registrar y gestionar de forma proactiva, exacta y profesional el tiempo dedicado a las tareas.
+
+### 1. Interpretación de Términos Comunes:
+- "Necesito llenar el ticket 11111", "Cargar horas a 11111", "Imputar tiempo en 11111", "Trabajé en el ticket 11111" -> Significa registrar una actividad ('add_activity') asociada al ticket 11111 tras verificar su contexto.
+- "Empezar con el ticket 11111" -> Significa iniciar el cronómetro con 'start_timer'.
+- "Resumen de hoy" o "¿Cómo voy hoy?" -> 'get_today_summary'.
+- "¿Qué registré en el ticket 11111?" -> 'get_ticket_context(ticket: "11111", include_time_entries: true)' o 'search_activities'.
+
+### 2. Protocolo Estricto de Tickets (ANTI-ALUCINACIÓN):
+- **PROHIBIDO INVENTAR TICKETS**: Jamás generes un número de ticket al azar ni asignes un ticket que el usuario no haya escrito textualmente.
+- Si no hay ticket, el campo debe ser omitido o null.
+- Si el usuario menciona un ticket (ej. 11111):
+  1. Ejecuta PRIMERO 'get_ticket_context(ticket: "11111")' (resolución en cascada: Favoritos/Historial local -> OpenProject API en vivo).
+  2. Si 'found: true': Utiliza el título oficial ('subject') y proyecto recuperados para registrar la actividad ('add_activity') o cronómetro ('start_timer').
+  3. Si 'found: false': PREGUNTA AL USUARIO:
+     "No encontré el ticket #11111 en OpenProject ni en favoritos. ¿El Project Manager o encargado ya creó este ticket en el sistema?"
+     - Si el usuario indica que aún no está creado: registra la actividad con ticket null y descripción profesional, indicando que queda pendiente de ticket.
+     - Si el usuario corrige el número: vuelve al paso 1 con el nuevo ticket.
+
+### 3. Herramientas MCP Disponibles:
+1. get_today_summary: Balance del día (horas trabajadas, meta, minutos restantes).
+2. get_ticket_context: Resolución del ticket (título, proyecto, estado, prioridad, asignado, descripción). Banderas: 'include_description' (def: true), 'include_comments' (def: false), 'include_attachments' (def: false), 'include_time_entries' (def: false).
+3. get_ticket_attachment: Descarga y retorna contenido de un archivo/adjunto o imagen. (OBLIGATORIO pedir permiso al usuario).
+4. search_activities: Búsqueda profunda en historial por ticket, descripción o rango de fechas.
+5. search_tickets: Búsqueda unificada en favoritos, historial y OpenProject en vivo.
+6. get_activities: Lista actividades registradas en una fecha.
+7. add_activity: Registra una actividad (autocompleta desde OpenProject o favoritos).
+8. edit_activity: Actualiza descripción, minutos o ticket de una actividad existente.
+9. start_timer: Inicia cronómetro para una tarea activa (pausa el anterior).
+10. stop_timer: Detiene cronómetro activo y consolida minutos.
+11. get_favorite_tickets: Lista tickets favoritos con título y proyecto.
+12. add_favorite_ticket: Guarda un ticket frecuente en favoritos.
+13. get_openproject_context: Información del usuario y configuración OpenProject.
+
+### 4. Lectura Progresiva de Contexto y Permisos de Archivos:
+- **Lectura Normal de Descripción**: Al consultar un ticket con 'get_ticket_context(ticket: "11111")', se incluye automáticamente la descripción ('include_description: true'). Lee y comprende la descripción para contextualizar la tarea.
+- **Sugerir Lectura de Comentarios**: Tras leer la descripción, sugiere proactivamente al usuario si desea que consultes también los comentarios o notas del ticket:
+  *"He leído la descripción del ticket. ¿Deseas que revise los comentarios para obtener más detalles?"*
+  - Si el usuario lo autoriza o lo pide, ejecuta 'get_ticket_context(ticket: "11111", include_comments: true)'.
+- **Permisos Obligatorios para Archivos y Adjuntos**:
+  - Si el ticket tiene archivos adjuntos o imágenes ('include_attachments: true'), o si necesitas inspeccionar un archivo adjunto con 'get_ticket_attachment':
+  - **NUNCA descargues ni abras un archivo sin el consentimiento explícito del usuario**.
+  - Pide permiso explícito: *"El ticket contiene el archivo adjunto [nombre]. ¿Me autorizas a descargarlo y revisar su contenido?"*
+  - Solo tras la confirmación afirmativa del usuario, ejecuta 'get_ticket_attachment(download_url: "...")'.
+<!-- POCKETPROJECT MCP RULES END -->
+"#;
+
+    let target_file = if agents_rules.exists() {
+        agents_rules
+    } else if cursor_rules.exists() {
+        cursor_rules
+    } else {
+        cwd.join("AGENTS.md")
+    };
+
+    let existing = std::fs::read_to_string(&target_file).unwrap_or_default();
+    if !existing.contains("POCKETPROJECT MCP RULES") {
+        let mut new_content = existing;
+        new_content.push_str(rule_content);
+        std::fs::write(&target_file, new_content).map_err(|e| e.to_string())?;
+    }
+
+    Ok(McpInstallResult {
+        success: true,
+        path: target_file.to_string_lossy().to_string(),
+        message: format!("Reglas inyectadas en {}", target_file.to_string_lossy()),
+    })
 }
 
 fn sanitize_url(url: &str) -> String {
@@ -251,7 +503,7 @@ async fn fetch_ticket_info(
     let res = client
         .get(&endpoint)
         .header("Authorization", &auth_value)
-        .header("Accept", "application/json")
+        .header("Accept", "application/hal+json, application/json")
         .send()
         .await
         .map_err(|e| format!("Error en conexión: {}", e))?;
@@ -309,7 +561,7 @@ async fn fetch_ticket_info(
         .post(&form_endpoint)
         .header("Authorization", &auth_value)
         .header("Content-Type", "application/json")
-        .header("Accept", "application/json")
+        .header("Accept", "application/hal+json, application/json")
         .body("{}")
         .send()
         .await
@@ -364,6 +616,359 @@ async fn fetch_ticket_info(
         available_statuses,
         message: "Ticket cargado".to_string(),
     })
+}
+
+#[tauri::command]
+async fn fetch_ticket_context(
+    url: String,
+    token: String,
+    ticket: String,
+    include_description: Option<bool>,
+    include_comments: Option<bool>,
+    include_attachments: Option<bool>,
+) -> Result<TicketContextResult, String> {
+    let clean_url = sanitize_url(&url);
+    let raw_ticket = ticket.trim().trim_start_matches('#');
+    if raw_ticket.is_empty() {
+        return Ok(TicketContextResult {
+            success: false,
+            ticket: ticket.clone(),
+            subject: None,
+            description: None,
+            comments: None,
+            attachments: None,
+            project_id: None,
+            project_name: None,
+            status_id: None,
+            status_name: None,
+            status_color: None,
+            version_id: None,
+            version_name: None,
+            priority_name: None,
+            assignee_name: None,
+            responsible_name: None,
+            start_date: None,
+            due_date: None,
+            estimated_time: None,
+            spent_time: None,
+            lock_version: None,
+            available_statuses: None,
+            message: "Ticket no especificado.".to_string(),
+        });
+    }
+
+    let endpoint = format!("{}/api/v3/work_packages/{}", clean_url, raw_ticket);
+    let auth_value = build_auth_header(&token);
+    let client = build_http_client(15)?;
+
+    let res = client
+        .get(&endpoint)
+        .header("Authorization", &auth_value)
+        .header("Accept", "application/hal+json, application/json")
+        .send()
+        .await
+        .map_err(|e| format!("Error en conexión: {}", e))?;
+
+    if !res.status().is_success() {
+        return Ok(TicketContextResult {
+            success: false,
+            ticket: format!("#{}", raw_ticket),
+            subject: None,
+            description: None,
+            comments: None,
+            attachments: None,
+            project_id: None,
+            project_name: None,
+            status_id: None,
+            status_name: None,
+            status_color: None,
+            version_id: None,
+            version_name: None,
+            priority_name: None,
+            assignee_name: None,
+            responsible_name: None,
+            start_date: None,
+            due_date: None,
+            estimated_time: None,
+            spent_time: None,
+            lock_version: None,
+            available_statuses: None,
+            message: format!("Error HTTP {}", res.status()),
+        });
+    }
+
+    let json_val: serde_json::Value = res.json().await.map_err(|e| e.to_string())?;
+
+    let subject = json_val["subject"].as_str().map(|s| s.to_string());
+    let project_name = json_val["_links"]["project"]["title"].as_str().map(|s| s.to_string());
+    let project_id = json_val["_links"]["project"]["href"]
+        .as_str()
+        .and_then(|href| href.split('/').last())
+        .map(|s| s.to_string());
+
+    let status_name = json_val["_links"]["status"]["title"].as_str().map(|s| s.to_string());
+    let status_id = json_val["_links"]["status"]["href"]
+        .as_str()
+        .and_then(|href| href.split('/').last())
+        .map(|s| s.to_string());
+
+    let status_color = json_val["_embedded"]["status"]["color"]
+        .as_str()
+        .or_else(|| json_val["status"]["color"].as_str())
+        .map(|s| s.to_string());
+
+    let version_name = json_val["_links"]["version"]["title"].as_str().map(|s| s.to_string());
+    let version_id = json_val["_links"]["version"]["href"]
+        .as_str()
+        .and_then(|href| href.split('/').last())
+        .map(|s| s.to_string());
+
+    let priority_name = json_val["_links"]["priority"]["title"].as_str().map(|s| s.to_string());
+    let assignee_name = json_val["_links"]["assignee"]["title"].as_str().map(|s| s.to_string());
+    let responsible_name = json_val["_links"]["responsible"]["title"].as_str().map(|s| s.to_string());
+    let start_date = json_val["startDate"].as_str().map(|s| s.to_string());
+    let due_date = json_val["dueDate"].as_str().map(|s| s.to_string());
+    let estimated_time = json_val["estimatedTime"].as_str().map(|s| s.to_string());
+    let spent_time = json_val["spentTime"].as_str().map(|s| s.to_string());
+    let lock_version = json_val["lockVersion"].as_i64();
+
+    // 1. Description
+    let description = if include_description.unwrap_or(true) {
+        let desc_obj = &json_val["description"];
+        if desc_obj.is_object() {
+            Some(TicketDescriptionItem {
+                raw: desc_obj["raw"].as_str().map(|s| s.to_string()),
+                html: desc_obj["html"].as_str().map(|s| s.to_string()),
+                format: desc_obj["format"].as_str().map(|s| s.to_string()),
+            })
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    // 2. Comments / Activities
+    let comments = if include_comments.unwrap_or(false) {
+        let act_endpoint = format!("{}/api/v3/work_packages/{}/activities", clean_url, raw_ticket);
+        if let Ok(act_res) = client
+            .get(&act_endpoint)
+            .header("Authorization", &auth_value)
+            .header("Accept", "application/hal+json, application/json")
+            .send()
+            .await
+        {
+            if act_res.status().is_success() {
+                if let Ok(act_json) = act_res.json::<serde_json::Value>().await {
+                    let elements = act_json["_embedded"]["elements"].as_array();
+                    if let Some(arr) = elements {
+                        let mut list = Vec::new();
+                        for a in arr {
+                            let comment_obj = &a["comment"];
+                            let raw_c = comment_obj["raw"].as_str().unwrap_or("").trim();
+                            let html_c = comment_obj["html"].as_str().unwrap_or("").trim();
+                            if !raw_c.is_empty() || !html_c.is_empty() {
+                                let id = a["id"].as_i64().map(|i| i.to_string()).unwrap_or_default();
+                                let created_at = a["createdAt"].as_str().unwrap_or("").to_string();
+                                let user_name = a["_links"]["user"]["title"].as_str().unwrap_or("Desconocido").to_string();
+                                list.push(TicketCommentItem {
+                                    id,
+                                    comment_raw: raw_c.to_string(),
+                                    comment_html: if html_c.is_empty() { raw_c.to_string() } else { html_c.to_string() },
+                                    created_at,
+                                    user_name,
+                                });
+                            }
+                        }
+                        Some(list)
+                    } else {
+                        Some(Vec::new())
+                    }
+                } else {
+                    Some(Vec::new())
+                }
+            } else {
+                Some(Vec::new())
+            }
+        } else {
+            Some(Vec::new())
+        }
+    } else {
+        None
+    };
+
+    // 3. Attachments
+    let attachments = if include_attachments.unwrap_or(false) {
+        let att_endpoint = format!("{}/api/v3/work_packages/{}/attachments", clean_url, raw_ticket);
+        if let Ok(att_res) = client
+            .get(&att_endpoint)
+            .header("Authorization", &auth_value)
+            .header("Accept", "application/hal+json, application/json")
+            .send()
+            .await
+        {
+            if att_res.status().is_success() {
+                if let Ok(att_json) = att_res.json::<serde_json::Value>().await {
+                    let elements = att_json["_embedded"]["elements"].as_array();
+                    if let Some(arr) = elements {
+                        let mut list = Vec::new();
+                        for att in arr {
+                            let id = att["id"].as_i64().map(|i| i.to_string()).unwrap_or_default();
+                            let file_name = att["fileName"].as_str().unwrap_or("archivo").to_string();
+                            let file_size = att["fileSize"].as_i64().unwrap_or(0);
+                            let content_type = att["contentType"].as_str().unwrap_or("application/octet-stream").to_string();
+                            let download_url = att["_links"]["downloadLocation"]["href"].as_str().unwrap_or("").to_string();
+                            let is_image = content_type.starts_with("image/")
+                                || file_name.ends_with(".png")
+                                || file_name.ends_with(".jpg")
+                                || file_name.ends_with(".jpeg")
+                                || file_name.ends_with(".webp")
+                                || file_name.ends_with(".gif");
+                            let created_at = att["createdAt"].as_str().map(|s| s.to_string());
+                            let author_name = att["_links"]["author"]["title"].as_str().map(|s| s.to_string());
+                            list.push(TicketAttachmentItem {
+                                id,
+                                file_name,
+                                file_size,
+                                content_type,
+                                download_url,
+                                is_image,
+                                created_at,
+                                author_name,
+                            });
+                        }
+                        Some(list)
+                    } else {
+                        Some(Vec::new())
+                    }
+                } else {
+                    Some(Vec::new())
+                }
+            } else {
+                Some(Vec::new())
+            }
+        } else {
+            Some(Vec::new())
+        }
+    } else {
+        None
+    };
+
+    // 4. Form endpoint for allowed statuses
+    let form_endpoint = format!("{}/api/v3/work_packages/{}/form", clean_url, raw_ticket);
+    let mut available_statuses: Option<Vec<StatusOptionItem>> = None;
+    if let Ok(form_res) = client
+        .post(&form_endpoint)
+        .header("Authorization", &auth_value)
+        .header("Content-Type", "application/json")
+        .header("Accept", "application/hal+json, application/json")
+        .body("{}")
+        .send()
+        .await
+    {
+        if form_res.status().is_success() {
+            if let Ok(form_json) = form_res.json::<serde_json::Value>().await {
+                let schema_status = &form_json["_embedded"]["schema"]["status"];
+                let allowed_raw = schema_status["allowedValues"]
+                    .as_array()
+                    .or_else(|| schema_status["_links"]["allowedValues"].as_array());
+
+                if let Some(arr) = allowed_raw {
+                    let mut list = Vec::new();
+                    for item in arr {
+                        let id = item["id"]
+                            .as_i64()
+                            .map(|i| i.to_string())
+                            .or_else(|| item["href"].as_str().and_then(|h| h.split('/').last().map(|s| s.to_string())));
+                        let name = item["name"]
+                            .as_str()
+                            .or_else(|| item["title"].as_str())
+                            .map(|s| s.to_string());
+                        let color = item["color"].as_str().map(|s| s.to_string());
+
+                        if let (Some(id_str), Some(name_str)) = (id, name) {
+                            list.push(StatusOptionItem {
+                                id: id_str,
+                                name: name_str,
+                                color,
+                            });
+                        }
+                    }
+                    if !list.is_empty() {
+                        available_statuses = Some(list);
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(TicketContextResult {
+        success: true,
+        ticket: format!("#{}", raw_ticket),
+        subject,
+        description,
+        comments,
+        attachments,
+        project_id,
+        project_name,
+        status_id,
+        status_name,
+        status_color,
+        version_id,
+        version_name,
+        priority_name,
+        assignee_name,
+        responsible_name,
+        start_date,
+        due_date,
+        estimated_time,
+        spent_time,
+        lock_version,
+        available_statuses,
+        message: "Ticket cargado con éxito".to_string(),
+    })
+}
+
+#[tauri::command]
+async fn fetch_attachment_content(
+    url: String,
+    token: String,
+    download_url: String,
+) -> Result<String, String> {
+    let clean_url = sanitize_url(&url);
+    let full_url = if download_url.starts_with("http") {
+        download_url
+    } else {
+        format!(
+            "{}{}{}",
+            clean_url,
+            if download_url.starts_with('/') { "" } else { "/" },
+            download_url
+        )
+    };
+    let auth_value = build_auth_header(&token);
+    let client = build_http_client(25)?;
+    let res = client
+        .get(&full_url)
+        .header("Authorization", &auth_value)
+        .send()
+        .await
+        .map_err(|e| format!("Error en conexión: {}", e))?;
+
+    if !res.status().is_success() {
+        return Err(format!("Error HTTP {}", res.status()));
+    }
+
+    let content_type = res
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream")
+        .to_string();
+
+    let bytes = res.bytes().await.map_err(|e| e.to_string())?;
+    let encoded = BASE64.encode(&bytes);
+    Ok(format!("data:{};base64,{}", content_type, encoded))
 }
 
 #[tauri::command]
@@ -758,7 +1363,7 @@ async fn update_work_package_status(
             let res = client
                 .get(&wp_url)
                 .header("Authorization", &auth_value)
-                .header("Accept", "application/json")
+                .header("Accept", "application/hal+json, application/json")
                 .send()
                 .await
                 .map_err(|e| e.to_string())?;
@@ -781,7 +1386,7 @@ async fn update_work_package_status(
         .patch(&patch_url)
         .header("Authorization", auth_value)
         .header("Content-Type", "application/json")
-        .header("Accept", "application/json")
+        .header("Accept", "application/hal+json, application/json")
         .json(&payload)
         .send()
         .await
@@ -815,7 +1420,7 @@ async fn update_work_package_version(
             let res = client
                 .get(&wp_url)
                 .header("Authorization", &auth_value)
-                .header("Accept", "application/json")
+                .header("Accept", "application/hal+json, application/json")
                 .send()
                 .await
                 .map_err(|e| e.to_string())?;
@@ -841,7 +1446,7 @@ async fn update_work_package_version(
         .patch(&patch_url)
         .header("Authorization", auth_value)
         .header("Content-Type", "application/json")
-        .header("Accept", "application/json")
+        .header("Accept", "application/hal+json, application/json")
         .json(&payload)
         .send()
         .await
@@ -942,6 +1547,7 @@ async fn fetch_statuses(
 
 #[tauri::command]
 fn exit_app(app: AppHandle) {
+    ipc::cleanup_ipc_file(&app);
     app.exit(0);
 }
 
@@ -951,8 +1557,29 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            Some(vec!["--minimized"]),
+        ))
         .setup(|app| {
             let handle = app.handle();
+
+            // Iniciar servidor local IPC para comunicación en tiempo real con PocketProject MCP
+            if let Err(e) = ipc::start_ipc_server(handle.clone()) {
+                eprintln!("[PocketProject IPC] Failed to start local server: {}", e);
+            }
+
+            // Habilitar inicio automático con el sistema operativo
+            let autostart_manager = app.autolaunch();
+            let _ = autostart_manager.enable();
+
+            // Si se inicia en el arranque con --minimized, ocultar ventana
+            let args: Vec<String> = std::env::args().collect();
+            if args.iter().any(|arg| arg == "--minimized") {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.hide();
+                }
+            }
 
             let show_item = MenuItem::with_id(handle, "show", "Abrir PocketProject", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(handle, "quit", "Salir", true, None::<&str>)?;
@@ -987,6 +1614,7 @@ pub fn run() {
                             }
                         }
                         "quit" => {
+                            ipc::cleanup_ipc_file(app);
                             app.exit(0);
                         }
                         _ => {}
@@ -1017,6 +1645,8 @@ pub fn run() {
             delete_activity,
             clear_activities,
             fetch_ticket_info,
+            fetch_ticket_context,
+            fetch_attachment_content,
             fetch_openproject_projects,
             fetch_time_entry_activities,
             create_time_entry,
@@ -1024,6 +1654,13 @@ pub fn run() {
             update_work_package_version,
             fetch_project_versions,
             fetch_statuses,
+            get_database_path,
+            get_ai_stats,
+            get_favorite_tickets,
+            save_favorite_ticket,
+            delete_favorite_ticket,
+            install_mcp_to_client,
+            inject_ai_rules,
             exit_app
         ])
         .run(tauri::generate_context!())
