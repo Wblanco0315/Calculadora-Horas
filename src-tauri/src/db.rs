@@ -94,6 +94,19 @@ pub struct ActivityRecord {
     pub activity_type_name: Option<String>,
     #[serde(default, alias = "created_at")]
     pub created_at: Option<String>,
+    #[serde(default, alias = "created_by_ai")]
+    pub created_by_ai: Option<bool>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct FavoriteTicketRecord {
+    pub ticket: String,
+    pub title: String,
+    #[serde(default, alias = "project_id")]
+    pub project_id: Option<String>,
+    #[serde(default, alias = "project_name")]
+    pub project_name: Option<String>,
 }
 
 pub fn get_db_path(app: &AppHandle) -> PathBuf {
@@ -182,6 +195,18 @@ fn init_tables(conn: &Connection) -> Result<()> {
     let _ = conn.execute("ALTER TABLE activities ADD COLUMN activity_type_id TEXT", []);
     let _ = conn.execute("ALTER TABLE activities ADD COLUMN activity_type_name TEXT", []);
     let _ = conn.execute("ALTER TABLE activities ADD COLUMN timer_last_started INTEGER", []);
+    let _ = conn.execute("ALTER TABLE activities ADD COLUMN created_by_ai INTEGER DEFAULT 0", []);
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS favorite_tickets (
+            ticket TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            project_id TEXT,
+            project_name TEXT,
+            created_at TEXT NOT NULL
+        )",
+        [],
+    )?;
 
     Ok(())
 }
@@ -276,7 +301,7 @@ pub fn load_activities(conn: &Connection, date: Option<&str>) -> Result<Vec<Acti
                     ticket, ticket_title, status_id, status_name, status_color,
                     version_id, version_name, board_id, board_column_id, board_column_name,
                     synced, timer_seconds, timer_state, created_at, activity_type_id, activity_type_name,
-                    timer_last_started
+                    timer_last_started, created_by_ai
              FROM activities WHERE date = ?1 ORDER BY created_at ASC"
         }
         None => {
@@ -284,7 +309,7 @@ pub fn load_activities(conn: &Connection, date: Option<&str>) -> Result<Vec<Acti
                     ticket, ticket_title, status_id, status_name, status_color,
                     version_id, version_name, board_id, board_column_id, board_column_name,
                     synced, timer_seconds, timer_state, created_at, activity_type_id, activity_type_name,
-                    timer_last_started
+                    timer_last_started, created_by_ai
              FROM activities ORDER BY date DESC, created_at ASC"
         }
     };
@@ -298,6 +323,7 @@ pub fn load_activities(conn: &Connection, date: Option<&str>) -> Result<Vec<Acti
     let mut activities = Vec::new();
     while let Some(row) = rows.next()? {
         let synced_int: i32 = row.get(17).unwrap_or(0);
+        let created_by_ai_int: i32 = row.get(24).unwrap_or(0);
         activities.push(ActivityRecord {
             id: row.get(0)?,
             name: row.get(1)?,
@@ -323,6 +349,7 @@ pub fn load_activities(conn: &Connection, date: Option<&str>) -> Result<Vec<Acti
             activity_type_id: row.get(21).ok(),
             activity_type_name: row.get(22).ok(),
             timer_last_started: row.get(23).ok(),
+            created_by_ai: Some(created_by_ai_int == 1),
         });
     }
 
@@ -333,14 +360,15 @@ pub fn save_activity(conn: &Connection, act: &ActivityRecord) -> Result<()> {
     let now = chrono_now();
     let created = act.created_at.clone().unwrap_or(now);
     let is_synced = if act.synced.unwrap_or(false) { 1 } else { 0 };
+    let is_created_by_ai = if act.created_by_ai.unwrap_or(false) { 1 } else { 0 };
 
     conn.execute(
         "INSERT INTO activities (
             id, name, minutes, seconds, date, project_id, project_name, ticket, ticket_title,
             status_id, status_name, status_color, version_id, version_name,
             board_id, board_column_id, board_column_name, synced, timer_seconds,
-            timer_state, created_at, activity_type_id, activity_type_name, timer_last_started
-        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24)
+            timer_state, created_at, activity_type_id, activity_type_name, timer_last_started, created_by_ai
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25)
         ON CONFLICT(id) DO UPDATE SET
             name = excluded.name,
             minutes = excluded.minutes,
@@ -363,7 +391,8 @@ pub fn save_activity(conn: &Connection, act: &ActivityRecord) -> Result<()> {
             timer_state = excluded.timer_state,
             activity_type_id = excluded.activity_type_id,
             activity_type_name = excluded.activity_type_name,
-            timer_last_started = excluded.timer_last_started",
+            timer_last_started = excluded.timer_last_started,
+            created_by_ai = excluded.created_by_ai",
         params![
             act.id,
             act.name,
@@ -389,9 +418,52 @@ pub fn save_activity(conn: &Connection, act: &ActivityRecord) -> Result<()> {
             act.activity_type_id,
             act.activity_type_name,
             act.timer_last_started,
+            is_created_by_ai,
         ],
     )?;
     Ok(())
+}
+
+pub fn load_favorite_tickets(conn: &Connection) -> Result<Vec<FavoriteTicketRecord>> {
+    let mut stmt = conn.prepare("SELECT ticket, title, project_id, project_name FROM favorite_tickets ORDER BY title ASC")?;
+    let rows = stmt.query_map([], |row| {
+        Ok(FavoriteTicketRecord {
+            ticket: row.get(0)?,
+            title: row.get(1)?,
+            project_id: row.get(2).ok(),
+            project_name: row.get(3).ok(),
+        })
+    })?;
+    let mut list = Vec::new();
+    for r in rows {
+        list.push(r?);
+    }
+    Ok(list)
+}
+
+pub fn save_favorite_ticket(conn: &Connection, fav: &FavoriteTicketRecord) -> Result<()> {
+    let now = chrono_now();
+    conn.execute(
+        "INSERT INTO favorite_tickets (ticket, title, project_id, project_name, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5)
+         ON CONFLICT(ticket) DO UPDATE SET
+            title = excluded.title,
+            project_id = excluded.project_id,
+            project_name = excluded.project_name",
+        params![fav.ticket, fav.title, fav.project_id, fav.project_name, now],
+    )?;
+    Ok(())
+}
+
+pub fn delete_favorite_ticket(conn: &Connection, ticket: &str) -> Result<()> {
+    conn.execute("DELETE FROM favorite_tickets WHERE ticket = ?1", params![ticket])?;
+    Ok(())
+}
+
+pub fn count_ai_activities(conn: &Connection) -> Result<i32> {
+    let mut stmt = conn.prepare("SELECT COUNT(*) FROM activities WHERE created_by_ai = 1")?;
+    let count: i32 = stmt.query_row([], |r| r.get(0))?;
+    Ok(count)
 }
 
 pub fn delete_activity(conn: &Connection, id: &str) -> Result<()> {

@@ -1,6 +1,6 @@
 {
   "name": "pocketproject",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -25,6 +25,7 @@
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-process": "~2",
     "@tauri-apps/plugin-updater": "~2",
+    "@tauri-apps/plugin-autostart": "~2",
     "gemini": "^7.5.2",
     "install": "^0.13.0",
     "plugin": "^0.3.3",

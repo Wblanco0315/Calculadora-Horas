@@ -53,7 +53,7 @@ import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 
       <div class="space-y-3.5 py-1 text-xs">
         @if (singleActivity(); as act) {
-          <div class="p-3 rounded-xl bg-slate-100/70 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-700/60 space-y-1">
+          <div class="p-3 rounded-xl bg-slate-100/70 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-700/60 space-y-1.5">
             <span class="font-bold text-slate-800 dark:text-zinc-100 block">
               Ticket #{{ act.ticket }} - {{ displayTitle(act) }}
             </span>
@@ -62,9 +62,17 @@ import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
                 {{ act.name }}
               </span>
             }
-            <span class="text-slate-500 dark:text-zinc-400">
+            <div class="text-slate-500 dark:text-zinc-400">
               {{ 'compact.syncModal.time' | translate }}: {{ act.minutes }} {{ 'compact.syncModal.minutes' | translate }} ({{ (act.minutes / 60).toFixed(2) }}h) · {{ 'compact.syncModal.date' | translate }}: {{ act.date }}
-            </span>
+            </div>
+            @if (hasPredefinedType()) {
+              <div class="pt-1 flex items-center gap-1.5 text-slate-600 dark:text-zinc-300">
+                <span class="text-[11px] text-slate-400 dark:text-zinc-500">{{ 'compact.syncModal.activityTypeLabel' | translate }}:</span>
+                <span class="font-semibold px-2 py-0.5 rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-[11px] text-slate-800 dark:text-zinc-200">
+                  {{ predefinedTypeName() }}
+                </span>
+              </div>
+            }
           </div>
         } @else {
           <div class="p-3 rounded-xl bg-slate-100/70 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-700/60">
@@ -74,21 +82,23 @@ import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
           </div>
         }
 
-        <!-- Activity Type Selector (e.g., Desarrollo, Soporte, Gestión) -->
-        <div>
-          <label class="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-            {{ 'compact.syncModal.activityTypeLabel' | translate }}
-          </label>
-          <p-select
-            [(ngModel)]="selectedActivityTypeId"
-            [options]="activityTypeOptions()"
-            optionLabel="label"
-            optionValue="value"
-            [placeholder]="'compact.syncModal.selectTypePlaceholder' | translate"
-            class="w-full text-xs"
-            appendTo="body"
-          />
-        </div>
+        <!-- Activity Type Selector (Only if not already defined when creating the activity) -->
+        @if (!hasPredefinedType()) {
+          <div>
+            <label class="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+              {{ 'compact.syncModal.activityTypeLabel' | translate }}
+            </label>
+            <p-select
+              [(ngModel)]="selectedActivityTypeId"
+              [options]="activityTypeOptions()"
+              optionLabel="label"
+              optionValue="value"
+              [placeholder]="'compact.syncModal.selectTypePlaceholder' | translate"
+              class="w-full text-xs"
+              appendTo="body"
+            />
+          </div>
+        }
 
         @if (statusMessage()) {
           <div
@@ -167,6 +177,28 @@ export class SyncConfirmModalComponent implements OnInit {
     return this.activityService.unsyncedActivities().length;
   });
 
+  readonly hasPredefinedType = computed<boolean>(() => {
+    const single = this.singleActivity();
+    if (single) {
+      return !!(single.activityTypeId || single.activity_type_id);
+    }
+    const list = this.activityService.isSelectionMode() && this.activityService.selectedActivities().length > 0
+      ? this.activityService.selectedActivities()
+      : this.activityService.unsyncedActivities();
+    return list.length > 0 && list.every((a) => !!(a.activityTypeId || a.activity_type_id));
+  });
+
+  readonly predefinedTypeName = computed<string>(() => {
+    const single = this.singleActivity();
+    if (single) {
+      if (single.activityTypeName) return single.activityTypeName;
+      const typeId = String(single.activityTypeId || single.activity_type_id);
+      const found = this.activityService.timeEntryActivities().find((t) => String(t.id) === typeId);
+      return found?.name || typeId;
+    }
+    return '';
+  });
+
   constructor() {
     effect(() => {
       const opts = this.activityTypeOptions();
@@ -218,7 +250,10 @@ export class SyncConfirmModalComponent implements OnInit {
 
     const single = this.singleActivity();
     if (single) {
-      const res = await this.activityService.syncActivity(single.id, this.selectedActivityTypeId || undefined);
+      const typeToSend = (single.activityTypeId || single.activity_type_id)
+        ? String(single.activityTypeId || single.activity_type_id)
+        : (this.selectedActivityTypeId || undefined);
+      const res = await this.activityService.syncActivity(single.id, typeToSend);
       this.isSubmitting.set(false);
       if (res.ok) {
         this.statusType.set('success');

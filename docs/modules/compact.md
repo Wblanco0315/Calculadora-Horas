@@ -59,11 +59,19 @@ src/app/modules/compact/
 ### 2.3. Barra de Saludo y Acciones Rápidas
 - **Ubicación**: En `compact.page.html` (bajo el hero).
 - **Diseño**:
-  - Subtítulo `REGISTRO DEL DÍA` y saludo `Hola, {{ currentUserName() }} 👋`.
+  - Subtítulo dinámico (`REGISTRO DEL DÍA` si es hoy o `REGISTRO HISTÓRICO` al explorar fechas pasadas o futuras) y saludo `Hola, {{ currentUserName() }} 👋`.
   - Botón **"Favoritos"**: Abre directamente el modal independiente de favoritos (`app-favorites-modal`) mediante `<button pButton>` con icono de estrella dorada.
   - Botón **"Añadir"**: Botón primario (`<button pButton>`) con icono de suma que abre el modal independiente de actividad (`app-activity-form-modal`).
 
-### 2.4. Barra de Búsqueda, Filtros con Popover y Sincronización
+### 2.4. Barra de Navegación de Fecha (Exploración Histórica)
+- **Ubicación**: En `compact.page.html` (entre la barra de saludo y la barra de filtros).
+- **Integración PrimeNG y Funcionalidad**:
+  - **Selector Dinámico con Indicador "Hoy"**: Cuando la jornada activa es la actual, el selector de fecha muestra de forma prominente la etiqueta **"Hoy"** junto al icono de calendario. Al hacer clic, abre el desplegable del calendario para saltar a cualquier otra fecha.
+  - **Botón Día Anterior**: Botón con directiva `pButton` e icono `tablerChevronLeft` (`setPreviousDay()`) siempre disponible para retroceder y revisar jornadas pasadas.
+  - **Controles de Avance e Historial**: Al encontrarse en un día pasado, el selector muestra la fecha seleccionada (`YYYY-MM-DD`), habilitando el botón de día siguiente (`tablerChevronRight`) y el botón directo para retornar a **"Hoy"** (`setToday()`).
+  - **Etiqueta Contextual Formateada**: Muestra a la derecha el nombre del día y la fecha localizada (e.g. `Mié, 18 de nov.` o `Vie, 6 de nov.`).
+
+### 2.5. Barra de Búsqueda, Filtros con Popover y Sincronización
 - **Ubicación**: En `compact.page.html`.
 - **Integración PrimeNG**:
   - Input de búsqueda en tiempo real: `Filtrar por ticket o descripción...` con icono de lupa.
@@ -78,7 +86,7 @@ src/app/modules/compact/
     - Modo normal: Botón "Todos" (sincroniza pendientes) y botón "Seleccionar" (habilita selección múltiple).
     - Modo selección activo: Botón "Cancelar" y botón "Enviar (X)".
 
-### 2.5. Lista y Fila de Actividad (`app-activity-row`)
+### 2.6. Lista y Fila de Actividad (`app-activity-row`)
 - **Ubicación**: `components/activity-row/activity-row.component.ts`
 - **Responsabilidad y Comportamiento**:
   - Checkbox para selección rápida cuando el modo de selección está habilitado.
@@ -103,7 +111,7 @@ src/app/modules/compact/
       3. **Tipo de actividad**: Tipo de actividad de OpenProject (`activityTypeName` o `projectName`).
     - **Sección de Descripción**: Se renderiza **únicamente** si la actividad contiene una descripción no vacía, respetando saltos de línea (`whitespace-pre-wrap`) y eliminando placeholders redundantes.
 
-### 2.6. Modales de Negocio Totalmente Separados
+### 2.7. Modales de Negocio Totalmente Separados
 Cada modal se encuentra aislado en su propio componente standalone dentro de `modals/`:
 1. **`app-activity-form-modal`**:
    - Modal dedicado exclusivamente para la creación y edición manual de actividades.

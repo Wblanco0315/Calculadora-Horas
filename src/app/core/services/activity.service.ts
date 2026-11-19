@@ -1,5 +1,6 @@
 import { Injectable, signal, computed, inject, effect } from '@angular/core';
 import { invoke, isTauri } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import {
   Activity,
   Project,
@@ -57,6 +58,15 @@ export class ActivityService {
   } | null>(null);
   readonly showSyncModal = signal<boolean>(false);
   readonly singleSyncActivity = signal<Activity | null>(null);
+  readonly showTicketContextModal = signal<boolean>(false);
+  readonly contextTicket = signal<string | null>(null);
+
+  /**
+   * Whether the currently selected date is today
+   */
+  readonly isToday = computed<boolean>(() => {
+    return this.selectedDate() === getTodayDateString();
+  });
 
   /**
    * Filtered activities for the currently selected date
@@ -98,9 +108,27 @@ export class ActivityService {
   });
 
   constructor() {
+    this.loadFavorites().catch(() => {});
     this.loadActivities(this.selectedDate()).catch((err) => {
       console.warn('Initial activities load failed:', err);
     });
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', () => {
+        this.loadActivities(this.selectedDate()).catch(() => {});
+        this.loadFavorites().catch(() => {});
+      });
+
+      // Realtime IPC sync: listen for events emitted from local IPC server when PocketProject MCP makes changes
+      if (isTauri()) {
+        listen('db-changed', () => {
+          this.loadActivities(this.selectedDate()).catch(() => {});
+          this.loadFavorites().catch(() => {});
+        }).catch((err) => {
+          console.warn('Failed to register db-changed listener:', err);
+        });
+      }
+    }
 
     effect(() => {
       if (this.storageService.isLoggedIn()) {
@@ -163,6 +191,33 @@ export class ActivityService {
     return 'HH:MM';
   }
 
+  async loadFavorites(): Promise<void> {
+    if (isTauri()) {
+      try {
+        const rows = await invoke<FavoriteTicket[]>('get_favorite_tickets');
+        if (rows && rows.length > 0) {
+          this.favoriteTickets.set(rows);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(rows));
+          }
+          return;
+        }
+      } catch (e) {
+        console.warn('Could not load favorites from SQLite:', e);
+      }
+    }
+
+    const stored = this.loadStoredFavorites();
+    if (stored.length > 0) {
+      this.favoriteTickets.set(stored);
+      if (isTauri()) {
+        for (const item of stored) {
+          invoke('save_favorite_ticket', { ticket: item }).catch(() => {});
+        }
+      }
+    }
+  }
+
   private loadStoredFavorites(): FavoriteTicket[] {
     if (typeof window !== 'undefined') {
       try {
@@ -208,7 +263,7 @@ export class ActivityService {
     }
   }
 
-  toggleFavorite(ticket: string, title: string, projectId?: string, projectName?: string): void {
+  async toggleFavorite(ticket: string, title: string, projectId?: string, projectName?: string): Promise<void> {
     const cleanTicket = ticket.trim().replace(/^#/, '');
     if (!cleanTicket) return;
 
@@ -216,8 +271,15 @@ export class ActivityService {
     const index = list.findIndex((f) => f.ticket === cleanTicket);
     if (index >= 0) {
       list.splice(index, 1);
+      if (isTauri()) {
+        invoke('delete_favorite_ticket', { ticket: cleanTicket }).catch(() => {});
+      }
     } else {
-      list.push({ ticket: cleanTicket, title: title.trim(), projectId, projectName });
+      const newFav: FavoriteTicket = { ticket: cleanTicket, title: title.trim(), projectId, projectName };
+      list.push(newFav);
+      if (isTauri()) {
+        invoke('save_favorite_ticket', { ticket: newFav }).catch(() => {});
+      }
     }
     this.persistFavorites(list);
   }
@@ -313,6 +375,7 @@ export class ActivityService {
       timerLastStarted,
       activityTypeId: raw.activityTypeId || raw.activity_type_id || undefined,
       activityTypeName: raw.activityTypeName || raw.activity_type_name || undefined,
+      createdByAi: Boolean(raw.createdByAi ?? raw.created_by_ai),
       createdAt: raw.createdAt || raw.created_at || new Date().toISOString(),
     };
   }
@@ -422,6 +485,7 @@ export class ActivityService {
       createdAt: new Date().toISOString(),
       synced: false,
       selected: false,
+      createdByAi: data.createdByAi ?? false,
       timerState: data.timerState || 'idle',
       timerLastStarted,
     };
@@ -488,17 +552,71 @@ export class ActivityService {
    * Fetches ticket subject and details using the dedicated OpenprojectService
    */
   async fetchTicketSubject(ticket: string): Promise<TicketInfoResult> {
-    const res = await this.openprojectService.getTicketInfo(ticket);
+    const clean = ticket.trim().replace(/^#/, '');
+    if (!clean) {
+      return { success: false, message: 'Ticket vacío' };
+    }
 
-    // If ticket belongs to a project not yet in our projects list, refresh projects
-    if (res.success && res.project_id) {
-      const existing = this.projects().find((p) => p.id === res.project_id);
-      if (!existing && res.project_name) {
+    // 1. Check local favorite tickets
+    const fav = this.favoriteTickets().find((f) => f.ticket.replace(/^#/, '') === clean);
+    if (fav && fav.title && fav.projectId) {
+      const existing = this.projects().find((p) => p.id === fav.projectId);
+      if (!existing) {
         this.projects.update((current) => [
           ...current,
-          { id: res.project_id!, name: res.project_name! },
+          { id: fav.projectId!, name: fav.projectName || `Proyecto #${fav.projectId}` },
         ]);
       }
+    }
+
+    // 2. Query live OpenProject API
+    const res = await this.openprojectService.getTicketInfo(clean);
+
+    if (res.success && res.subject) {
+      if (res.project_id) {
+        const existing = this.projects().find((p) => p.id === res.project_id);
+        if (!existing) {
+          this.projects.update((current) => [
+            ...current,
+            { id: res.project_id!, name: res.project_name || `Proyecto #${res.project_id}` },
+          ]);
+        }
+      }
+      return res;
+    }
+
+    // 3. Fallback to favorite ticket if OpenProject call did not return a subject
+    if (fav && fav.title) {
+      return {
+        success: true,
+        subject: fav.title,
+        project_id: fav.projectId,
+        project_name: fav.projectName,
+        message: 'From favorites',
+      };
+    }
+
+    // 4. Fallback to past activities history
+    const past = this.activities().find(
+      (a) => a.ticket && a.ticket.replace(/^#/, '') === clean && a.ticketTitle
+    );
+    if (past && past.ticketTitle) {
+      if (past.projectId) {
+        const existing = this.projects().find((p) => p.id === past.projectId);
+        if (!existing) {
+          this.projects.update((current) => [
+            ...current,
+            { id: past.projectId!, name: past.projectName || `Proyecto #${past.projectId}` },
+          ]);
+        }
+      }
+      return {
+        success: true,
+        subject: past.ticketTitle,
+        project_id: past.projectId,
+        project_name: past.projectName,
+        message: 'From history',
+      };
     }
 
     return res;
@@ -543,7 +661,12 @@ export class ActivityService {
 
     await this.updateActivity(id, { isSyncing: true, syncError: false, syncSuccess: false });
 
-    const effectiveTypeId = activityTypeId || act.activityTypeId || act.activity_type_id;
+    // Effective activity type: activity's own assigned type -> passed arg -> fallback to available type
+    let effectiveTypeId = act.activityTypeId || act.activity_type_id || activityTypeId;
+    if (!effectiveTypeId && this.timeEntryActivities().length > 0) {
+      const devType = this.timeEntryActivities().find((t) => t.name.toLowerCase().includes('dev')) || this.timeEntryActivities()[0];
+      effectiveTypeId = devType.id;
+    }
 
     const result = await this.openprojectService.createTimeEntry({
       ticket: act.ticket,
@@ -749,6 +872,18 @@ export class ActivityService {
     this.singleSyncActivity.set(null);
   }
 
+  openTicketContextModal(ticket: string): void {
+    const clean = ticket.trim().replace(/^#/, '');
+    if (!clean) return;
+    this.contextTicket.set(clean);
+    this.showTicketContextModal.set(true);
+  }
+
+  closeTicketContextModal(): void {
+    this.showTicketContextModal.set(false);
+    this.contextTicket.set(null);
+  }
+
   toggleSelectionMode(): void {
     const next = !this.isSelectionMode();
     this.isSelectionMode.set(next);
@@ -762,5 +897,41 @@ export class ActivityService {
     this.activities().forEach((a) => {
       if (a.selected) this.updateActivity(a.id, { selected: false });
     });
+  }
+
+  async getDatabasePath(): Promise<string> {
+    if (isTauri()) {
+      try {
+        return await invoke<string>('get_database_path');
+      } catch (e) {
+        console.warn('Failed to get database path:', e);
+      }
+    }
+    return 'pocketproject.sqlite';
+  }
+
+  async getAiStats(): Promise<number> {
+    if (isTauri()) {
+      try {
+        return await invoke<number>('get_ai_stats');
+      } catch (e) {
+        console.warn('Failed to get AI stats:', e);
+      }
+    }
+    return this.activities().filter((a) => a.createdByAi).length;
+  }
+
+  async installMcpToClient(client: string): Promise<{ success: boolean; path: string; message: string }> {
+    if (isTauri()) {
+      return await invoke('install_mcp_to_client', { client });
+    }
+    return { success: false, path: '', message: 'Solo disponible en la app de escritorio' };
+  }
+
+  async injectAiRules(): Promise<{ success: boolean; path: string; message: string }> {
+    if (isTauri()) {
+      return await invoke('inject_ai_rules');
+    }
+    return { success: false, path: '', message: 'Solo disponible en la app de escritorio' };
   }
 }

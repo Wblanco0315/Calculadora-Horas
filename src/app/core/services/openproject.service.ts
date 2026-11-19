@@ -10,6 +10,10 @@ import {
   BoardLocation,
   TimeEntryActivityType,
   TicketInfoResult,
+  TicketContextResult,
+  TicketContextOptions,
+  TicketComment,
+  TicketAttachment,
   CreateTimeEntryParams,
 } from '../interfaces/openproject.interface';
 
@@ -60,7 +64,7 @@ export class OpenprojectService {
 
     return {
       Authorization: auth,
-      Accept: 'application/json',
+      Accept: 'application/hal+json, application/json',
       'Content-Type': 'application/json',
     };
   }
@@ -91,12 +95,65 @@ export class OpenprojectService {
 
     if (this.isTauriApp()) {
       try {
-        return await invoke<TicketInfoResult>('fetch_ticket_info', {
+        const res = await invoke<TicketInfoResult>('fetch_ticket_info', {
           url,
           token,
           ticket: rawTicket,
         });
+
+        if (res.success && res.subject) {
+          return res;
+        }
+
+        // Resilient fallback to fetch_ticket_context if fetch_ticket_info failed
+        const ctx = await this.getTicketContext(rawTicket, {
+          includeDescription: false,
+          includeComments: false,
+          includeAttachments: false,
+        });
+        if (ctx.success && ctx.subject) {
+          return {
+            success: true,
+            subject: ctx.subject,
+            project_id: ctx.project_id,
+            project_name: ctx.project_name,
+            status_id: ctx.status_id,
+            status_name: ctx.status_name,
+            status_color: ctx.status_color,
+            version_id: ctx.version_id,
+            version_name: ctx.version_name,
+            lock_version: ctx.lock_version,
+            available_statuses: ctx.available_statuses,
+            message: 'OK',
+          };
+        }
+
+        return res;
       } catch (err: unknown) {
+        try {
+          const ctx = await this.getTicketContext(rawTicket, {
+            includeDescription: false,
+            includeComments: false,
+            includeAttachments: false,
+          });
+          if (ctx.success && ctx.subject) {
+            return {
+              success: true,
+              subject: ctx.subject,
+              project_id: ctx.project_id,
+              project_name: ctx.project_name,
+              status_id: ctx.status_id,
+              status_name: ctx.status_name,
+              status_color: ctx.status_color,
+              version_id: ctx.version_id,
+              version_name: ctx.version_name,
+              lock_version: ctx.lock_version,
+              available_statuses: ctx.available_statuses,
+              message: 'OK',
+            };
+          }
+        } catch {}
+
         return {
           success: false,
           message: err instanceof Error ? err.message : String(err),
@@ -180,6 +237,269 @@ export class OpenprojectService {
         message: err instanceof Error ? err.message : String(err),
       };
     }
+  }
+
+  /**
+   * Fetches full ticket context including description, comments, and attachments
+   */
+  async getTicketContext(
+    ticket: string,
+    options?: TicketContextOptions
+  ): Promise<TicketContextResult> {
+    const rawTicket = ticket.trim().replace(/^#/, '');
+    if (!rawTicket) {
+      return { success: false, ticket, message: 'Ticket vacío' };
+    }
+
+    const token = this.getToken();
+    const url = this.sanitizeUrl();
+
+    if (this.isTauriApp()) {
+      try {
+        return await invoke<TicketContextResult>('fetch_ticket_context', {
+          url,
+          token,
+          ticket: rawTicket,
+          includeDescription: options?.includeDescription ?? true,
+          includeComments: options?.includeComments ?? true,
+          includeAttachments: options?.includeAttachments ?? true,
+        });
+      } catch (err: unknown) {
+        return {
+          success: false,
+          ticket: `#${rawTicket}`,
+          message: err instanceof Error ? err.message : String(err),
+        };
+      }
+    }
+
+    // Web Fallback implementation
+    try {
+      const headers = this.buildAuthHeaders(token);
+      const wpEndpoint = `${url}/api/v3/work_packages/${rawTicket}`;
+
+      const res = await fetch(wpEndpoint, { headers });
+      if (!res.ok) {
+        return {
+          success: false,
+          ticket: `#${rawTicket}`,
+          message: `HTTP ${res.status}`,
+        };
+      }
+
+      const wpData: any = await res.json();
+      const subject = wpData.subject || null;
+      const projectName = wpData._links?.project?.title || null;
+      const projectHref = wpData._links?.project?.href || '';
+      const projectId = projectHref ? projectHref.split('/').pop() : null;
+
+      const statusName = wpData._links?.status?.title || null;
+      const statusHref = wpData._links?.status?.href || '';
+      const statusId = statusHref ? statusHref.split('/').pop() : null;
+      const statusColor = wpData._embedded?.status?.color || null;
+
+      const versionName = wpData._links?.version?.title || null;
+      const versionHref = wpData._links?.version?.href || '';
+      const versionId = versionHref ? versionHref.split('/').pop() : null;
+
+      const priorityName = wpData._links?.priority?.title || null;
+      const assigneeName = wpData._links?.assignee?.title || null;
+      const responsibleName = wpData._links?.responsible?.title || null;
+      const startDate = wpData.startDate || null;
+      const dueDate = wpData.dueDate || null;
+      const estimatedTime = wpData.estimatedTime || null;
+      const spentTime = wpData.spentTime || null;
+      const lockVersion = wpData.lockVersion || null;
+
+      // 1. Description
+      const descRaw = wpData.description?.raw || null;
+      const descHtml = wpData.description?.html || null;
+      const description = (descRaw || descHtml) ? { raw: descRaw, html: descHtml } : null;
+
+      // 2. Comments / Activities
+      let comments: TicketComment[] | null = null;
+      if (options?.includeComments ?? true) {
+        try {
+          const actRes = await fetch(`${url}/api/v3/work_packages/${rawTicket}/activities`, { headers });
+          if (actRes.ok) {
+            const actData: any = await actRes.json();
+            const elements: any[] = actData._embedded?.elements || [];
+
+            // Pre-populate known users from work package links
+            const knownUsers = new Map<string, string>();
+            if (wpData._links?.author?.href && wpData._links?.author?.title) {
+              const uid = wpData._links.author.href.split('/').pop();
+              if (uid) knownUsers.set(uid, wpData._links.author.title);
+            }
+            if (wpData._links?.assignee?.href && wpData._links?.assignee?.title) {
+              const uid = wpData._links.assignee.href.split('/').pop();
+              if (uid) knownUsers.set(uid, wpData._links.assignee.title);
+            }
+            if (wpData._links?.responsible?.href && wpData._links?.responsible?.title) {
+              const uid = wpData._links.responsible.href.split('/').pop();
+              if (uid) knownUsers.set(uid, wpData._links.responsible.title);
+            }
+
+            // Fetch any missing user names
+            const missingUids = new Set<string>();
+            for (const a of elements) {
+              const uHref = a._links?.user?.href;
+              if (uHref) {
+                const uid = uHref.split('/').pop();
+                if (uid && !knownUsers.has(uid)) {
+                  missingUids.add(uid);
+                }
+              }
+            }
+
+            for (const uid of missingUids) {
+              try {
+                const uRes = await fetch(`${url}/api/v3/users/${uid}`, { headers });
+                if (uRes.ok) {
+                  const uData: any = await uRes.json();
+                  if (uData.name) {
+                    knownUsers.set(uid, uData.name);
+                  }
+                }
+              } catch {}
+            }
+
+            comments = [];
+            for (const a of elements) {
+              const commentRaw = a.comment?.raw || '';
+              const commentHtml = a.comment?.html || a.comment?.raw || '';
+
+              const details: Array<{ raw: string; html: string }> = [];
+              if (Array.isArray(a.details)) {
+                for (const d of a.details) {
+                  const dRaw = d.raw || '';
+                  const dHtml = d.html || d.raw || '';
+                  if (dRaw || dHtml) {
+                    details.push({ raw: dRaw, html: dHtml });
+                  }
+                }
+              }
+
+              if (commentRaw || commentHtml || details.length > 0) {
+                const uHref = a._links?.user?.href || '';
+                const uid = uHref.split('/').pop() || '';
+                const userName = knownUsers.get(uid) || a._links?.user?.title || (uid ? `Usuario #${uid}` : 'Desconocido');
+
+                comments.push({
+                  id: String(a.id),
+                  commentRaw,
+                  commentHtml: commentHtml || commentRaw,
+                  createdAt: a.createdAt || '',
+                  userName,
+                  details,
+                });
+              }
+            }
+          }
+        } catch {
+          comments = [];
+        }
+      }
+
+      // 3. Attachments
+      let attachments: TicketAttachment[] | null = null;
+      if (options?.includeAttachments ?? true) {
+        try {
+          const attRes = await fetch(`${url}/api/v3/work_packages/${rawTicket}/attachments`, { headers });
+          if (attRes.ok) {
+            const attData: any = await attRes.json();
+            const elements: any[] = attData._embedded?.elements || [];
+            attachments = elements.map((att: any) => {
+              const fileName = att.fileName || 'archivo';
+              const contentType = att.contentType || 'application/octet-stream';
+              const isImage = contentType.startsWith('image/') ||
+                /\.(png|jpe?g|webp|gif|svg)$/i.test(fileName);
+              return {
+                id: String(att.id),
+                fileName,
+                fileSize: att.fileSize || 0,
+                contentType,
+                downloadUrl: att._links?.downloadLocation?.href || '',
+                isImage,
+                createdAt: att.createdAt || undefined,
+                authorName: att._links?.author?.title || undefined,
+              };
+            });
+          }
+        } catch {
+          attachments = [];
+        }
+      }
+
+      return {
+        success: true,
+        ticket: `#${rawTicket}`,
+        subject,
+        description,
+        comments,
+        attachments,
+        project_id: projectId,
+        project_name: projectName,
+        status_id: statusId,
+        status_name: statusName,
+        status_color: statusColor,
+        version_id: versionId,
+        version_name: versionName,
+        priority_name: priorityName,
+        assignee_name: assigneeName,
+        responsible_name: responsibleName,
+        start_date: startDate,
+        due_date: dueDate,
+        estimated_time: estimatedTime,
+        spent_time: spentTime,
+        lock_version: lockVersion,
+        message: 'OK',
+      };
+    } catch (err: unknown) {
+      return {
+        success: false,
+        ticket: `#${rawTicket}`,
+        message: err instanceof Error ? err.message : String(err),
+      };
+    }
+  }
+
+  /**
+   * Fetches content of an attachment using authenticated HTTP headers and returns a data URL
+   */
+  async fetchAttachmentContent(downloadUrl: string): Promise<string> {
+    const token = this.getToken();
+    const url = this.sanitizeUrl();
+
+    if (this.isTauriApp()) {
+      try {
+        return await invoke<string>('fetch_attachment_content', {
+          url,
+          token,
+          downloadUrl,
+        });
+      } catch (err) {
+        console.warn('Tauri attachment fetch error:', err);
+        throw err;
+      }
+    }
+
+    // Web Fallback
+    const fullUrl = downloadUrl.startsWith('http')
+      ? downloadUrl
+      : `${url}${downloadUrl.startsWith('/') ? '' : '/'}${downloadUrl}`;
+    const res = await fetch(fullUrl, {
+      headers: {
+        Authorization: this.buildAuthHeaders(token)['Authorization'],
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    const blob = await res.blob();
+    return URL.createObjectURL(blob);
   }
 
   // ──────────────────────────────────────────────
