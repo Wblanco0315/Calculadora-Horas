@@ -202,7 +202,7 @@ export const es = {
   dashboard: {
     title: 'Panel Principal',
     overview: 'Resumen',
-    settings: 'Configuración',
+    settings: 'Ajustes',
     navGeneral: 'Navegación',
     navOpenProject: 'OpenProject',
     navSettings: 'Configuración',
@@ -309,7 +309,7 @@ export const es = {
     noMoreRecordsDate: 'No hay actividades registradas\npara esta fecha',
     openFullMode: 'Abrir Modo Completo (Dashboard)',
     comingSoon: 'Próximamente',
-    settings: 'Configuración',
+    settings: 'Ajustes',
     resetDialogTitle: 'Reiniciar Actividades',
     resetDialogMessage: '¿Estás seguro de que deseas eliminar todas las actividades registradas para este día? Esta acción no se puede deshacer.',
     confirmReset: 'Sí, reiniciar',

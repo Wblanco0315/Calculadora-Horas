@@ -60,6 +60,17 @@ export class ActivityService {
   readonly singleSyncActivity = signal<Activity | null>(null);
   readonly showTicketContextModal = signal<boolean>(false);
   readonly contextTicket = signal<string | null>(null);
+  readonly activeMenuId = signal<string | null>(null);
+
+  openMenu(id: string): void {
+    this.activeMenuId.set(id);
+  }
+
+  closeMenu(id?: string): void {
+    if (!id || this.activeMenuId() === id) {
+      this.activeMenuId.set(null);
+    }
+  }
 
   /**
    * Whether the currently selected date is today

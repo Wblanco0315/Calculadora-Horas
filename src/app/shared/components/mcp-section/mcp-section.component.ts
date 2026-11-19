@@ -1,6 +1,7 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonDirective } from 'primeng/button';
+import { Tabs, TabList, Tab } from 'primeng/tabs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   tablerRobot,
@@ -24,7 +25,7 @@ export type McpClientType = 'quick_setup' | 'antigravity' | 'agy_cli' | 'cursor'
 @Component({
   selector: 'app-mcp-section',
   standalone: true,
-  imports: [CommonModule, ButtonDirective, NgIcon, TranslatePipe],
+  imports: [CommonModule, ButtonDirective, Tabs, TabList, Tab, NgIcon, TranslatePipe],
   viewProviders: [
     provideIcons({
       tablerRobot,
@@ -56,80 +57,34 @@ export type McpClientType = 'quick_setup' | 'antigravity' | 'agy_cli' | 'cursor'
 
       <!-- Step 1: Automated Client Setup -->
       <div class="p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-50/60 dark:bg-zinc-900/40 space-y-3">
-        <div class="flex items-center justify-between gap-2 flex-wrap">
+        <div class="space-y-2.5">
           <span class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
             1. {{ 'setup.mcp.clientConfigTitle' | translate }}
           </span>
 
-          <!-- Client selector pills -->
-          <div class="flex gap-1 overflow-x-auto pb-1 sm:pb-0">
-            <button
-              type="button"
-              (click)="selectClient('quick_setup')"
-              class="px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
-              [class.bg-primary-500]="selectedClient() === 'quick_setup'"
-              [class.text-white]="selectedClient() === 'quick_setup'"
-              [class.text-slate-600]="selectedClient() !== 'quick_setup'"
-              [class.dark:text-zinc-400]="selectedClient() !== 'quick_setup'"
-            >
-              {{ 'setup.mcp.clientSetupCli' | translate }}
-            </button>
-            <button
-              type="button"
-              (click)="selectClient('antigravity')"
-              class="px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
-              [class.bg-primary-500]="selectedClient() === 'antigravity'"
-              [class.text-white]="selectedClient() === 'antigravity'"
-              [class.text-slate-600]="selectedClient() !== 'antigravity'"
-              [class.dark:text-zinc-400]="selectedClient() !== 'antigravity'"
-            >
-              {{ 'setup.mcp.clientAntigravity' | translate }}
-            </button>
-            <button
-              type="button"
-              (click)="selectClient('agy_cli')"
-              class="px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
-              [class.bg-primary-500]="selectedClient() === 'agy_cli'"
-              [class.text-white]="selectedClient() === 'agy_cli'"
-              [class.text-slate-600]="selectedClient() !== 'agy_cli'"
-              [class.dark:text-zinc-400]="selectedClient() !== 'agy_cli'"
-            >
-              {{ 'setup.mcp.clientAgyCli' | translate }}
-            </button>
-            <button
-              type="button"
-              (click)="selectClient('cursor')"
-              class="px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
-              [class.bg-primary-500]="selectedClient() === 'cursor'"
-              [class.text-white]="selectedClient() === 'cursor'"
-              [class.text-slate-600]="selectedClient() !== 'cursor'"
-              [class.dark:text-zinc-400]="selectedClient() !== 'cursor'"
-            >
-              {{ 'setup.mcp.clientCursor' | translate }}
-            </button>
-            <button
-              type="button"
-              (click)="selectClient('claude_desktop')"
-              class="px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
-              [class.bg-primary-500]="selectedClient() === 'claude_desktop'"
-              [class.text-white]="selectedClient() === 'claude_desktop'"
-              [class.text-slate-600]="selectedClient() !== 'claude_desktop'"
-              [class.dark:text-zinc-400]="selectedClient() !== 'claude_desktop'"
-            >
-              {{ 'setup.mcp.clientClaudeDesktop' | translate }}
-            </button>
-            <button
-              type="button"
-              (click)="selectClient('claude_code')"
-              class="px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
-              [class.bg-primary-500]="selectedClient() === 'claude_code'"
-              [class.text-white]="selectedClient() === 'claude_code'"
-              [class.text-slate-600]="selectedClient() !== 'claude_code'"
-              [class.dark:text-zinc-400]="selectedClient() !== 'claude_code'"
-            >
-              {{ 'setup.mcp.clientClaudeCode' | translate }}
-            </button>
-          </div>
+          <!-- PrimeNG Tabs for Client Selection -->
+          <p-tabs [value]="selectedClient()" (valueChange)="selectClient($event)">
+            <p-tablist class="w-full flex gap-1 overflow-x-auto border-b border-slate-200/80 dark:border-zinc-800">
+              <p-tab value="quick_setup" class="cursor-pointer py-1.5 px-3 text-xs font-medium">
+                {{ 'setup.mcp.clientSetupCli' | translate }}
+              </p-tab>
+              <p-tab value="antigravity" class="cursor-pointer py-1.5 px-3 text-xs font-medium">
+                {{ 'setup.mcp.clientAntigravity' | translate }}
+              </p-tab>
+              <p-tab value="agy_cli" class="cursor-pointer py-1.5 px-3 text-xs font-medium">
+                {{ 'setup.mcp.clientAgyCli' | translate }}
+              </p-tab>
+              <p-tab value="cursor" class="cursor-pointer py-1.5 px-3 text-xs font-medium">
+                {{ 'setup.mcp.clientCursor' | translate }}
+              </p-tab>
+              <p-tab value="claude_desktop" class="cursor-pointer py-1.5 px-3 text-xs font-medium">
+                {{ 'setup.mcp.clientClaudeDesktop' | translate }}
+              </p-tab>
+              <p-tab value="claude_code" class="cursor-pointer py-1.5 px-3 text-xs font-medium">
+                {{ 'setup.mcp.clientClaudeCode' | translate }}
+              </p-tab>
+            </p-tablist>
+          </p-tabs>
         </div>
 
         <!-- Target hint -->
@@ -336,9 +291,11 @@ Tu objetivo es registrar y gestionar de forma proactiva, exacta y profesional el
     this.aiActivitiesCount.set(count);
   }
 
-  selectClient(client: McpClientType): void {
-    this.selectedClient.set(client);
-    this.installFeedback.set(null);
+  selectClient(client: unknown): void {
+    if (client) {
+      this.selectedClient.set(client as McpClientType);
+      this.installFeedback.set(null);
+    }
   }
 
   canAutoInstall(): boolean {

@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, OnDestroy, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, OnDestroy, output, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonDirective } from 'primeng/button';
 import { Popover } from 'primeng/popover';
@@ -315,7 +315,7 @@ function padZero(val: number): string {
             <!-- Single Action Button (Opens Popover Menu) -->
             <button
               type="button"
-              (click)="actionPopover.toggle($event)"
+              (click)="toggleMenu($event)"
               class="cursor-pointer p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors flex items-center justify-center"
               [title]="'compact.actions' | translate"
             >
@@ -323,7 +323,7 @@ function padZero(val: number): string {
             </button>
 
             <!-- PrimeNG Actions Popover -->
-            <p-popover #actionPopover [dismissable]="true" appendTo="body" styleClass="p-popover-sm shadow-xl">
+            <p-popover #actionPopover [dismissable]="true" (onHide)="onMenuHide()" appendTo="body" styleClass="p-popover-sm shadow-xl">
               <div class="flex flex-col min-w-[170px] p-1 gap-0.5 text-xs select-none">
                 <!-- Cronómetro -->
                 @if (!activity().synced) {
@@ -531,7 +531,16 @@ export class ActivityRowComponent implements OnDestroy {
   readonly currentTimeTick = signal<number>(Date.now());
   private tickInterval: ReturnType<typeof setInterval> | null = null;
 
+  readonly actionPopover = viewChild<Popover>('actionPopover');
+
   constructor() {
+    effect(() => {
+      const activeId = this.activityService.activeMenuId();
+      if (activeId !== this.activity().id) {
+        this.actionPopover()?.hide();
+      }
+    });
+
     effect(() => {
       const state = this.activity().timerState;
       if (state === 'running') {
@@ -548,6 +557,9 @@ export class ActivityRowComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.stopTicking();
+    if (this.activityService.activeMenuId() === this.activity().id) {
+      this.activityService.closeMenu(this.activity().id);
+    }
   }
 
   private startTicking(): void {
@@ -690,7 +702,28 @@ export class ActivityRowComponent implements OnDestroy {
     this.showStopwatchControls.set(false);
   }
 
+  toggleMenu(event: Event): void {
+    event.stopPropagation();
+    const popover = this.actionPopover();
+    if (!popover) return;
+
+    if (this.activityService.activeMenuId() === this.activity().id) {
+      popover.hide();
+      this.activityService.closeMenu(this.activity().id);
+    } else {
+      this.activityService.openMenu(this.activity().id);
+      popover.toggle(event);
+    }
+  }
+
+  onMenuHide(): void {
+    if (this.activityService.activeMenuId() === this.activity().id) {
+      this.activityService.closeMenu(this.activity().id);
+    }
+  }
+
   toggleExpanded(): void {
+    this.activityService.closeMenu();
     if (this.isConfirmingDelete() || this.showStopwatchControls()) return;
     this.isExpanded.update((v) => !v);
   }

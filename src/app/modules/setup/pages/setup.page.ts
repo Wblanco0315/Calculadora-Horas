@@ -87,14 +87,6 @@ export class SetupPage implements OnInit {
     return false;
   });
 
-  readonly headerContextLabel = computed(() => {
-    if (this.storageService.isConfigured()) {
-      return this.setupService.languageService.t('compact.settings');
-    }
-    const step = this.setupService.activeStep();
-    return `${this.setupService.languageService.t('setup.title')} (${step}/4)`;
-  });
-
   async ngOnInit(): Promise<void> {
     await this.setupService.init();
     if (!this.storageService.isConfigured()) {
