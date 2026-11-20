@@ -232,7 +232,16 @@ Para garantizar la mantenibilidad y claridad del proyecto:
 ## 8. Directrices Obligatorias de PocketProject Time Tracker (MCP)
 
 Todo agente o asistente que opere con el servidor MCP de PocketProject debe cumplir estrictamente:
-- **Interpretación de Modismos**: Expresiones como "necesito llenar el ticket 11111", "cargar horas a 11111", "imputar tiempo en 11111" significan registrar una actividad (`add_activity`) asociada al ticket 11111.
+- **Interpretación de Modismos**:
+  - "Necesito llenar el ticket 11111", "cargar horas a 11111", "imputar tiempo en 11111" -> registrar actividad (`add_activity`).
+  - "Empezar con el ticket 11111" -> iniciar cronómetro (`start_timer`).
+  - "Resumen de hoy" o "¿Cómo voy hoy?" -> `get_today_summary`.
+  - "¿Quién soy?", "Datos de mi usuario" -> `get_user_info`.
+  - "Listar proyectos", "Ver proyectos" -> `get_projects`.
+  - "Listar estados", "¿Cuáles son los estados de OpenProject?" -> `get_statuses`.
+  - "Cambiar estado del ticket 11111 a [estado]" -> `update_ticket_status`.
+  - "Ver tableros del proyecto", "Columnas del tablero" -> `get_project_boards` / `get_board_columns`.
+  - "Mover ticket 11111 a la columna [columna]" -> `move_ticket_column`.
 - **Prohibido Inventar Tickets**: Jamás inventar o asumir un número de ticket que el usuario no haya escrito textualmente. Si no hay ticket, el campo debe ser omitido o `null`.
 - **Protocolo de Validación en Cascada**:
   1. Ejecutar primero `get_ticket_context(ticket: "11111")` (resolución local ➔ OpenProject API en vivo).
@@ -242,3 +251,6 @@ Todo agente o asistente que opere con el servidor MCP de PocketProject debe cump
   - `get_ticket_context` incluye por defecto la descripción del ticket (`include_description: true`). El agente debe leer la descripción para comprender el requerimiento.
   - **Sugerir lectura de comentarios**: Tras leer la descripción, el agente debe sugerir de forma proactiva al usuario si desea que consulte los comentarios o notas: *"He leído la descripción del ticket. ¿Deseas que revise los comentarios para obtener más detalles?"*. Solo si el usuario lo pide o autoriza, se ejecuta con `include_comments: true`.
   - **Permisos Obligatorios para Archivos y Adjuntos**: NUNCA descargar ni leer un archivo adjunto o imagen sin pedir confirmación explícita al usuario: *"El ticket contiene el archivo adjunto [nombre]. ¿Me autorizas a descargarlo y revisar su contenido?"*. Solo con autorización se ejecuta `get_ticket_attachment`.
+- **Gestión de Estados y Tableros Kanban**:
+  - Para cambiar el estado de un ticket, consultar previamente los estados válidos con `get_statuses` o desde el metadato del ticket y llamar a `update_ticket_status`.
+  - Para desplazar tickets en tableros de acción/Kanban, listar los tableros con `get_project_boards`, obtener las columnas con `get_board_columns` y mover el ticket con `move_ticket_column`, asegurando la sincronización de la posición y el estado en OpenProject.
