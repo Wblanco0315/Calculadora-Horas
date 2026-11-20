@@ -251,7 +251,14 @@ Todo agente o asistente que opere con el servidor MCP de PocketProject debe cump
   - `get_ticket_context` incluye por defecto la descripción del ticket (`include_description: true`). El agente debe leer la descripción para comprender el requerimiento.
   - **Sugerir lectura de comentarios**: Tras leer la descripción, el agente debe sugerir de forma proactiva al usuario si desea que consulte los comentarios o notas: *"He leído la descripción del ticket. ¿Deseas que revise los comentarios para obtener más detalles?"*. Solo si el usuario lo pide o autoriza, se ejecuta con `include_comments: true`.
   - **Permisos Obligatorios para Archivos y Adjuntos**: NUNCA descargar ni leer un archivo adjunto o imagen sin pedir confirmación explícita al usuario: *"El ticket contiene el archivo adjunto [nombre]. ¿Me autorizas a descargarlo y revisar su contenido?"*. Solo con autorización se ejecuta `get_ticket_attachment`.
-- **Gestión de Estados y Tableros Kanban**:
-  - Para cambiar el estado de un ticket, consultar previamente los estados válidos con `get_statuses` o desde el metadato del ticket y llamar a `update_ticket_status`.
-  - Para desplazar tickets en tableros de acción/Kanban, listar los tableros con `get_project_boards`, obtener las columnas con `get_board_columns` y mover el ticket con `move_ticket_column`, asegurando la sincronización de la posición y el estado en OpenProject.
+- **Gestión de Estados, Tableros y Ciclo de Vida del Ticket**:
+  - **Roles**: El PM crea o se le solicita el ticket; el responsable supervisa la tarea y el asignado es quien solventa y desarrolla.
+  - **Inicio**: Al empezar una tarea, si no hay ticket, pedir el número al usuario o indicar que lo solicite al PM.
+  - **En Curso**: Durante el desarrollo, asignar estado **"En desarrollo"** y mover a columna **"HACER HOY"** o **"EN CURSO"** (consultando al usuario cuál prefiere).
+  - **Sin Solución / Comportamiento Esperado**: Si no tiene solución técnica o es el comportamiento esperado, estado **"Justificado"**.
+  - **Bloqueo por Dependencia**: Si depende de otra tarea externa para continuar, estado **"En espera"** y mover a columna **"BLOQUEANTE"**.
+  - **Desarrollo Culminado**: Al terminar, pasar a estado **"Desarrollado"** y a columna **"DESARROLLADO"**.
+  - **Prueba Fallida**: Si el ticket está en **"Prueba fallida"**, la solución previa no funcionó. Investigar leyendo la descripción, sugiriendo revisar comentarios y pidiendo permiso para revisar archivos.
+  - **Pase a Producción y Cierre**: Tras desplegarse, superar QA y estar en producción sin inconvenientes, el PM o el asignado delegado pasan a estado **"Cerrado"** y columna **"FINALIZADO"**.
+  - **Confirmación Obligatoria**: Cualquier cambio en OpenProject es inmediato. Ante cualquier duda o transición, **PREGUNTAR SIEMPRE AL USUARIO** a qué columna o estado mover, mostrando las opciones disponibles. Jamás ejecutar transiciones a ciegas.
 

@@ -134,5 +134,22 @@ Eres un asistente de ingeniería de software conectado a PocketProject vía Mode
   - **NUNCA descargar ni leer un archivo sin consentimiento previo**.
   - Pide permiso explícito: *"El ticket contiene el archivo adjunto [nombre]. ¿Me autorizas a descargarlo y revisar su contenido?"*
   - Solo con autorización expresa del usuario se ejecuta `get_ticket_attachment(download_url: "...")`.
+
+### 4. Flujo de Trabajo y Ciclo de Vida del Ticket (Estados y Tableros)
+1. **Roles**:
+   - **PM (Project Manager)**: Crea o se le solicita el ticket; supervisa el avance general y el cierre final a producción.
+   - **Responsable**: Supervisa la tarea y su validación técnica.
+   - **Asignado**: Desarrollador/ingeniero que solventa la tarea.
+2. **Inicio**:
+   - Al empezar a trabajar, si no se cuenta con ticket, solicitar el número al usuario o sugerir que lo pida al PM.
+3. **Transición de Estados y Columnas**:
+   - **En Curso**: Durante el desarrollo, estado **"En desarrollo"** y columna **"HACER HOY"** o **"EN CURSO"** (preguntar al usuario cuál).
+   - **Sin Solución / Comportamiento Esperado**: Si no tiene solución viable o es el comportamiento correcto esperado, estado **"Justificado"**.
+   - **Bloqueo / Dependencia**: Si depende de otra tarea previa, estado **"En espera"** y columna **"BLOQUEANTE"**.
+   - **Desarrollo Terminado**: Al finalizar la tarea, estado **"Desarrollado"** y columna **"DESARROLLADO"**.
+   - **Prueba Fallida**: Si el ticket está en **"Prueba fallida"**, la solución previa falló; investigar a fondo revisando descripción, comentarios y archivos (con permiso).
+   - **Pase a Producción y Cierre**: Tras despliegue, paso exitoso por QA y validación en producción, el PM o el asignado delegado pasan a estado **"Cerrado"** y columna **"FINALIZADO"**.
+4. **Confirmación Obligatoria**:
+   - Cualquier cambio en OpenProject es inmediato. Si existen dudas sobre a qué columna mover o qué estado asignar, **preguntar siempre al usuario** mostrando el listado de opciones disponibles. Jamás ejecutar transiciones a ciegas.
 <!-- POCKETPROJECT MCP RULES END -->
 ```

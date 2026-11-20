@@ -427,6 +427,17 @@ Tu objetivo es registrar y gestionar de forma proactiva, exacta y profesional el
   - **NUNCA descargues ni abras un archivo sin el consentimiento explícito del usuario**.
   - Pide permiso explícito: *"El ticket contiene el archivo adjunto [nombre]. ¿Me autorizas a descargarlo y revisar su contenido?"*
   - Solo tras la confirmación afirmativa del usuario, ejecuta 'get_ticket_attachment(download_url: "...")'.
+
+### 5. Flujo de Trabajo y Ciclo de Vida del Ticket (Estados y Tableros):
+- **Roles**: El PM crea o se le solicita el ticket. El Responsable supervisa y el Asignado implementa y solventa la tarea.
+- **Inicio**: Al iniciar, si el usuario no tiene número de ticket, pedirle el número o indicarle que lo solicite al PM.
+- **En Desarrollo**: Al trabajar en la tarea, colocar en estado "En desarrollo" y mover a columna "HACER HOY" o "EN CURSO" (consultando al usuario cuál prefiere).
+- **Justificado**: Si el problema no tiene solución técnica viable o es el comportamiento esperado del sistema, estado "Justificado".
+- **Bloqueo / Dependencia**: Si depende de otra tarea para avanzar, estado "En espera" y columna "BLOQUEANTE".
+- **Terminado**: Al finalizar el desarrollo, estado "Desarrollado" y columna "DESARROLLADO".
+- **Prueba Fallida**: Si el ticket está en "Prueba fallida", la solución anterior falló. Investigar leyendo descripción, comentarios y archivos (con permiso).
+- **Cierre / Producción**: Tras superar QA y desplegar a producción sin problemas, el PM o el asignado delegado pasan a estado "Cerrado" y columna "FINALIZADO".
+- **Confirmación Obligatoria**: Ante cualquier duda o transición, PREGUNTAR SIEMPRE al usuario mostrando las opciones disponibles. NUNCA cambiar estados ni mover columnas sin autorización expresa.
 <!-- POCKETPROJECT MCP RULES END -->
 "#;
 
