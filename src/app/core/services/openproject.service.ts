@@ -36,7 +36,7 @@ export class OpenprojectService {
     }
   }
 
-  private sanitizeUrl(url?: string): string {
+  sanitizeUrl(url?: string): string {
     const raw = (url || this.storageService.config().openproject_url || '').trim();
     let clean = raw.replace(/\/+$/, '');
     if (!clean) {
@@ -46,6 +46,11 @@ export class OpenprojectService {
       clean = clean.substring(0, clean.length - 7);
     }
     return clean;
+  }
+
+  getWorkPackageUrl(ticket: string): string {
+    const raw = ticket.trim().replace(/^#/, '');
+    return `${this.sanitizeUrl()}/work_packages/${raw}`;
   }
 
   private getToken(): string {
@@ -167,15 +172,7 @@ export class OpenprojectService {
       const formEndpoint = `${url}/api/v3/work_packages/${rawTicket}/form`;
       const headers = this.buildAuthHeaders(token);
 
-      const [wpRes, formRes] = await Promise.all([
-        fetch(endpoint, { headers }),
-        fetch(formEndpoint, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({}),
-        }),
-      ]);
-
+      const wpRes = await fetch(endpoint, { headers });
       if (!wpRes.ok) {
         return {
           success: false,
@@ -201,20 +198,32 @@ export class OpenprojectService {
       const lockVersion = wpData.lockVersion || null;
 
       let availableStatuses: StatusOption[] | null = null;
-      if (formRes.ok) {
-        const formData = await formRes.json();
-        const allowedRaw =
-          formData?._embedded?.schema?.status?.allowedValues ??
-          formData?._embedded?.schema?.status?._links?.allowedValues;
-        const allowedArray = Array.isArray(allowedRaw) ? allowedRaw : [];
+      try {
+        const formRes = await fetch(formEndpoint, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(lockVersion ? { lockVersion } : {}),
+        });
+        if (formRes.ok) {
+          const formData = await formRes.json();
+          const allowedRaw =
+            formData?._embedded?.schema?.status?._embedded?.allowedValues ??
+            formData?._embedded?.schema?.status?.allowedValues ??
+            formData?._embedded?.schema?.status?._links?.allowedValues;
+          const allowedArray = Array.isArray(allowedRaw) ? allowedRaw : [];
 
-        if (allowedArray.length > 0) {
-          availableStatuses = allowedArray.map((s: Record<string, unknown>) => ({
-            id: String(s['id'] || (String(s['href'] || '').split('/').pop())),
-            name: String(s['name'] || s['title'] || ''),
-            color: typeof s['color'] === 'string' ? s['color'] : undefined,
-          }));
+          if (allowedArray.length > 0) {
+            availableStatuses = allowedArray.map((s: Record<string, unknown>) => ({
+              id: String(s['id'] || (String(s['href'] || '').split('/').pop())),
+              name: String(s['name'] || s['title'] || ''),
+              color: typeof s['color'] === 'string' ? s['color'] : undefined,
+            }));
+          }
         }
+      } catch {}
+
+      if (!availableStatuses || availableStatuses.length === 0) {
+        availableStatuses = await this.getStatuses();
       }
 
       return {
@@ -453,6 +462,7 @@ export class OpenprojectService {
         estimated_time: estimatedTime,
         spent_time: spentTime,
         lock_version: lockVersion,
+        available_statuses: await this.getStatuses(),
         message: 'OK',
       };
     } catch (err: unknown) {
@@ -1011,6 +1021,23 @@ export class OpenprojectService {
     if (!token) return [];
     const url = this.sanitizeUrl();
 
+    if (this.isTauriApp()) {
+      try {
+        const res = await invoke<BoardOption[]>('fetch_project_boards', {
+          url,
+          token,
+          projectId,
+          projectIdentifier: projectIdentifier || null,
+        });
+        if (res && res.length) {
+          this.boardsCache.set(projectId, res);
+          return res;
+        }
+      } catch (err) {
+        console.warn('Could not fetch project boards via Tauri:', err);
+      }
+    }
+
     try {
       const res = await fetch(`${url}/api/v3/grids`, {
         headers: this.buildAuthHeaders(token),
@@ -1019,12 +1046,27 @@ export class OpenprojectService {
       const data = await res.json();
       if (!data?._embedded?.elements) return [];
 
-      const identifier = projectIdentifier || projectId;
       const boards: BoardOption[] = data._embedded.elements
         .filter((g: Record<string, unknown>) => {
-          const links = g['_links'] as Record<string, { href?: string }> | undefined;
+          const links = g['_links'] as Record<string, { href?: string; title?: string }> | undefined;
           const scope = links?.['scope']?.href ?? links?.['page']?.href ?? '';
-          return scope.endsWith('/boards') && scope.includes(`/${identifier}/`);
+          const isBoard =
+            scope.endsWith('/boards') ||
+            (Array.isArray((g as any).widgets) &&
+              (g as any).widgets.some((w: any) => w.identifier === 'work_package_query'));
+          const isSubtaskView = (g as any).options?.attribute === 'subtasks';
+          if (!isBoard || isSubtaskView) return false;
+
+          const projHref = links?.['project']?.href ?? '';
+          const projId = projHref.split('/').pop() || '';
+          const pid = String(projectId).trim();
+          const matchesProject =
+            projId === pid ||
+            projHref.endsWith(`/${pid}`) ||
+            scope.includes(`/${pid}/`) ||
+            Boolean(projectIdentifier && scope.includes(`/${projectIdentifier}/`));
+
+          return matchesProject;
         })
         .map((g: Record<string, unknown>) => {
           const links = g['_links'] as Record<string, { title?: string }> | undefined;
@@ -1056,6 +1098,22 @@ export class OpenprojectService {
     if (!token) return [];
     const url = this.sanitizeUrl();
 
+    if (this.isTauriApp()) {
+      try {
+        const res = await invoke<BoardColumnOption[]>('fetch_board_columns', {
+          url,
+          token,
+          gridId,
+        });
+        if (res && res.length) {
+          this.boardColumnsCache.set(gridId, res);
+          return res;
+        }
+      } catch (err) {
+        console.warn('Could not fetch board columns via Tauri:', err);
+      }
+    }
+
     try {
       const headers = this.buildAuthHeaders(token);
       const gridRes = await fetch(`${url}/api/v3/grids/${gridId}`, { headers });
@@ -1074,12 +1132,35 @@ export class OpenprojectService {
             if (!qRes.ok) return null;
             const qData = await qRes.json();
             const elements: Array<{ id: number }> = qData._embedded?.results?._embedded?.elements ?? [];
+
+            let statusId: string | undefined;
+            let statusName: string | undefined;
+            if (Array.isArray(qData.filters)) {
+              const statusFilter = qData.filters.find((f: any) => {
+                const href = f?._links?.filter?.href || '';
+                const name = (f?.name || '').toLowerCase();
+                return href.endsWith('/status') || href.endsWith('/status_id') || name === 'status' || name === 'estado';
+              });
+              if (statusFilter) {
+                const valObj = statusFilter?._links?.values?.[0];
+                if (valObj?.href) {
+                  statusId = valObj.href.split('/').pop();
+                  statusName = valObj.title;
+                } else if (Array.isArray(statusFilter.values) && statusFilter.values.length > 0) {
+                  const firstVal = statusFilter.values[0];
+                  statusId = typeof firstVal === 'object' ? firstVal.id || firstVal.href?.split('/').pop() : String(firstVal);
+                }
+              }
+            }
+
             return {
               queryId,
               name: qData.name ?? `Columna ${queryId}`,
               widgetId: widget.id,
               startColumn: widget.startColumn,
               workPackageIds: elements.map((e) => e.id),
+              statusId,
+              statusName,
             } as BoardColumnOption;
           } catch {
             return null;
@@ -1110,18 +1191,19 @@ export class OpenprojectService {
     const boards = await this.getProjectBoards(projectId, projectIdentifier);
     if (!boards.length) return null;
 
-    const results = await Promise.all(
-      boards.map(async (board) => {
+    const results: Array<BoardLocation | null> = await Promise.all(
+      boards.map(async (board): Promise<BoardLocation | null> => {
         const columns = await this.getBoardColumns(board.id);
         const col = columns.find((c) => c.workPackageIds.includes(ticketNum));
-        return col
-          ? {
-              boardId: board.id,
-              boardName: board.name,
-              boardColumnQueryId: col.queryId,
-              boardColumnName: col.name,
-            }
-          : null;
+        if (!col) return null;
+        return {
+          boardId: board.id,
+          boardName: board.name,
+          boardColumnQueryId: col.queryId,
+          boardColumnName: col.name,
+          statusId: col.statusId,
+          statusName: col.statusName,
+        };
       })
     );
 
@@ -1131,43 +1213,120 @@ export class OpenprojectService {
   async moveWorkPackageToBoardColumn(
     ticket: string,
     targetQueryId: string,
-    sourceQueryId?: string
-  ): Promise<{ ok: boolean; error?: string }> {
-    const ticketNum = parseInt(ticket.trim().replace(/^#/, ''), 10);
+    sourceQueryId?: string,
+    targetStatusId?: string
+  ): Promise<{ ok: boolean; statusId?: string; error?: string }> {
+    const rawTicket = ticket.trim().replace(/^#/, '');
+    const ticketNum = parseInt(rawTicket, 10);
     if (isNaN(ticketNum)) return { ok: false, error: 'Invalid ticket ID' };
     const token = this.getToken();
     if (!token) return { ok: false, error: 'No token' };
     const url = this.sanitizeUrl();
+
+    if (this.isTauriApp()) {
+      try {
+        const res = await invoke<{ ok: boolean; statusId?: string; error?: string }>(
+          'move_work_package_to_board_column',
+          {
+            url,
+            token,
+            ticket: rawTicket,
+            targetQueryId,
+            sourceQueryId: sourceQueryId || null,
+            targetStatusId: targetStatusId || null,
+          }
+        );
+
+        if (res.ok) {
+          this.boardColumnsCache.forEach((cols, gridId) => {
+            if (cols.some((c) => c.queryId === targetQueryId || c.queryId === sourceQueryId)) {
+              this.boardColumnsCache.delete(gridId);
+            }
+          });
+        }
+        return res;
+      } catch (err: any) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+
     const headers = this.buildAuthHeaders(token);
 
     try {
+      // 1. Resolve target status if not explicitly passed
+      let effectiveStatusId = targetStatusId;
+      if (!effectiveStatusId) {
+        for (const cols of this.boardColumnsCache.values()) {
+          const matched = cols.find((c) => c.queryId === targetQueryId);
+          if (matched?.statusId) {
+            effectiveStatusId = matched.statusId;
+            break;
+          }
+        }
+      }
+
+      // 2. If it is an action board for status, update the ticket status in OpenProject
+      if (effectiveStatusId) {
+        const statusRes = await this.updateWorkPackageStatus(rawTicket, effectiveStatusId);
+        if (!statusRes.ok) {
+          console.warn('Could not update work package status directly:', statusRes.error);
+        }
+      }
+
+      // 3. Remove order from source query if distinct (-1 tells OpenProject to remove_order)
       if (sourceQueryId && sourceQueryId !== targetQueryId) {
         await fetch(`${url}/api/v3/queries/${sourceQueryId}/order`, {
           method: 'PATCH',
           headers,
-          body: JSON.stringify({ delta: { [String(ticketNum)]: -40960 } }),
+          body: JSON.stringify({ delta: { [String(ticketNum)]: -1 } }),
+        }).catch((err) => console.warn('Could not remove previous order:', err));
+      }
+
+      // 4. Update order position in target query (positioned at top / first position)
+      let targetPosition = 0;
+      try {
+        const orderRes = await fetch(`${url}/api/v3/queries/${targetQueryId}/order`, {
+          method: 'GET',
+          headers,
         });
+        if (orderRes.ok) {
+          const orderMap: Record<string, number> = await orderRes.json();
+          const existingPositions: number[] = [];
+          for (const [wpId, pos] of Object.entries(orderMap)) {
+            if (wpId !== String(ticketNum) && typeof pos === 'number') {
+              existingPositions.push(pos);
+            }
+          }
+          if (existingPositions.length > 0) {
+            const minPos = Math.min(...existingPositions);
+            targetPosition = minPos - 8192;
+          }
+        }
+      } catch (err) {
+        console.warn('Could not check existing query order:', err);
       }
 
       const putRes = await fetch(`${url}/api/v3/queries/${targetQueryId}/order`, {
         method: 'PATCH',
         headers,
-        body: JSON.stringify({ delta: { [String(ticketNum)]: -1 } }),
+        body: JSON.stringify({ delta: { [String(ticketNum)]: targetPosition } }),
       });
 
       if (!putRes.ok) {
-        const errData = await putRes.json().catch(() => null);
-        return { ok: false, error: errData?.message || `HTTP ${putRes.status}` };
+        if (!effectiveStatusId) {
+          const errData = await putRes.json().catch(() => null);
+          return { ok: false, error: errData?.message || `HTTP ${putRes.status}` };
+        }
       }
 
-      // Invalidate column cache for the grid
+      // 5. Invalidate column cache for affected grids
       this.boardColumnsCache.forEach((cols, gridId) => {
-        if (cols.some((c) => c.queryId === targetQueryId)) {
+        if (cols.some((c) => c.queryId === targetQueryId || c.queryId === sourceQueryId)) {
           this.boardColumnsCache.delete(gridId);
         }
       });
 
-      return { ok: true };
+      return { ok: true, statusId: effectiveStatusId };
     } catch (err: unknown) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }

@@ -393,18 +393,21 @@ export class ActivityService {
 
   private async backfillMissingTitles(activities: Activity[]): Promise<void> {
     if (!this.storageService.isLoggedIn()) return;
-    const toBackfill = activities.filter((a) => a.ticket && !a.ticketTitle);
+    const toBackfill = activities.filter((a) => a.ticket && (!a.ticketTitle || !a.statusName));
     if (toBackfill.length === 0) return;
 
     for (const act of toBackfill) {
       if (!act.ticket) continue;
       try {
         const info = await this.fetchTicketSubject(act.ticket);
-        if (info.success && info.subject) {
+        if (info.success) {
           await this.updateActivity(act.id, {
-            ticketTitle: info.subject,
+            ticketTitle: info.subject || act.ticketTitle,
             projectId: act.projectId || info.project_id || undefined,
             projectName: act.projectName || info.project_name || undefined,
+            statusId: act.statusId || info.status_id || undefined,
+            statusName: act.statusName || info.status_name || undefined,
+            statusColor: act.statusColor || info.status_color || undefined,
           });
         }
       } catch {

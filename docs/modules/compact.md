@@ -144,6 +144,25 @@ Cada modal se encuentra aislado en su propio componente standalone dentro de `mo
 5. **`app-close-confirm-modal`**:
    - Modal dedicado para confirmar el cierre de la aplicación al pulsar el botón de cerrar (`X`) o mediante solicitudes de cierre del sistema.
    - Proporciona opciones limpias para Cancelar, Minimizar a la bandeja (guardar en los iconos ocultos) o Cerrar la aplicación definitivamente.
+6. **`app-ticket-context-modal` (Modal de Contexto Extendido de Ticket)**:
+   - **Ubicación**: `src/app/shared/components/ticket-context-modal/ticket-context-modal.component.ts`.
+   - **Dimensiones y Responsividad**:
+     - Tamaño mínimo garantizado de `min(94vw, 540px)` de ancho y `min(75vh, 480px)` de alto, con contenedor de pestañas de `min-h-[380px]`.
+     - `zIndex` calibrado a 1100 para no solapar ni ocultar el `app-header` nativo.
+   - **Pestaña de Detalle (Primera vista predeterminada)**:
+     - Panel de 12 metadatos clave organizados en rejilla uniforme: Proyecto, Tipo, Versión, Prioridad, Asignado, Responsable, Fechas (Inicio / Fin), Estimado (formateado con `formatDuration`), Horas Invertidas y Tiempo Registrado Hoy.
+     - **Cambio de Estado en Vivo**: Selector interactivo (`<p-select>`) de estados de OpenProject con indicador cromático (`status_color`) y actualización reactiva inmediata con control de concurrencia optimista (`lock_version`).
+     - **Flujo de Tableros (Kanban / Action Boards)**: Selectores independientes para elegir el Tablero (`<p-select>`) y la Columna de destino (`<p-select>`), sincronizando el posicionamiento delta y actualizando automáticamente el estado del ticket.
+   - **Pestaña de Descripción**:
+     - Soporte completo para renderizado Markdown y HTML generado por OpenProject CKEditor.
+     - **Imágenes Integradas con Autenticación**: Pre-descarga de imágenes mediante `fetch_attachment_content` de Tauri para eludir restricciones de cookies de sesión, reemplazando fuentes relativas por data URLs en base64 en tiempo real con caché reactivo (`imageCache`).
+     - **Lightbox Interactivo**: Al hacer clic en cualquier imagen embebida, se despliega una visualización a pantalla completa con zoom.
+   - **Pestaña de Comentarios**:
+     - Barra de filtros fija/adherida (*pinned*) en la parte superior (búsqueda por texto y autor), separada de la barra de desplazamiento que se aplica exclusivamente al listado de comentarios (`max-h-72 overflow-y-auto`).
+     - Renderizado de comentarios con avatares, fechas relativas y soporte de imágenes inline.
+   - **Pestaña de Archivos (Descargas e hipervínculos directos)**:
+     - Título estandarizado a **"Archivos"** / **"Files"**.
+     - Lista de adjuntos enlazados directamente a la plataforma web de OpenProject (mediante `openUrl`), emulando con fidelidad el comportamiento nativo web.
 
 ---
 

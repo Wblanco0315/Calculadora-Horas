@@ -150,3 +150,21 @@ router-outlet {
               border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
               color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* Ensure PrimeNG dialog and overlay masks never cover the desktop application header (32px / 2rem) */
+.p-dialog-mask,
+.p-overlay-mask {
+  top: 2rem !important;
+  height: calc(100dvh - 2rem) !important;
+}
+
+.p-dialog {
+  max-height: calc(100dvh - 3.5rem) !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.p-dialog .p-dialog-content {
+  overflow-y: auto !important;
+  flex: 1 1 auto !important;
+}

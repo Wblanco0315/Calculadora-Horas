@@ -407,6 +407,9 @@ export class ActivityFormModalComponent {
   // Form fields
   ticketNumber = '';
   ticketTitle = '';
+  ticketStatusId = signal<string | undefined>(undefined);
+  ticketStatusName = signal<string | undefined>(undefined);
+  ticketStatusColor = signal<string | undefined>(undefined);
   activityName = '';
   hours: number = 0;
   minutes: number = 30;
@@ -452,6 +455,9 @@ export class ActivityFormModalComponent {
           this.isEditing.set(true);
           this.ticketNumber = editing.ticket || '';
           this.ticketTitle = editing.ticketTitle || '';
+          this.ticketStatusId.set(editing.statusId || undefined);
+          this.ticketStatusName.set(editing.statusName || undefined);
+          this.ticketStatusColor.set(editing.statusColor || undefined);
           this.isTicketFound.set(!!editing.ticket && !!editing.ticketTitle);
           const opts = this.activityTypeOptions();
           this.selectedActivityTypeId =
@@ -502,6 +508,9 @@ export class ActivityFormModalComponent {
   resetForm(): void {
     this.ticketNumber = '';
     this.ticketTitle = '';
+    this.ticketStatusId.set(undefined);
+    this.ticketStatusName.set(undefined);
+    this.ticketStatusColor.set(undefined);
     this.isTicketFound.set(false);
     const opts = this.activityTypeOptions();
     this.selectedActivityTypeId = opts.length > 0 ? opts[0].value : '';
@@ -568,6 +577,9 @@ export class ActivityFormModalComponent {
       const res = await this.activityService.fetchTicketSubject(raw);
       if (res.success && res.subject) {
         this.ticketTitle = res.subject;
+        this.ticketStatusId.set(res.status_id || undefined);
+        this.ticketStatusName.set(res.status_name || undefined);
+        this.ticketStatusColor.set(res.status_color || undefined);
         this.isTicketFound.set(true);
         if (res.project_id) {
           this.selectedProjectId = res.project_id;
@@ -669,6 +681,9 @@ export class ActivityFormModalComponent {
         projectName: proj?.name || undefined,
         activityTypeId: this.selectedActivityTypeId || undefined,
         activityTypeName: typeObj?.name || undefined,
+        statusId: this.ticketStatusId() || editing.statusId,
+        statusName: this.ticketStatusName() || editing.statusName,
+        statusColor: this.ticketStatusColor() || editing.statusColor,
         timerSeconds: 0,
         timerState: 'idle',
         timerLastStarted: undefined,
@@ -685,6 +700,9 @@ export class ActivityFormModalComponent {
         projectName: proj?.name || undefined,
         activityTypeId: this.selectedActivityTypeId || undefined,
         activityTypeName: typeObj?.name || undefined,
+        statusId: this.ticketStatusId(),
+        statusName: this.ticketStatusName(),
+        statusColor: this.ticketStatusColor(),
         timerSeconds: 0,
         timerState: useStopwatch ? 'running' : 'idle',
         timerLastStarted: useStopwatch ? Date.now() : undefined,

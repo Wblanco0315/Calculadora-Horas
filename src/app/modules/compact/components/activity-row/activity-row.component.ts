@@ -116,7 +116,7 @@ function padZero(val: number): string {
           }
 
           <!-- Ticket line + Title -->
-          <div class="flex items-center gap-1.5">
+          <div class="flex items-center gap-1.5 flex-wrap">
             @if (activity().ticket) {
               <button
                 type="button"
@@ -126,6 +126,15 @@ function padZero(val: number): string {
               >
                 #{{ activity().ticket }}
               </button>
+            }
+            @if (activity().statusName) {
+              <span
+                class="shrink-0 text-[10px] font-semibold px-1.5 py-0.2 rounded border"
+                [style.borderColor]="activity().statusColor || '#3b82f6'"
+                [style.color]="activity().statusColor || '#3b82f6'"
+              >
+                {{ activity().statusName }}
+              </span>
             }
             @if (activity().createdByAi) {
               <span
@@ -457,8 +466,13 @@ function padZero(val: number): string {
                 </span>
                 <div class="flex items-center gap-1 flex-wrap">
                   @if (activity().statusName) {
-                    <span class="font-medium text-slate-700 dark:text-zinc-200 truncate">
-                      {{ activity().statusName }}
+                    <span
+                      class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.2 rounded border"
+                      [style.borderColor]="activity().statusColor || '#3b82f6'"
+                      [style.color]="activity().statusColor || '#3b82f6'"
+                    >
+                      <span class="size-1.5 rounded-full shrink-0" [style.backgroundColor]="activity().statusColor || '#3b82f6'"></span>
+                      <span>{{ activity().statusName }}</span>
                     </span>
                   }
                   <span

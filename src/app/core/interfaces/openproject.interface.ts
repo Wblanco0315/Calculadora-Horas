@@ -27,6 +27,8 @@ export interface BoardColumnOption {
   widgetId: number;
   startColumn: number;
   workPackageIds: number[];
+  statusId?: string;
+  statusName?: string;
 }
 
 export interface BoardLocation {
@@ -34,6 +36,8 @@ export interface BoardLocation {
   boardName: string;
   boardColumnQueryId: string;
   boardColumnName: string;
+  statusId?: string;
+  statusName?: string;
 }
 
 export interface TimeEntryActivityType {

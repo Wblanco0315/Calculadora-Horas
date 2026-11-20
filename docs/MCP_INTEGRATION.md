@@ -86,6 +86,13 @@ O en `~/.gemini/config/mcp_config.json`:
 | `start_timer` | `ticket`, `ticket_title`, `name`, `project_name` | Pausa cronómetros previos e inicia un nuevo cronómetro en tiempo real con `created_by_ai = 1`. |
 | `stop_timer` | `id` (opcional) | Detiene el cronómetro activo y consolida los minutos trabajados. |
 | `get_openproject_context` | Ninguno | Proporciona el contexto de OpenProject (nombre de usuario, URL base, conteo de favoritos). |
+| `get_user_info` | Ninguno | Obtiene el perfil completo del usuario autenticado en OpenProject (ID, nombre, correo, login, admin, horario). |
+| `get_projects` | `query`, `active`, `limit` | Lista y busca proyectos accesibles en OpenProject con ID, nombre, slug y jerarquía. |
+| `get_statuses` | Ninguno | Retorna la lista oficial de estados disponibles en OpenProject (ID, nombre, color hexadecimal). |
+| `update_ticket_status` | `ticket` (req), `status_id` (req), `lock_version` (opc) | Actualiza el estado de un ticket en OpenProject con soporte de concurrencia optimista. |
+| `get_project_boards` | `project_id` (req), `project_identifier` (opc) | Lista los tableros Kanban / de acción disponibles en el proyecto indicado. |
+| `get_board_columns` | `board_id` (req) | Retorna las columnas del tablero seleccionado con sus queries, estados asignados y tickets contenidos. |
+| `move_ticket_column` | `ticket` (req), `target_query_id` (req), `source_query_id` (opc), `target_status_id` (opc) | Desplaza un ticket a otra columna del tablero, ajustando su posición y sincronizando su estado en OpenProject. |
 
 ---
 
@@ -100,7 +107,12 @@ Eres un asistente de ingeniería de software conectado a PocketProject vía Mode
 - "Necesito llenar el ticket 11111", "Cargar horas a 11111", "Imputar tiempo en 11111", "Trabajé en el ticket 11111" -> Significa registrar una actividad ('add_activity') asociada al ticket 11111.
 - "Empezar con el ticket 11111" -> Significa iniciar el cronómetro con 'start_timer'.
 - "¿Cómo voy hoy?" o "Resumen de horas" -> 'get_today_summary'.
-- "¿Qué registré en el ticket 11111?" -> 'get_ticket_context(ticket: "11111", include_time_entries: true)'.
+- "¿Quién soy?", "Información de mi usuario" -> 'get_user_info'.
+- "Listar proyectos", "Ver proyectos" -> 'get_projects'.
+- "Listar estados", "¿Cuáles son los estados?" -> 'get_statuses'.
+- "Cambiar estado del ticket 11111 a En progreso" -> 'update_ticket_status'.
+- "Ver tableros del proyecto", "Columnas del tablero" -> 'get_project_boards' / 'get_board_columns'.
+- "Mover ticket 11111 a la columna Hecho" -> 'move_ticket_column'.
 
 ### 2. Protocolo Estricto de Tickets (ANTI-ALUCINACIÓN):
 - **PROHIBIDO INVENTAR TICKETS**: Jamás generes un número de ticket al azar ni asignes un ticket que el usuario no haya escrito textualmente.

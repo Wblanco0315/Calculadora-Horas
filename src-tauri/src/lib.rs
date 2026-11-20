@@ -44,6 +44,32 @@ pub struct VersionOptionItem {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct BoardOptionItem {
+    pub id: String,
+    pub name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct BoardColumnOptionItem {
+    pub query_id: String,
+    pub name: String,
+    pub widget_id: i64,
+    pub start_column: i64,
+    pub work_package_ids: Vec<i64>,
+    pub status_id: Option<String>,
+    pub status_name: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct MoveColumnResult {
+    pub ok: bool,
+    pub status_id: Option<String>,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TicketInfoResult {
     pub success: bool,
     pub subject: Option<String>,
@@ -352,6 +378,12 @@ Tu objetivo es registrar y gestionar de forma proactiva, exacta y profesional el
 - "Empezar con el ticket 11111" -> Significa iniciar el cronómetro con 'start_timer'.
 - "Resumen de hoy" o "¿Cómo voy hoy?" -> 'get_today_summary'.
 - "¿Qué registré en el ticket 11111?" -> 'get_ticket_context(ticket: "11111", include_time_entries: true)' o 'search_activities'.
+- "¿Quién soy?", "Información de mi usuario" -> 'get_user_info'.
+- "Listar proyectos", "Ver proyectos" -> 'get_projects'.
+- "Listar estados", "¿Cuáles son los estados de OpenProject?" -> 'get_statuses'.
+- "Cambiar estado del ticket 11111 a [estado]" -> 'update_ticket_status'.
+- "Ver tableros del proyecto", "Columnas del tablero" -> 'get_project_boards' / 'get_board_columns'.
+- "Mover ticket 11111 a la columna [columna]" -> 'move_ticket_column'.
 
 ### 2. Protocolo Estricto de Tickets (ANTI-ALUCINACIÓN):
 - **PROHIBIDO INVENTAR TICKETS**: Jamás generes un número de ticket al azar ni asignes un ticket que el usuario no haya escrito textualmente.
@@ -378,6 +410,12 @@ Tu objetivo es registrar y gestionar de forma proactiva, exacta y profesional el
 11. get_favorite_tickets: Lista tickets favoritos con título y proyecto.
 12. add_favorite_ticket: Guarda un ticket frecuente en favoritos.
 13. get_openproject_context: Información del usuario y configuración OpenProject.
+14. get_user_info: Perfil completo del usuario OpenProject autenticado.
+15. get_projects: Lista y búsqueda de proyectos de OpenProject.
+16. get_statuses: Lista oficial de estados de OpenProject.
+17. update_ticket_status: Actualiza el estado de un ticket en OpenProject.
+18. get_project_boards / get_board_columns: Consulta tableros Kanban y columnas de un proyecto.
+19. move_ticket_column: Mueve un ticket de columna en un tablero y sincroniza su estado.
 
 ### 4. Lectura Progresiva de Contexto y Permisos de Archivos:
 - **Lectura Normal de Descripción**: Al consultar un ticket con 'get_ticket_context(ticket: "11111")', se incluye automáticamente la descripción ('include_description: true'). Lee y comprende la descripción para contextualizar la tarea.
@@ -608,21 +646,26 @@ async fn fetch_ticket_info(
     // Query form endpoint to fetch allowed statuses
     let form_endpoint = format!("{}/api/v3/work_packages/{}/form", clean_url, raw_ticket);
     let mut available_statuses: Option<Vec<StatusOptionItem>> = None;
+    let form_body = match lock_version {
+        Some(lv) => serde_json::json!({ "lockVersion": lv }).to_string(),
+        None => "{}".to_string(),
+    };
 
     if let Ok(form_res) = client
         .post(&form_endpoint)
         .header("Authorization", &auth_value)
         .header("Content-Type", "application/json")
         .header("Accept", "application/hal+json, application/json")
-        .body("{}")
+        .body(form_body)
         .send()
         .await
     {
         if form_res.status().is_success() {
             if let Ok(form_json) = form_res.json::<serde_json::Value>().await {
                 let schema_status = &form_json["_embedded"]["schema"]["status"];
-                let allowed_raw = schema_status["allowedValues"]
+                let allowed_raw = schema_status["_embedded"]["allowedValues"]
                     .as_array()
+                    .or_else(|| schema_status["allowedValues"].as_array())
                     .or_else(|| schema_status["_links"]["allowedValues"].as_array());
 
                 if let Some(arr) = allowed_raw {
@@ -650,6 +693,15 @@ async fn fetch_ticket_info(
                         available_statuses = Some(list);
                     }
                 }
+            }
+        }
+    }
+
+    // Resilient fallback: if form did not return available statuses, fetch all project statuses
+    if available_statuses.as_ref().map_or(true, |v| v.is_empty()) {
+        if let Ok(all) = fetch_statuses(clean_url.clone(), token.clone()).await {
+            if !all.is_empty() {
+                available_statuses = Some(all);
             }
         }
     }
@@ -959,7 +1011,10 @@ async fn fetch_ticket_context(
                             let file_name = att["fileName"].as_str().unwrap_or("archivo").to_string();
                             let file_size = att["fileSize"].as_i64().unwrap_or(0);
                             let content_type = att["contentType"].as_str().unwrap_or("application/octet-stream").to_string();
-                            let download_url = att["_links"]["downloadLocation"]["href"].as_str().unwrap_or("").to_string();
+                            let mut download_url = att["_links"]["downloadLocation"]["href"].as_str().unwrap_or("").to_string();
+                            if download_url.is_empty() && !id.is_empty() {
+                                download_url = format!("/api/v3/attachments/{}/content", id);
+                            }
                             let is_image = content_type.starts_with("image/")
                                 || file_name.ends_with(".png")
                                 || file_name.ends_with(".jpg")
@@ -999,20 +1054,26 @@ async fn fetch_ticket_context(
     // 4. Form endpoint for allowed statuses
     let form_endpoint = format!("{}/api/v3/work_packages/{}/form", clean_url, raw_ticket);
     let mut available_statuses: Option<Vec<StatusOptionItem>> = None;
+    let form_body = match lock_version {
+        Some(lv) => serde_json::json!({ "lockVersion": lv }).to_string(),
+        None => "{}".to_string(),
+    };
+
     if let Ok(form_res) = client
         .post(&form_endpoint)
         .header("Authorization", &auth_value)
         .header("Content-Type", "application/json")
         .header("Accept", "application/hal+json, application/json")
-        .body("{}")
+        .body(form_body)
         .send()
         .await
     {
         if form_res.status().is_success() {
             if let Ok(form_json) = form_res.json::<serde_json::Value>().await {
                 let schema_status = &form_json["_embedded"]["schema"]["status"];
-                let allowed_raw = schema_status["allowedValues"]
+                let allowed_raw = schema_status["_embedded"]["allowedValues"]
                     .as_array()
+                    .or_else(|| schema_status["allowedValues"].as_array())
                     .or_else(|| schema_status["_links"]["allowedValues"].as_array());
 
                 if let Some(arr) = allowed_raw {
@@ -1040,6 +1101,15 @@ async fn fetch_ticket_context(
                         available_statuses = Some(list);
                     }
                 }
+            }
+        }
+    }
+
+    // Resilient fallback: if form did not return available statuses, fetch all project statuses
+    if available_statuses.as_ref().map_or(true, |v| v.is_empty()) {
+        if let Ok(all) = fetch_statuses(clean_url.clone(), token.clone()).await {
+            if !all.is_empty() {
+                available_statuses = Some(all);
             }
         }
     }
@@ -1089,26 +1159,74 @@ async fn fetch_attachment_content(
         )
     };
     let auth_value = build_auth_header(&token);
-    let client = build_http_client(25)?;
-    let res = client
-        .get(&full_url)
+    let client = reqwest::Client::builder()
+        .user_agent(BROWSER_USER_AGENT)
+        .timeout(Duration::from_secs(25))
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .map_err(|e| format!("Error creando cliente HTTP: {}", e))?;
+
+    let mut current_url = full_url;
+    let mut current_res = client
+        .get(&current_url)
         .header("Authorization", &auth_value)
         .send()
         .await
         .map_err(|e| format!("Error en conexión: {}", e))?;
 
-    if !res.status().is_success() {
-        return Err(format!("Error HTTP {}", res.status()));
+    let mut redirects = 0;
+    while current_res.status().is_redirection() && redirects < 5 {
+        redirects += 1;
+        if let Some(loc) = current_res.headers().get("location") {
+            let loc_str = loc.to_str().map_err(|e| e.to_string())?;
+            current_url = if loc_str.starts_with("http") {
+                loc_str.to_string()
+            } else {
+                format!(
+                    "{}{}{}",
+                    clean_url,
+                    if loc_str.starts_with('/') { "" } else { "/" },
+                    loc_str
+                )
+            };
+            current_res = client
+                .get(&current_url)
+                .header("Authorization", &auth_value)
+                .send()
+                .await
+                .map_err(|e| format!("Error en conexión: {}", e))?;
+        } else {
+            break;
+        }
     }
 
-    let content_type = res
+    if !current_res.status().is_success() {
+        return Err(format!("Error HTTP {}", current_res.status()));
+    }
+
+    let mut content_type = current_res
         .headers()
         .get("content-type")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("application/octet-stream")
         .to_string();
 
-    let bytes = res.bytes().await.map_err(|e| e.to_string())?;
+    if content_type == "application/octet-stream" || content_type.starts_with("text/") {
+        let lower = current_url.to_lowercase();
+        if lower.ends_with(".png") {
+            content_type = "image/png".to_string();
+        } else if lower.ends_with(".jpg") || lower.ends_with(".jpeg") {
+            content_type = "image/jpeg".to_string();
+        } else if lower.ends_with(".gif") {
+            content_type = "image/gif".to_string();
+        } else if lower.ends_with(".webp") {
+            content_type = "image/webp".to_string();
+        } else if lower.ends_with(".svg") {
+            content_type = "image/svg+xml".to_string();
+        }
+    }
+
+    let bytes = current_res.bytes().await.map_err(|e| e.to_string())?;
     let encoded = BASE64.encode(&bytes);
     Ok(format!("data:{};base64,{}", content_type, encoded))
 }
@@ -1688,6 +1806,372 @@ async fn fetch_statuses(
 }
 
 #[tauri::command]
+async fn fetch_project_boards(
+    url: String,
+    token: String,
+    project_id: String,
+    project_identifier: Option<String>,
+) -> Result<Vec<BoardOptionItem>, String> {
+    let clean_url = sanitize_url(&url);
+    let endpoint = format!("{}/api/v3/grids", clean_url);
+    let auth_value = build_auth_header(&token);
+    let client = build_http_client(12)?;
+
+    let res = client
+        .get(&endpoint)
+        .header("Authorization", auth_value)
+        .header("Accept", "application/hal+json, application/json")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !res.status().is_success() {
+        return Ok(Vec::new());
+    }
+
+    let json_val: serde_json::Value = res.json().await.map_err(|e| e.to_string())?;
+    let mut list = Vec::new();
+
+    if let Some(elements) = json_val["_embedded"]["elements"].as_array() {
+        for g in elements {
+            let scope = g["_links"]["scope"]["href"]
+                .as_str()
+                .or_else(|| g["_links"]["page"]["href"].as_str())
+                .unwrap_or("");
+
+            let is_board = scope.ends_with("/boards")
+                || g["widgets"].as_array().map_or(false, |w| {
+                    w.iter()
+                        .any(|item| item["identifier"].as_str() == Some("work_package_query"))
+                });
+
+            // Exclude non-workflow grids like subtask hierarchy views (WBS)
+            let is_subtask_view = g["options"]["attribute"].as_str() == Some("subtasks");
+            if !is_board || is_subtask_view {
+                continue;
+            }
+
+            let proj_href = g["_links"]["project"]["href"].as_str().unwrap_or("");
+            let proj_id = proj_href.split('/').last().unwrap_or("");
+
+            let pid = project_id.trim();
+            let matches_project = (proj_id == pid || proj_href.ends_with(&format!("/{}", pid)))
+                || scope.contains(&format!("/{}/", pid))
+                || project_identifier.as_ref().map_or(false, |ident| {
+                    !ident.is_empty() && scope.contains(&format!("/{}/", ident))
+                });
+
+            if matches_project {
+                let id = g["id"].as_i64().map(|n| n.to_string()).unwrap_or_default();
+                let name = g["name"]
+                    .as_str()
+                    .or_else(|| g["_links"]["scope"]["title"].as_str())
+                    .or_else(|| g["_links"]["page"]["title"].as_str())
+                    .unwrap_or("Board")
+                    .to_string();
+
+                list.push(BoardOptionItem { id, name });
+            }
+        }
+    }
+
+    Ok(list)
+}
+
+#[tauri::command]
+async fn fetch_board_columns(
+    url: String,
+    token: String,
+    grid_id: String,
+) -> Result<Vec<BoardColumnOptionItem>, String> {
+    let clean_url = sanitize_url(&url);
+    let endpoint = format!("{}/api/v3/grids/{}", clean_url, grid_id.trim());
+    let auth_value = build_auth_header(&token);
+    let client = build_http_client(12)?;
+
+    let res = client
+        .get(&endpoint)
+        .header("Authorization", &auth_value)
+        .header("Accept", "application/hal+json, application/json")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !res.status().is_success() {
+        return Ok(Vec::new());
+    }
+
+    let grid_val: serde_json::Value = res.json().await.map_err(|e| e.to_string())?;
+    let mut columns = Vec::new();
+
+    if let Some(widgets) = grid_val["widgets"].as_array() {
+        for widget in widgets {
+            let widget_id = widget["id"].as_i64().unwrap_or(0);
+            let start_column = widget["startColumn"].as_i64().unwrap_or(0);
+            let query_id = widget["options"]["queryId"]
+                .as_i64()
+                .map(|n| n.to_string())
+                .or_else(|| {
+                    widget["options"]["queryId"]
+                        .as_str()
+                        .map(|s| s.to_string())
+                });
+
+            if let Some(qid) = query_id {
+                let q_endpoint = format!("{}/api/v3/queries/{}", clean_url, qid);
+                if let Ok(q_res) = client
+                    .get(&q_endpoint)
+                    .header("Authorization", &auth_value)
+                    .header("Accept", "application/hal+json, application/json")
+                    .send()
+                    .await
+                {
+                    if q_res.status().is_success() {
+                        if let Ok(q_val) = q_res.json::<serde_json::Value>().await {
+                            let name = q_val["name"]
+                                .as_str()
+                                .unwrap_or(&format!("Columna {}", qid))
+                                .to_string();
+
+                            let mut wp_ids = Vec::new();
+                            if let Some(elements) = q_val["_embedded"]["results"]["_embedded"]
+                                ["elements"]
+                                .as_array()
+                            {
+                                for el in elements {
+                                    if let Some(id) = el["id"].as_i64() {
+                                        wp_ids.push(id);
+                                    }
+                                }
+                            }
+
+                            let mut status_id = None;
+                            let mut status_name = None;
+                            if let Some(filters) = q_val["filters"].as_array() {
+                                for f in filters {
+                                    let href =
+                                        f["_links"]["filter"]["href"].as_str().unwrap_or("");
+                                    let fname = f["name"].as_str().unwrap_or("").to_lowercase();
+                                    if href.ends_with("/status")
+                                        || href.ends_with("/status_id")
+                                        || fname == "status"
+                                        || fname == "estado"
+                                    {
+                                        if let Some(val_obj) = f["_links"]["values"]
+                                            .as_array()
+                                            .and_then(|v| v.first())
+                                        {
+                                            if let Some(v_href) = val_obj["href"].as_str() {
+                                                status_id = v_href
+                                                    .split('/')
+                                                    .last()
+                                                    .map(|s| s.to_string());
+                                                status_name = val_obj["title"]
+                                                    .as_str()
+                                                    .map(|s| s.to_string());
+                                            }
+                                        } else if let Some(first_val) =
+                                            f["values"].as_array().and_then(|v| v.first())
+                                        {
+                                            status_id = first_val
+                                                .as_str()
+                                                .map(|s| s.to_string())
+                                                .or_else(|| first_val.as_i64().map(|n| n.to_string()));
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+
+                            columns.push(BoardColumnOptionItem {
+                                query_id: qid,
+                                name,
+                                widget_id,
+                                start_column,
+                                work_package_ids: wp_ids,
+                                status_id,
+                                status_name,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    columns.sort_by_key(|c| c.start_column);
+    Ok(columns)
+}
+
+#[tauri::command]
+async fn move_work_package_to_board_column(
+    url: String,
+    token: String,
+    ticket: String,
+    target_query_id: String,
+    source_query_id: Option<String>,
+    target_status_id: Option<String>,
+) -> Result<MoveColumnResult, String> {
+    let clean_url = sanitize_url(&url);
+    let raw_ticket = ticket.trim().trim_start_matches('#');
+    let ticket_num = raw_ticket
+        .parse::<i64>()
+        .map_err(|_| "Ticket ID inválido".to_string())?;
+    let auth_value = build_auth_header(&token);
+    let client = build_http_client(12)?;
+
+    // 1. Determine target status
+    let mut resolved_status_id = target_status_id;
+    if resolved_status_id.is_none() {
+        let q_url = format!("{}/api/v3/queries/{}", clean_url, target_query_id);
+        if let Ok(res) = client
+            .get(&q_url)
+            .header("Authorization", &auth_value)
+            .send()
+            .await
+        {
+            if let Ok(q_val) = res.json::<serde_json::Value>().await {
+                if let Some(filters) = q_val["filters"].as_array() {
+                    for f in filters {
+                        let href = f["_links"]["filter"]["href"].as_str().unwrap_or("");
+                        let fname = f["name"].as_str().unwrap_or("").to_lowercase();
+                        if href.ends_with("/status")
+                            || href.ends_with("/status_id")
+                            || fname == "status"
+                            || fname == "estado"
+                        {
+                            if let Some(val_obj) =
+                                f["_links"]["values"].as_array().and_then(|v| v.first())
+                            {
+                                resolved_status_id = val_obj["href"]
+                                    .as_str()
+                                    .and_then(|h| h.split('/').last())
+                                    .map(|s| s.to_string());
+                            } else if let Some(fv) = f["values"].as_array().and_then(|v| v.first())
+                            {
+                                resolved_status_id = fv
+                                    .as_str()
+                                    .map(|s| s.to_string())
+                                    .or_else(|| fv.as_i64().map(|n| n.to_string()));
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Update Work Package status if target status is known
+    if let Some(ref sid) = resolved_status_id {
+        let wp_url = format!("{}/api/v3/work_packages/{}", clean_url, raw_ticket);
+        let lv = if let Ok(wp_res) = client
+            .get(&wp_url)
+            .header("Authorization", &auth_value)
+            .send()
+            .await
+        {
+            let wp_val: serde_json::Value = wp_res.json().await.unwrap_or_default();
+            wp_val["lockVersion"].as_i64().unwrap_or(0)
+        } else {
+            0
+        };
+
+        let patch_body = serde_json::json!({
+            "lockVersion": lv,
+            "_links": {
+                "status": { "href": format!("/api/v3/statuses/{}", sid) }
+            }
+        });
+
+        let _ = client
+            .patch(&wp_url)
+            .header("Authorization", &auth_value)
+            .header("Content-Type", "application/json")
+            .json(&patch_body)
+            .send()
+            .await;
+    }
+
+    // 3. Remove from source query order if different
+    if let Some(ref sqid) = source_query_id {
+        if sqid != &target_query_id && !sqid.is_empty() {
+            let src_order_url = format!("{}/api/v3/queries/{}/order", clean_url, sqid);
+            let remove_body = serde_json::json!({
+                "delta": { ticket_num.to_string(): -1 }
+            });
+            let _ = client
+                .patch(&src_order_url)
+                .header("Authorization", &auth_value)
+                .header("Content-Type", "application/json")
+                .json(&remove_body)
+                .send()
+                .await;
+        }
+    }
+
+    // 4. Set order in target query (positioned at the top / first position)
+    let target_order_url = format!("{}/api/v3/queries/{}/order", clean_url, target_query_id);
+    let mut target_position: i64 = 0;
+
+    if let Ok(order_res) = client
+        .get(&target_order_url)
+        .header("Authorization", &auth_value)
+        .header("Accept", "application/json")
+        .send()
+        .await
+    {
+        if let Ok(order_map) = order_res.json::<serde_json::Map<String, serde_json::Value>>().await {
+            let mut min_pos: Option<i64> = None;
+            for (k, v) in &order_map {
+                if k != &ticket_num.to_string() {
+                    if let Some(pos) = v.as_i64() {
+                        min_pos = Some(min_pos.map_or(pos, |m| m.min(pos)));
+                    }
+                }
+            }
+            if let Some(min) = min_pos {
+                // OpenProject standard ORDER_DISTANCE / 2 is 8192 to guarantee top of column
+                target_position = min.saturating_sub(8192);
+            }
+        }
+    }
+
+    let target_body = serde_json::json!({
+        "delta": { ticket_num.to_string(): target_position }
+    });
+    let target_res = client
+        .patch(&target_order_url)
+        .header("Authorization", &auth_value)
+        .header("Content-Type", "application/json")
+        .json(&target_body)
+        .send()
+        .await
+        .map_err(|e| format!("Error en conexión: {}", e))?;
+
+    if target_res.status().is_success() {
+        Ok(MoveColumnResult {
+            ok: true,
+            status_id: resolved_status_id,
+            error: None,
+        })
+    } else if resolved_status_id.is_some() {
+        Ok(MoveColumnResult {
+            ok: true,
+            status_id: resolved_status_id,
+            error: None,
+        })
+    } else {
+        let err_text = target_res.text().await.unwrap_or_default();
+        Ok(MoveColumnResult {
+            ok: false,
+            status_id: resolved_status_id,
+            error: Some(format!("Error en OpenProject: {}", err_text)),
+        })
+    }
+}
+
+#[tauri::command]
 fn exit_app(app: AppHandle) {
     ipc::cleanup_ipc_file(&app);
     app.exit(0);
@@ -1796,6 +2280,9 @@ pub fn run() {
             update_work_package_version,
             fetch_project_versions,
             fetch_statuses,
+            fetch_project_boards,
+            fetch_board_columns,
+            move_work_package_to_board_column,
             get_database_path,
             get_ai_stats,
             get_favorite_tickets,
