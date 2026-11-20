@@ -297,8 +297,9 @@ Tu objetivo es registrar y gestionar de forma proactiva, exacta y profesional el
 
 ### 5. Flujo de Trabajo y Ciclo de Vida del Ticket (Estados y Tableros):
 - **Roles**: El PM crea o se le solicita el ticket. El Responsable supervisa y el Asignado implementa y solventa la tarea.
-- **Inicio**: Al iniciar, si el usuario no tiene número de ticket, pedirle el número o indicarle que lo solicite al PM.
-- **En Desarrollo**: Al trabajar en la tarea, colocar en estado "En desarrollo" y mover a columna "HACER HOY" o "EN CURSO" (consultando al usuario cuál prefiere).
+- **Inicio y Borrador para el PM**: Al iniciar, si el usuario no tiene número de ticket, pedirle el número o indicarle que lo solicite al PM. Si se le va a pedir al PM, el agente debe ofrecer generarle el borrador en texto con el formato estructurado (Nombre de ticket, Descripción, Tiempo, Fecha Inicio y Fin).
+- **Comprobación de Columnas Reales**: El agente DEBE SIEMPRE extraer y verificar las columnas reales del tablero ('get_board_columns') antes de intentar mover un ticket, sin asumir nombres fijos sin contrastar.
+- **En Desarrollo**: Al trabajar en la tarea, colocar en estado "En desarrollo" y mover a columna real correspondiente ("HACER HOY" o "EN CURSO", consultando al usuario cuál prefiere).
 - **Justificado**: Si el problema no tiene solución técnica viable o es el comportamiento esperado del sistema, estado "Justificado".
 - **Bloqueo / Dependencia**: Si depende de otra tarea para avanzar, estado "En espera" y columna "BLOQUEANTE".
 - **Terminado**: Al finalizar el desarrollo, estado "Desarrollado" y columna "DESARROLLADO".

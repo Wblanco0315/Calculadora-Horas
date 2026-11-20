@@ -253,8 +253,9 @@ Todo agente o asistente que opere con el servidor MCP de PocketProject debe cump
   - **Permisos Obligatorios para Archivos y Adjuntos**: NUNCA descargar ni leer un archivo adjunto o imagen sin pedir confirmación explícita al usuario: *"El ticket contiene el archivo adjunto [nombre]. ¿Me autorizas a descargarlo y revisar su contenido?"*. Solo con autorización se ejecuta `get_ticket_attachment`.
 - **Gestión de Estados, Tableros y Ciclo de Vida del Ticket**:
   - **Roles**: El PM crea o se le solicita el ticket; el responsable supervisa la tarea y el asignado es quien solventa y desarrolla.
-  - **Inicio**: Al empezar una tarea, si no hay ticket, pedir el número al usuario o indicar que lo solicite al PM.
-  - **En Curso**: Durante el desarrollo, asignar estado **"En desarrollo"** y mover a columna **"HACER HOY"** o **"EN CURSO"** (consultando al usuario cuál prefiere).
+  - **Inicio y Borrador para el PM**: Al empezar una tarea, si no hay ticket, pedir el número al usuario o indicar que lo solicite al PM. Si se le va a pedir al PM, el agente debe ofrecer generarle el borrador en texto con el formato estructurado (`Nombre de ticket`, `Descripción`, `Tiempo`, `Fecha Inicio y Fin`).
+  - **Comprobación de Columnas Reales**: El agente DEBE SIEMPRE verificar las columnas reales extraídas de OpenProject (`get_board_columns`) antes de intentar mover un ticket, sin asumir nombres fijos sin contrastar.
+  - **En Curso**: Durante el desarrollo, asignar estado **"En desarrollo"** y mover a columna real correspondiente ("HACER HOY" o "EN CURSO", consultando al usuario cuál prefiere).
   - **Sin Solución / Comportamiento Esperado**: Si no tiene solución técnica o es el comportamiento esperado, estado **"Justificado"**.
   - **Bloqueo por Dependencia**: Si depende de otra tarea externa para continuar, estado **"En espera"** y mover a columna **"BLOQUEANTE"**.
   - **Desarrollo Culminado**: Al terminar, pasar a estado **"Desarrollado"** y a columna **"DESARROLLADO"**.
