@@ -449,6 +449,7 @@ export class SetupService {
       schedule: scheduleConfig,
       user_name: this.testResult()?.user_name || this.storageService.config().user_name || '',
       user_login: this.testResult()?.user_login || this.storageService.config().user_login || '',
+      min_daily_minutes: Math.round(this.scheduleService.minDailyHours() * 60),
     };
 
     try {

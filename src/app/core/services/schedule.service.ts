@@ -40,6 +40,7 @@ export class ScheduleService {
     JSON.parse(JSON.stringify(DEFAULT_DAYS_TEMPLATE))
   );
   readonly lunchMinutes = signal<number>(60);
+  readonly minDailyHours = signal<number>(8.5);
   readonly isSaving = signal<boolean>(false);
 
   readonly allDaysMeta: DayMeta[] = [
@@ -288,6 +289,12 @@ export class ScheduleService {
       this.lunchMinutes.set(config.lunch_minutes);
     }
 
+    if (config.min_daily_minutes !== undefined && config.min_daily_minutes > 0) {
+      this.minDailyHours.set(Number((config.min_daily_minutes / 60).toFixed(2)));
+    } else {
+      this.minDailyHours.set(8.5);
+    }
+
     if (config.schedule?.groups && config.schedule.groups.length > 0) {
       this.scheduleGroups.set(JSON.parse(JSON.stringify(config.schedule.groups)));
       this.syncDaysFromGroups(config.schedule.groups);
@@ -308,6 +315,11 @@ export class ScheduleService {
     this.initFromConfig(current);
   }
 
+  setMinDailyHours(hours: number): void {
+    const val = Math.max(1, Math.min(24, Math.round(hours * 10) / 10));
+    this.minDailyHours.set(val);
+  }
+
   async saveSchedule(): Promise<void> {
     this.isSaving.set(true);
     const currentConfig = this.storageService.config();
@@ -324,6 +336,7 @@ export class ScheduleService {
       entry_time: primaryDay ? primaryDay.entry_time : currentConfig.entry_time,
       exit_time: primaryDay ? primaryDay.exit_time : currentConfig.exit_time,
       lunch_minutes: this.lunchMinutes(),
+      min_daily_minutes: Math.round(this.minDailyHours() * 60),
       schedule: scheduleConfig,
     };
 
