@@ -47,12 +47,12 @@ src/app/modules/compact/
 - **Ubicación**: `components/stats-hero/stats-hero.component.ts`
 - **Integración PrimeNG y Diseño**:
   - Degradado que utiliza **exclusivamente tokens primarios dinámicos del tema seleccionado**: `bg-linear-to-b from-primary-500 to-primary-600 dark:from-primary-950 dark:to-zinc-900 text-white`.
-  - Encabezado con etiqueta "TOTAL REGISTRADO" y "Meta del día: HH:MM / decimal".
+  - Encabezado con etiqueta "TOTAL REGISTRADO" y "Mínimo del día: HH:MM / decimal".
   - Contador numérico prominente en fuente monoespaciada (`JetBrains Mono`) con botón "Reiniciar" (`<button pButton>` con `ButtonDirective`) que dispara el modal dedicado `app-reset-confirm-modal`.
   - **Uso Oficial de `SelectButton` de PrimeNG (`<p-selectbutton>`)** para el conmutador de formato `[ HH:MM | DECIMAL ]`, permitiendo alternar reactivamente el formato de horas en toda la aplicación.
   - **Transiciones Fluidas y Estabilidad de Layout (`animate-timeSwap`)**: Transición suave mediante micro-animación sin saltos bruscos (`animate-timeSwap`) en el total, meta y horas restantes al cambiar de formato, manteniendo bloqueada la altura y evitando cualquier estiramiento o desplazamiento visual de la interfaz.
-  - Indicador de estado reactivo: "¡Meta cumplida! X extras", "¡Meta cumplida!" o "X restantes".
-  - Barra de progreso delgada (`h-1.5`) de alto contraste con fondo semitransparente y relleno blanco.
+  - Indicador de estado reactivo hacia el mínimo exigido: "¡Mínimo cumplido! X extras", "¡Mínimo diario cumplido!" o "X restantes para el mínimo".
+  - Barra de progreso delgada (`h-1.5`) de alto contraste con fondo semitransparente y relleno blanco que refleja el avance frente a las horas mínimas requeridas.
 
 ### 2.3. Barra de Saludo y Acciones Rápidas
 - **Ubicación**: En `compact.page.html` (bajo el hero).

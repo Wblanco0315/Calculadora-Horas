@@ -22,6 +22,12 @@ pub struct AppConfig {
     pub user_name: Option<String>,
     #[serde(default)]
     pub user_login: Option<String>,
+    #[serde(default = "default_min_daily_minutes")]
+    pub min_daily_minutes: Option<u32>,
+}
+
+fn default_min_daily_minutes() -> Option<u32> {
+    Some(510)
 }
 
 fn default_language() -> Option<String> {
@@ -43,6 +49,7 @@ impl Default for AppConfig {
             language: Some("es".to_string()),
             user_name: None,
             user_login: None,
+            min_daily_minutes: Some(510),
         }
     }
 }
@@ -163,6 +170,7 @@ fn init_tables(conn: &Connection) -> Result<()> {
     let _ = conn.execute("ALTER TABLE app_config ADD COLUMN is_configured INTEGER NOT NULL DEFAULT 0", []);
     let _ = conn.execute("ALTER TABLE app_config ADD COLUMN user_name TEXT", []);
     let _ = conn.execute("ALTER TABLE app_config ADD COLUMN user_login TEXT", []);
+    let _ = conn.execute("ALTER TABLE app_config ADD COLUMN min_daily_minutes INTEGER DEFAULT 510", []);
 
     conn.execute(
         "CREATE TABLE IF NOT EXISTS activities (
@@ -215,7 +223,7 @@ pub fn load_config(conn: &Connection) -> Result<Option<AppConfig>> {
     let mut stmt = conn.prepare(
         "SELECT entry_time, exit_time, lunch_minutes, openproject_url, openproject_token,
                 theme_mode, primary_color, is_configured, schedule_json, language,
-                user_name, user_login
+                user_name, user_login, min_daily_minutes
          FROM app_config WHERE id = 1",
     )?;
 
@@ -235,6 +243,7 @@ pub fn load_config(conn: &Connection) -> Result<Option<AppConfig>> {
             language: row.get(9).ok().or_else(|| Some("es".to_string())),
             user_name: row.get(10).ok(),
             user_login: row.get(11).ok(),
+            min_daily_minutes: row.get(12).ok().or(Some(510)),
         }))
     } else {
         Ok(None)
@@ -255,12 +264,13 @@ pub fn is_configured(conn: &Connection) -> Result<bool> {
 pub fn save_config(conn: &Connection, config: &AppConfig) -> Result<()> {
     let now = chrono_now();
     let lang = config.language.clone().unwrap_or_else(|| "es".to_string());
+    let min_daily = config.min_daily_minutes.unwrap_or(510);
     conn.execute(
         "INSERT INTO app_config (
             id, entry_time, exit_time, lunch_minutes, openproject_url, openproject_token,
             theme_mode, primary_color, is_configured, schedule_json, language,
-            user_name, user_login, updated_at
-        ) VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
+            user_name, user_login, min_daily_minutes, updated_at
+        ) VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
         ON CONFLICT(id) DO UPDATE SET
             entry_time = excluded.entry_time,
             exit_time = excluded.exit_time,
@@ -274,6 +284,7 @@ pub fn save_config(conn: &Connection, config: &AppConfig) -> Result<()> {
             language = excluded.language,
             user_name = excluded.user_name,
             user_login = excluded.user_login,
+            min_daily_minutes = excluded.min_daily_minutes,
             updated_at = excluded.updated_at",
         params![
             config.entry_time,
@@ -288,6 +299,7 @@ pub fn save_config(conn: &Connection, config: &AppConfig) -> Result<()> {
             lang,
             config.user_name,
             config.user_login,
+            min_daily,
             now,
         ],
     )?;

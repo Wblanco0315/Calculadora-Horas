@@ -47,6 +47,7 @@ export interface AppConfig {
   schedule_json?: string;
   user_name?: string;
   user_login?: string;
+  min_daily_minutes?: number;
 }
 
 export interface ConnectionTestResult {
@@ -125,4 +126,5 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   schedule: DEFAULT_WORK_SCHEDULE,
   user_name: '',
   user_login: '',
+  min_daily_minutes: 510,
 };

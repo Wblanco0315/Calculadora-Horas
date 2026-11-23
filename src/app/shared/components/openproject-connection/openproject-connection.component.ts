@@ -13,11 +13,13 @@ import {
   tablerEyeOff,
   tablerCheck,
   tablerX,
+  tablerHelp,
 } from '@ng-icons/tabler-icons';
 import { StorageService } from '../../../core/services/storage.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { ConnectionTestResult } from '../../../core/interfaces/config.interface';
 import { TranslatePipe } from '../../pipes/translate.pipe';
+import { TokenGuideModalComponent } from '../token-guide-modal/token-guide-modal.component';
 
 @Component({
   selector: 'app-openproject-connection',
@@ -32,6 +34,7 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
     IconField,
     InputIcon,
     InputPassword,
+    TokenGuideModalComponent,
   ],
   viewProviders: [
     provideIcons({
@@ -40,6 +43,7 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
       tablerEyeOff,
       tablerCheck,
       tablerX,
+      tablerHelp,
     }),
   ],
   template: `
@@ -70,9 +74,22 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
 
       <!-- OpenProject Token -->
       <div>
-        <label for="openproject-token" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-zinc-400 mb-2">
-          {{ 'setup.openproject.personalToken' | translate }}
-        </label>
+        <div class="flex items-center justify-between mb-2">
+          <label for="openproject-token" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-zinc-400">
+            {{ 'setup.openproject.personalToken' | translate }}
+          </label>
+          <button
+            pButton
+            type="button"
+            variant="text"
+            size="small"
+            (click)="showTokenGuide.set(true)"
+            class="text-xs text-primary-600 dark:text-primary-400 hover:underline !p-0 !h-auto font-medium inline-flex items-center gap-1 cursor-pointer"
+          >
+            <ng-icon name="tablerHelp" size="0.95rem" />
+            <span>{{ 'setup.openproject.howToGetToken' | translate }}</span>
+          </button>
+        </div>
         <p-iconfield class="w-full block">
           <input
             id="openproject-token"
@@ -176,6 +193,9 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
           </button>
         </div>
       }
+
+      <!-- Token Guide Modal (100% self-contained, no external links) -->
+      <app-token-guide-modal [(visible)]="showTokenGuide" />
     </section>
   `,
 })
@@ -192,6 +212,7 @@ export class OpenprojectConnectionComponent {
   readonly saved = output<ConnectionTestResult>();
 
   mask = true;
+  readonly showTokenGuide = signal<boolean>(false);
   readonly isTesting = signal<boolean>(false);
   readonly isSaving = signal<boolean>(false);
   readonly savedNotification = signal<boolean>(false);

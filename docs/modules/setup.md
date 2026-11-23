@@ -45,10 +45,11 @@ El asistente utiliza un componente `<p-stepper>` de PrimeNG y un switcher de con
 - **Color de Acento**: Componente PrimeNG `<p-select>` para seleccionar el color primario de la aplicación (`violet`, `indigo`, `blue`, `emerald`, `amber`, `rose`), actualizando en tiempo real la paleta semántica del tema Aura.
 
 ### Paso 2: Horario Laboral (`ScheduleStepComponent`)
-- Reutiliza el componente transversal `<app-schedule-editor>` (compartido de forma unificada con la modal de edición en `overview`).
+- Reutiliza el componente transversal `<app-schedule-editor>` (compartido de forma unificada con la modal de edición en `overview` y la sección de usuario en `setting`).
 - **Modos de Jornada**: Soporta configuración agrupada (*Por Grupos*) o individual (*Día por Día*).
 - **Selector de Días**: Permite asignar días hábiles de la semana a cada horario.
 - **Horas de Entrada y Salida**: Utiliza `<p-datepicker>` de PrimeNG configurado en modo horario (`[timeOnly]="true"` y formato de 12 horas con intervalos de 5 minutos).
+- **Mínimo de Horas a Registrar Diarias**: Campo numérico `<p-inputnumber>` con botones de incremento/decremento (`+` / `-` 0.5h), preajustes rápidos (7.5h, 8.0h, 8.5h, 9.0h) y cálculo en tiempo real de minutos equivalentes (persistido como `min_daily_minutes` en SQLite).
 - **Resumen en Tiempo Real**: Calcula el total de minutos laborables semanales y valida que exista al menos un horario válido configurado.
 
 ### Paso 3: Descanso / Almuerzo (`LunchStepComponent`)
@@ -58,6 +59,7 @@ El asistente utiliza un componente `<p-stepper>` de PrimeNG y un switcher de con
 
 ### Paso 4: Conexión OpenProject (`OpenprojectStepComponent`)
 - **URL y Token**: Inputs para ingresar la URL base del servidor OpenProject y el Personal Access Token (PAT).
+- **Guía de Obtención de Token**: Disparador "¿Cómo obtener tu token?" que abre el diálogo modal dedicado `app-token-guide-modal` con 5 pasos ilustrados y completamente autocontenido (sin enlaces externos).
 - **Prueba de Conexión en Vivo**: Ejecuta llamada a la API a través de `HttpService` / `StorageService` para comprobar la validez del token y reporta el usuario autenticado con un `<p-tag>` de estado.
 
 ---
