@@ -45,6 +45,9 @@ export class StorageService {
     if (initial.theme_mode) {
       this.themeService.setTheme(initial.theme_mode);
     }
+    if (initial.light_style) {
+      this.themeService.setLightStyle(initial.light_style);
+    }
     if (initial.primary_color) {
       this.themeService.setPrimaryColor(initial.primary_color);
     }
