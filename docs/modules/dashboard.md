@@ -22,8 +22,13 @@ src/app/modules/dashboard/
 
 ## 2. Responsabilidades Arquitectónicas
 
+### 2.0. Barra Superior del Sistema (`app-header`)
+- Integra el componente reutilizable `app-header` como barra de título frameless (altura estándar Windows de 32px), garantizando arrastre suave (`startDragging`), conmutador de tema, comprobación de actualizaciones, controles de ventana (minimizar a bandeja, maximizar/restaurar con doble clic o botón) y disparador de cierre con confirmación.
+- Incluye el diálogo modal de confirmación de cierre (`app-close-confirm-modal`).
+
 ### 2.1. Barra Lateral de Navegación (`p-sidebar`)
 - Implementa `p-sidebar-layout` y `p-sidebar` de PrimeNG con soporte responsivo (`offcanvas` para pantallas móviles, colapso de icono para escritorio).
+- Encabezado con el isologo oficial (`app-logo`), nombre de la aplicación y enlace directo al resumen general.
 - Navegación limpia y directa sin elementos innecesarios:
   - **Resumen** (`/dashboard/overview`): Acceso a la vista general de jornada diaria, métricas y calendario semanal.
   - **Configuración** (`/dashboard/settings`): Acceso al módulo de ajustes por pestañas (User y System).

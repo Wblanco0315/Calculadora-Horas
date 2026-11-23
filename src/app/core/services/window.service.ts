@@ -37,6 +37,12 @@ export class WindowService {
   }
 
   private getInitialViewMode(): AppViewMode {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(VIEW_MODE_KEY);
+      if (saved === 'compact' || saved === 'full') {
+        return saved;
+      }
+    }
     return 'compact';
   }
 
@@ -64,17 +70,37 @@ export class WindowService {
   }
 
   /**
-   * Full mode is reserved for future versions; for v1.0.0 keeps compact mode
+   * Switch to Full Mode (Dashboard layout view: ~1150x780)
    */
-  async setFullMode(_targetUrl: string = '/compact'): Promise<void> {
-    await this.setCompactMode();
+  async setFullMode(targetUrl: string = '/dashboard/overview'): Promise<void> {
+    this.viewMode.set('full');
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(VIEW_MODE_KEY, 'full');
+    }
+
+    if (isTauri()) {
+      try {
+        const win = getCurrentWindow();
+        await win.unmaximize();
+        await win.setSize(new LogicalSize(FULL_WINDOW_WIDTH, FULL_WINDOW_HEIGHT));
+        await win.center();
+      } catch (err) {
+        console.warn('Error adjusting window to full mode:', err);
+      }
+    }
+
+    await this.router.navigateByUrl(targetUrl);
   }
 
   /**
-   * Toggle view mode - in v1.0.0 remains in compact mode
+   * Toggle between Compact and Full modes
    */
   async toggleViewMode(): Promise<void> {
-    await this.setCompactMode();
+    if (this.viewMode() === 'compact') {
+      await this.setFullMode();
+    } else {
+      await this.setCompactMode();
+    }
   }
 
   /**

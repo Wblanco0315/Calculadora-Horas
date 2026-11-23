@@ -26,6 +26,8 @@ export class AppComponent implements OnInit {
 
     if (!config.is_configured) {
       await this.windowService.maximize();
+    } else if (this.windowService.viewMode() === 'full') {
+      await this.windowService.setFullMode();
     }
 
     // Check for updates in the background on startup

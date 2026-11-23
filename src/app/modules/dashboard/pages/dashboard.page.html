@@ -1,8 +1,11 @@
-<div class="h-screen w-full flex overflow-hidden bg-slate-50 dark:bg-zinc-950 transition-colors duration-200">
-  <p-sidebar-layout class="min-h-screen! w-full relative!">
-    @if (isMobile() && open()) {
-    <p-sidebar-backdrop class="absolute!" />
-    }
+<div class="h-screen w-full flex flex-col overflow-hidden bg-slate-50 dark:bg-zinc-950 transition-colors duration-200">
+  <app-header class="shrink-0" />
+
+  <div class="flex-1 min-h-0 flex overflow-hidden">
+    <p-sidebar-layout class="min-h-full! w-full relative!">
+      @if (isMobile() && open()) {
+      <p-sidebar-backdrop class="absolute!" />
+      }
 
     <!-- Collapsible PrimeNG Sidebar -->
     <p-sidebar id="preview" [collapsible]="isMobile() ? 'offcanvas' : 'icon'" [overlay]="isMobile()" [(open)]="open">
@@ -14,14 +17,8 @@
             <p-sidebar-menu>
               <p-sidebar-menu-item>
                 <button pSidebarMenuButton class="p-1! cursor-pointer" (click)="navigateTo('/dashboard/overview')">
-                  <div
-                    class="flex size-7 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-primary-500 to-primary-700 text-white text-xs font-bold shadow-xs">
-                    P2
-                  </div>
-                  <div class="flex flex-col text-left">
-                    <span class="font-bold text-sm text-slate-800 dark:text-zinc-100">PocketProject</span>
-                    <span class="text-[10px] text-slate-400">Time & Schedule</span>
-                  </div>
+                  <app-logo [variant]="'isologo'" [size]="'md'" class="shrink-0 drop-shadow-xs" />
+                  
                 </button>
               </p-sidebar-menu-item>
             </p-sidebar-menu>
@@ -82,7 +79,7 @@
     </p-sidebar>
 
     <!-- Main Shell Area -->
-    <p-sidebar-main class="flex-1 flex flex-col h-screen">
+    <p-sidebar-main class="flex-1 flex flex-col h-full">
       <!-- Sticky Top Header with Breadcrumb and Action Buttons -->
       <header
         class="flex h-16 sm:sticky sm:top-0 sm:z-50 sm:backdrop-blur-sm items-center justify-between border-b border-slate-200 dark:border-zinc-800 px-4 py-1.5 sm:px-6 bg-white/80 dark:bg-zinc-900/80">
@@ -169,4 +166,7 @@
       </main>
     </p-sidebar-main>
   </p-sidebar-layout>
+  </div>
+
+  <app-close-confirm-modal />
 </div>

@@ -21,7 +21,9 @@ export const routes: Routes = [
   },
   {
     path: 'dashboard',
-    redirectTo: 'compact',
+    canActivate: [configGuard],
+    loadChildren: () =>
+      import('./modules/dashboard/dashboard.router').then((m) => m.dashboardRoutes),
   },
   {
     path: '**',

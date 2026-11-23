@@ -352,12 +352,12 @@
       class="border-t border-slate-100 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xs shrink-0 px-4 py-2.5 sm:px-8 sm:py-3 select-none z-20"
     >
       <div class="max-w-4xl mx-auto w-full flex items-center justify-between">
-        <!-- Active View: Calculator (Compact Mode) - Icon Only -->
+        <!-- Open Full Mode / Dashboard Button -->
         <button
           type="button"
-          class="cursor-default flex items-center justify-center p-2 rounded-xl text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/40 font-medium"
-          [title]="'compact.title' | translate"
-          disabled
+          (click)="windowService.setFullMode('/dashboard/overview')"
+          class="cursor-pointer flex items-center justify-center p-2 rounded-xl text-slate-600 dark:text-zinc-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+          [title]="'compact.openFullMode' | translate"
         >
           <ng-icon name="tablerLayoutDashboard" size="1.25rem" />
         </button>

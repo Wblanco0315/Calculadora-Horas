@@ -27,6 +27,9 @@ import { LanguageService } from '../../../core/services/language.service';
 import { WindowService } from '../../../core/services/window.service';
 import { UpdateService } from '../../../core/services/update.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { AppHeaderComponent } from '../../../shared/components/app-header/app-header.component';
+import { AppLogoComponent } from '../../../shared/components/app-logo/app-logo.component';
+import { CloseConfirmModalComponent } from '../../compact/modals/close-confirm-modal/close-confirm-modal.component';
 
 export interface NavItem {
   icon: string;
@@ -55,6 +58,9 @@ export interface NavGroup {
     Breadcrumb,
     NgIcon,
     TranslatePipe,
+    AppHeaderComponent,
+    AppLogoComponent,
+    CloseConfirmModalComponent,
   ],
   viewProviders: [
     provideIcons({
