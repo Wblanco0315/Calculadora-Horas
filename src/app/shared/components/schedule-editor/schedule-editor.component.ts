@@ -10,6 +10,7 @@ import {
   tablerAlertCircle,
   tablerCoffee,
   tablerMinus,
+  tablerClock,
 } from '@ng-icons/tabler-icons';
 import { DatePicker } from 'primeng/datepicker';
 import { ButtonDirective } from 'primeng/button';
@@ -38,6 +39,7 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
       tablerAlertCircle,
       tablerCoffee,
       tablerMinus,
+      tablerClock,
     }),
   ],
   template: `
@@ -270,6 +272,83 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
             </div>
           </div>
         }
+
+        <!-- Minimum Daily Hours Setting Card -->
+        @if (showMinHours()) {
+          <div class="p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/60 dark:bg-zinc-800/40 space-y-3.5 sm:space-y-4">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-zinc-400 flex items-center gap-1.5">
+                <ng-icon name="tablerClock" size="1.1rem" class="text-primary-600 dark:text-primary-400" />
+                {{ 'setup.schedule.minDailyHoursLabel' | translate }}
+              </label>
+              <span class="text-xs font-mono font-bold text-primary-600 dark:text-primary-400">
+                {{ formattedMinHoursEquiv() }}
+              </span>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-1.5">
+                <button
+                  pButton
+                  type="button"
+                  (click)="adjustMinHours(-0.5)"
+                  [disabled]="scheduleService.minDailyHours() <= 1"
+                  iconOnly
+                  rounded
+                  variant="outlined"
+                  severity="secondary"
+                  class="w-8 h-8"
+                >
+                  <ng-icon name="tablerMinus" />
+                </button>
+
+                <p-inputnumber
+                  [ngModel]="scheduleService.minDailyHours()"
+                  (ngModelChange)="onMinHoursChange($event)"
+                  [min]="1"
+                  [max]="24"
+                  [step]="0.5"
+                  [minFractionDigits]="1"
+                  [maxFractionDigits]="2"
+                  suffix=" h"
+                  styleClass="w-28"
+                  inputStyleClass="w-full text-center text-xs font-bold font-mono py-1.5 rounded-lg"
+                />
+
+                <button
+                  pButton
+                  type="button"
+                  (click)="adjustMinHours(0.5)"
+                  [disabled]="scheduleService.minDailyHours() >= 24"
+                  iconOnly
+                  rounded
+                  variant="outlined"
+                  severity="secondary"
+                  class="w-8 h-8"
+                >
+                  <ng-icon name="tablerPlus" />
+                </button>
+              </div>
+
+              <!-- Quick presets -->
+              <div class="flex items-center gap-1">
+                @for (preset of [7.5, 8.0, 8.5, 9.0]; track preset) {
+                  <button
+                    pButton
+                    type="button"
+                    (click)="scheduleService.setMinDailyHours(preset)"
+                    [severity]="scheduleService.minDailyHours() === preset ? 'primary' : 'secondary'"
+                    [variant]="scheduleService.minDailyHours() === preset ? undefined : 'outlined'"
+                    rounded
+                    class="text-[11px] px-2 py-0.5"
+                  >
+                    {{ preset.toFixed(1) }}h
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+        }
       
     </section>
   `,
@@ -279,6 +358,25 @@ export class ScheduleEditorComponent {
 
   readonly showTitle = input<boolean>(true);
   readonly showLunch = input<boolean>(false);
+  readonly showMinHours = input<boolean>(true);
+
+  readonly formattedMinHoursEquiv = computed(() => {
+    const totalMins = Math.round(this.scheduleService.minDailyHours() * 60);
+    const h = Math.floor(totalMins / 60);
+    const m = totalMins % 60;
+    return `${h}h ${m.toString().padStart(2, '0')}m`;
+  });
+
+  adjustMinHours(delta: number): void {
+    const current = this.scheduleService.minDailyHours();
+    this.scheduleService.setMinDailyHours(current + delta);
+  }
+
+  onMinHoursChange(val: number | null): void {
+    if (val !== null && !isNaN(val)) {
+      this.scheduleService.setMinDailyHours(val);
+    }
+  }
 
   readonly draftEntryDate = computed(() => this.timeStringToDate(this.scheduleService.draftEntryTime()));
   readonly draftExitDate = computed(() => this.timeStringToDate(this.scheduleService.draftExitTime()));

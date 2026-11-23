@@ -41,7 +41,7 @@ src/app/modules/overview/
 - **Sincronización Reactiva del Perfil**: Obtiene y persiste de manera automática el nombre de usuario autenticado (`user_name`) desde la API de OpenProject en SQLite y `localStorage`.
 
 ### 2.2. Tarjetas de Resumen y Métricas (`app-overview-summary`)
-- **Horario de hoy**: Identifica automáticamente el día en curso (`todaySchedule`), informando si es día laborable o de descanso, horas esperadas calculadas descontando el almuerzo, progreso (`<p-progressbar>`) y total acumulado semanal.
+- **Mínimo Exigido Hoy**: Identifica automáticamente el día en curso (`todaySchedule`), informando si es día laborable o de descanso, horas mínimas exigidas a registrar (configuradas vía `min_daily_minutes` o derivadas de la jornada), progreso (`<p-progressbar>`) y total acumulado semanal.
 - **Apariencia**: Resumen del modo de tema activo (oscuro/claro) y color primario seleccionado con indicador visual.
 - **OpenProject API**: Detalle de la URL del servidor y estado del token.
 

@@ -32,7 +32,7 @@ import { formatWorkMinutes } from '../../../../core/interfaces/config.interface'
             <ng-icon name="tablerClock" size="1.25rem" />
           </div>
           <h3 class="text-sm font-bold text-slate-800 dark:text-zinc-200 tracking-wide">
-            {{ 'dashboard.todayGoal' | translate }}
+            {{ 'dashboard.todayMinHours' | translate }}
           </h3>
         </div>
 

@@ -80,8 +80,16 @@ export class StorageService {
    */
   readonly maxDailyMinutes = computed<number>(() => {
     const today = this.todaySchedule();
+    if (today && !today.enabled) {
+      return 0;
+    }
+
+    const customMin = this.config().min_daily_minutes;
+    if (typeof customMin === 'number' && customMin > 0) {
+      return customMin;
+    }
+
     if (today) {
-      if (!today.enabled) return 0;
       return calculateWorkMinutes(today.entry_time, today.exit_time, today.lunch_minutes);
     }
 
