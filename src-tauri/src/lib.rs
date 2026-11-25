@@ -51,14 +51,84 @@ pub struct BoardOptionItem {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct BoardWorkPackageCardItem {
+    pub id: i64,
+    pub subject: String,
+    pub type_name: Option<String>,
+    pub type_color: Option<String>,
+    pub status_id: Option<String>,
+    pub status_name: Option<String>,
+    pub status_color: Option<String>,
+    pub priority_name: Option<String>,
+    pub assignee_name: Option<String>,
+    pub project_name: Option<String>,
+    pub start_date: Option<String>,
+    pub due_date: Option<String>,
+    pub lock_version: Option<i64>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct BoardColumnOptionItem {
     pub query_id: String,
     pub name: String,
     pub widget_id: i64,
     pub start_column: i64,
     pub work_package_ids: Vec<i64>,
+    pub work_packages: Vec<BoardWorkPackageCardItem>,
     pub status_id: Option<String>,
     pub status_name: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkPackageOptionItem {
+    pub id: String,
+    pub name: String,
+    pub color: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkPackageFormSchemaResult {
+    pub statuses: Vec<WorkPackageOptionItem>,
+    pub priorities: Vec<WorkPackageOptionItem>,
+    pub assignees: Vec<WorkPackageOptionItem>,
+    pub responsibles: Vec<WorkPackageOptionItem>,
+    pub versions: Vec<WorkPackageOptionItem>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateWorkPackagePayload {
+    pub lock_version: Option<i64>,
+    pub subject: Option<String>,
+    pub description_raw: Option<String>,
+    pub start_date: Option<String>,
+    pub clear_start_date: Option<bool>,
+    pub due_date: Option<String>,
+    pub clear_due_date: Option<bool>,
+    pub estimated_time: Option<String>,
+    pub status_id: Option<String>,
+    pub priority_id: Option<String>,
+    pub assignee_id: Option<String>,
+    pub clear_assignee: Option<bool>,
+    pub responsible_id: Option<String>,
+    pub clear_responsible: Option<bool>,
+    pub version_id: Option<String>,
+    pub clear_version: Option<bool>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PlatformTimeEntryItem {
+    pub id: String,
+    pub hours: String,
+    pub spent_on: String,
+    pub comment: String,
+    pub user_name: String,
+    pub activity_name: String,
+    pub created_at: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -140,6 +210,10 @@ pub struct TicketContextResult {
     pub success: bool,
     pub ticket: String,
     pub subject: Option<String>,
+    pub type_name: Option<String>,
+    pub author_name: Option<String>,
+    pub created_at: Option<String>,
+    pub updated_at: Option<String>,
     pub description: Option<TicketDescriptionItem>,
     pub comments: Option<Vec<TicketCommentItem>>,
     pub attachments: Option<Vec<TicketAttachmentItem>>,
@@ -750,6 +824,10 @@ async fn fetch_ticket_context(
             success: false,
             ticket: ticket.clone(),
             subject: None,
+            type_name: None,
+            author_name: None,
+            created_at: None,
+            updated_at: None,
             description: None,
             comments: None,
             attachments: None,
@@ -790,6 +868,10 @@ async fn fetch_ticket_context(
             success: false,
             ticket: format!("#{}", raw_ticket),
             subject: None,
+            type_name: None,
+            author_name: None,
+            created_at: None,
+            updated_at: None,
             description: None,
             comments: None,
             attachments: None,
@@ -839,6 +921,13 @@ async fn fetch_ticket_context(
         .and_then(|href| href.split('/').last())
         .map(|s| s.to_string());
 
+    let type_name = json_val["_links"]["type"]["title"]
+        .as_str()
+        .or_else(|| json_val["_embedded"]["type"]["title"].as_str())
+        .map(|s| s.to_string());
+    let author_name = json_val["_links"]["author"]["title"].as_str().map(|s| s.to_string());
+    let created_at = json_val["createdAt"].as_str().map(|s| s.to_string());
+    let updated_at = json_val["updatedAt"].as_str().map(|s| s.to_string());
     let priority_name = json_val["_links"]["priority"]["title"].as_str().map(|s| s.to_string());
     let assignee_name = json_val["_links"]["assignee"]["title"].as_str().map(|s| s.to_string());
     let responsible_name = json_val["_links"]["responsible"]["title"].as_str().map(|s| s.to_string());
@@ -1130,6 +1219,10 @@ async fn fetch_ticket_context(
         success: true,
         ticket: format!("#{}", raw_ticket),
         subject,
+        type_name,
+        author_name,
+        created_at,
+        updated_at,
         description,
         comments,
         attachments,
@@ -1946,6 +2039,7 @@ async fn fetch_board_columns(
                                 .to_string();
 
                             let mut wp_ids = Vec::new();
+                            let mut wp_cards = Vec::new();
                             if let Some(elements) = q_val["_embedded"]["results"]["_embedded"]
                                 ["elements"]
                                 .as_array()
@@ -1953,6 +2047,58 @@ async fn fetch_board_columns(
                                 for el in elements {
                                     if let Some(id) = el["id"].as_i64() {
                                         wp_ids.push(id);
+                                        let subject = el["subject"]
+                                            .as_str()
+                                            .unwrap_or("")
+                                            .to_string();
+                                        let type_name = el["_links"]["type"]["title"]
+                                            .as_str()
+                                            .map(|s| s.to_string());
+                                        let type_color = el["_embedded"]["type"]["color"]
+                                            .as_str()
+                                            .map(|s| s.to_string());
+                                        let wp_status_id = el["_links"]["status"]["href"]
+                                            .as_str()
+                                            .and_then(|h| h.split('/').last())
+                                            .map(|s| s.to_string());
+                                        let wp_status_name = el["_links"]["status"]["title"]
+                                            .as_str()
+                                            .map(|s| s.to_string());
+                                        let wp_status_color = el["_embedded"]["status"]["color"]
+                                            .as_str()
+                                            .map(|s| s.to_string());
+                                        let priority_name = el["_links"]["priority"]["title"]
+                                            .as_str()
+                                            .map(|s| s.to_string());
+                                        let assignee_name = el["_links"]["assignee"]["title"]
+                                            .as_str()
+                                            .map(|s| s.to_string());
+                                        let project_name = el["_links"]["project"]["title"]
+                                            .as_str()
+                                            .map(|s| s.to_string());
+                                        let start_date = el["startDate"]
+                                            .as_str()
+                                            .map(|s| s.to_string());
+                                        let due_date = el["dueDate"]
+                                            .as_str()
+                                            .map(|s| s.to_string());
+                                        let lock_version = el["lockVersion"].as_i64();
+
+                                        wp_cards.push(BoardWorkPackageCardItem {
+                                            id,
+                                            subject,
+                                            type_name,
+                                            type_color,
+                                            status_id: wp_status_id,
+                                            status_name: wp_status_name,
+                                            status_color: wp_status_color,
+                                            priority_name,
+                                            assignee_name,
+                                            project_name,
+                                            start_date,
+                                            due_date,
+                                            lock_version,
+                                        });
                                     }
                                 }
                             }
@@ -2001,6 +2147,7 @@ async fn fetch_board_columns(
                                 widget_id,
                                 start_column,
                                 work_package_ids: wp_ids,
+                                work_packages: wp_cards,
                                 status_id,
                                 status_name,
                             });
@@ -2015,6 +2162,127 @@ async fn fetch_board_columns(
     Ok(columns)
 }
 
+fn build_query_order_delta(
+    ticket_id: i64,
+    order_map: &serde_json::Map<String, serde_json::Value>,
+    target_position_index: Option<usize>,
+    target_ticket_ids: Option<&[i64]>,
+) -> serde_json::Map<String, serde_json::Value> {
+    const ORDER_GAP: i64 = 8192;
+
+    let mut ordered_entries: Vec<(i64, i64)> = order_map
+        .iter()
+        .filter_map(|(id, position)| {
+            let id = id.parse::<i64>().ok()?;
+            let position = position.as_i64()?;
+            (id != ticket_id).then_some((id, position))
+        })
+        .collect();
+    ordered_entries.sort_by_key(|(id, position)| (*position, *id));
+
+    let Some(target_position_index) = target_position_index else {
+        let position = ordered_entries
+            .iter()
+            .map(|(_, position)| *position)
+            .min()
+            .map(|position| position.saturating_sub(ORDER_GAP))
+            .unwrap_or(0);
+        return serde_json::Map::from_iter([(
+            ticket_id.to_string(),
+            serde_json::Value::from(position),
+        )]);
+    };
+
+    let mut target_ids = Vec::new();
+    let mut seen_ids = std::collections::HashSet::new();
+    for id in target_ticket_ids.unwrap_or_default() {
+        if *id > 0 && *id != ticket_id && seen_ids.insert(*id) {
+            target_ids.push(*id);
+        }
+    }
+    let target_index = target_position_index.min(target_ids.len());
+    let previous_id = target_index.checked_sub(1).and_then(|index| target_ids.get(index));
+    let next_id = target_ids.get(target_index);
+    let mut ordered_ids: Vec<i64> = ordered_entries.iter().map(|(id, _)| *id).collect();
+
+    for (index, id) in target_ids.iter().enumerate() {
+        if ordered_ids.contains(id) {
+            continue;
+        }
+        let next_known_index = target_ids[index + 1..]
+            .iter()
+            .find_map(|candidate| ordered_ids.iter().position(|ordered_id| ordered_id == candidate));
+        if let Some(position) = next_known_index {
+            ordered_ids.insert(position, *id);
+            continue;
+        }
+        let previous_known_index = target_ids[..index]
+            .iter()
+            .rev()
+            .find_map(|candidate| ordered_ids.iter().position(|ordered_id| ordered_id == candidate));
+        if let Some(position) = previous_known_index {
+            ordered_ids.insert(position + 1, *id);
+            continue;
+        }
+        ordered_ids.insert(index.min(ordered_ids.len()), *id);
+    }
+
+    let next_index = next_id.and_then(|id| ordered_ids.iter().position(|ordered_id| ordered_id == id));
+    let previous_index = previous_id.and_then(|id| ordered_ids.iter().position(|ordered_id| ordered_id == id));
+    let insertion_index = next_index
+        .or_else(|| previous_index.map(|index| index + 1))
+        .unwrap_or_else(|| target_index.min(ordered_ids.len()));
+
+    let position_for = |id: Option<&i64>| {
+        id.and_then(|id| ordered_entries.iter().find(|(ordered_id, _)| ordered_id == id))
+            .map(|(_, position)| *position)
+    };
+    let previous_position = insertion_index
+        .checked_sub(1)
+        .and_then(|index| ordered_ids.get(index))
+        .and_then(|id| position_for(Some(id)));
+    let next_position = ordered_ids
+        .get(insertion_index)
+        .and_then(|id| position_for(Some(id)));
+
+    if let (Some(previous), Some(next)) = (previous_position, next_position) {
+        if next.saturating_sub(previous) > 1 {
+            let position = previous.saturating_add(next.saturating_sub(previous) / 2);
+            return serde_json::Map::from_iter([(
+                ticket_id.to_string(),
+                serde_json::Value::from(position),
+            )]);
+        }
+    } else if let Some(previous) = previous_position {
+        if insertion_index == ordered_ids.len() {
+            return serde_json::Map::from_iter([(
+                ticket_id.to_string(),
+                serde_json::Value::from(previous.saturating_add(ORDER_GAP)),
+            )]);
+        }
+    } else if let Some(next) = next_position {
+        if insertion_index == 0 {
+            return serde_json::Map::from_iter([(
+                ticket_id.to_string(),
+                serde_json::Value::from(next.saturating_sub(ORDER_GAP)),
+            )]);
+        }
+    } else if ordered_ids.is_empty() {
+        return serde_json::Map::from_iter([(
+            ticket_id.to_string(),
+            serde_json::Value::from(0),
+        )]);
+    }
+
+    ordered_ids.insert(insertion_index, ticket_id);
+    serde_json::Map::from_iter(ordered_ids.iter().enumerate().map(|(index, id)| {
+        (
+            id.to_string(),
+            serde_json::Value::from((index as i64).saturating_mul(ORDER_GAP)),
+        )
+    }))
+}
+
 #[tauri::command]
 async fn move_work_package_to_board_column(
     url: String,
@@ -2023,9 +2291,12 @@ async fn move_work_package_to_board_column(
     target_query_id: String,
     source_query_id: Option<String>,
     target_status_id: Option<String>,
+    target_position_index: Option<usize>,
+    target_ticket_ids: Option<Vec<i64>>,
 ) -> Result<MoveColumnResult, String> {
     let clean_url = sanitize_url(&url);
     let raw_ticket = ticket.trim().trim_start_matches('#');
+    let same_query = source_query_id.as_deref() == Some(target_query_id.as_str());
     let ticket_num = raw_ticket
         .parse::<i64>()
         .map_err(|_| "Ticket ID inválido".to_string())?;
@@ -2074,35 +2345,48 @@ async fn move_work_package_to_board_column(
         }
     }
 
-    // 2. Update Work Package status if target status is known
-    if let Some(ref sid) = resolved_status_id {
-        let wp_url = format!("{}/api/v3/work_packages/{}", clean_url, raw_ticket);
-        let lv = if let Ok(wp_res) = client
-            .get(&wp_url)
-            .header("Authorization", &auth_value)
-            .send()
-            .await
-        {
-            let wp_val: serde_json::Value = wp_res.json().await.unwrap_or_default();
-            wp_val["lockVersion"].as_i64().unwrap_or(0)
-        } else {
-            0
-        };
+    // 2. Update Work Package status only when the drop changes columns
+    let mut status_was_updated = false;
+    if !same_query {
+        if let Some(ref sid) = resolved_status_id {
+            let wp_url = format!("{}/api/v3/work_packages/{}", clean_url, raw_ticket);
+            let lv = if let Ok(wp_res) = client
+                .get(&wp_url)
+                .header("Authorization", &auth_value)
+                .send()
+                .await
+            {
+                let wp_val: serde_json::Value = wp_res.json().await.unwrap_or_default();
+                wp_val["lockVersion"].as_i64().unwrap_or(0)
+            } else {
+                0
+            };
 
-        let patch_body = serde_json::json!({
-            "lockVersion": lv,
-            "_links": {
-                "status": { "href": format!("/api/v3/statuses/{}", sid) }
+            let patch_body = serde_json::json!({
+                "lockVersion": lv,
+                "_links": {
+                    "status": { "href": format!("/api/v3/statuses/{}", sid) }
+                }
+            });
+            let status_res = client
+                .patch(&wp_url)
+                .header("Authorization", &auth_value)
+                .header("Content-Type", "application/json")
+                .json(&patch_body)
+                .send()
+                .await
+                .map_err(|e| format!("Error actualizando estado: {}", e))?;
+
+            if !status_res.status().is_success() {
+                let error = status_res.text().await.unwrap_or_default();
+                return Ok(MoveColumnResult {
+                    ok: false,
+                    status_id: resolved_status_id.clone(),
+                    error: Some(format!("Error actualizando estado en OpenProject: {}", error)),
+                });
             }
-        });
-
-        let _ = client
-            .patch(&wp_url)
-            .header("Authorization", &auth_value)
-            .header("Content-Type", "application/json")
-            .json(&patch_body)
-            .send()
-            .await;
+            status_was_updated = true;
+        }
     }
 
     // 3. Remove from source query order if different
@@ -2122,36 +2406,55 @@ async fn move_work_package_to_board_column(
         }
     }
 
-    // 4. Set order in target query (positioned at the top / first position)
+    // 4. Persist the requested visual position. Calls without a drop index retain first-position behavior.
     let target_order_url = format!("{}/api/v3/queries/{}/order", clean_url, target_query_id);
-    let mut target_position: i64 = 0;
-
-    if let Ok(order_res) = client
+    let mut order_map = serde_json::Map::new();
+    let order_response = client
         .get(&target_order_url)
         .header("Authorization", &auth_value)
         .header("Accept", "application/json")
         .send()
-        .await
-    {
-        if let Ok(order_map) = order_res.json::<serde_json::Map<String, serde_json::Value>>().await {
-            let mut min_pos: Option<i64> = None;
-            for (k, v) in &order_map {
-                if k != &ticket_num.to_string() {
-                    if let Some(pos) = v.as_i64() {
-                        min_pos = Some(min_pos.map_or(pos, |m| m.min(pos)));
-                    }
+        .await;
+
+    match order_response {
+        Ok(response) if response.status().is_success() => {
+            match response.json::<serde_json::Map<String, serde_json::Value>>().await {
+                Ok(map) => order_map = map,
+                Err(error) if target_position_index.is_some() => {
+                    return Ok(MoveColumnResult {
+                        ok: false,
+                        status_id: resolved_status_id,
+                        error: Some(format!("Error leyendo el orden de la columna: {}", error)),
+                    });
                 }
-            }
-            if let Some(min) = min_pos {
-                // OpenProject standard ORDER_DISTANCE / 2 is 8192 to guarantee top of column
-                target_position = min.saturating_sub(8192);
+                Err(_) => {}
             }
         }
+        Ok(response) if target_position_index.is_some() => {
+            let error = response.text().await.unwrap_or_default();
+            return Ok(MoveColumnResult {
+                ok: false,
+                status_id: resolved_status_id,
+                error: Some(format!("Error leyendo el orden de la columna: {}", error)),
+            });
+        }
+        Err(error) if target_position_index.is_some() => {
+            return Ok(MoveColumnResult {
+                ok: false,
+                status_id: resolved_status_id,
+                error: Some(format!("Error leyendo el orden de la columna: {}", error)),
+            });
+        }
+        _ => {}
     }
 
-    let target_body = serde_json::json!({
-        "delta": { ticket_num.to_string(): target_position }
-    });
+    let order_delta = build_query_order_delta(
+        ticket_num,
+        &order_map,
+        target_position_index,
+        target_ticket_ids.as_deref(),
+    );
+    let target_body = serde_json::json!({ "delta": order_delta });
     let target_res = client
         .patch(&target_order_url)
         .header("Authorization", &auth_value)
@@ -2167,7 +2470,7 @@ async fn move_work_package_to_board_column(
             status_id: resolved_status_id,
             error: None,
         })
-    } else if resolved_status_id.is_some() {
+    } else if status_was_updated {
         Ok(MoveColumnResult {
             ok: true,
             status_id: resolved_status_id,
@@ -2187,6 +2490,315 @@ async fn move_work_package_to_board_column(
 fn exit_app(app: AppHandle) {
     ipc::cleanup_ipc_file(&app);
     app.exit(0);
+}
+
+fn parse_schema_allowed_values(
+    schema_field: &serde_json::Value,
+) -> Vec<WorkPackageOptionItem> {
+    let mut items = Vec::new();
+    let arr = schema_field["_embedded"]["allowedValues"]
+        .as_array()
+        .or_else(|| schema_field["allowedValues"].as_array())
+        .or_else(|| schema_field["_links"]["allowedValues"].as_array());
+
+    if let Some(list) = arr {
+        for v in list {
+            let id = v["id"]
+                .as_i64()
+                .map(|n| n.to_string())
+                .or_else(|| v["id"].as_str().map(|s| s.to_string()))
+                .or_else(|| {
+                    v["href"]
+                        .as_str()
+                        .or_else(|| v["_links"]["self"]["href"].as_str())
+                        .and_then(|h| h.split('/').filter(|s| !s.is_empty()).last())
+                        .map(|s| s.to_string())
+                })
+                .unwrap_or_default();
+
+            let name = v["name"]
+                .as_str()
+                .or_else(|| v["title"].as_str())
+                .or_else(|| v["_links"]["self"]["title"].as_str())
+                .unwrap_or("")
+                .to_string();
+
+            let color = v["color"].as_str().map(|s| s.to_string());
+
+            if !id.is_empty() && !name.is_empty() {
+                items.push(WorkPackageOptionItem { id, name, color });
+            }
+        }
+    }
+    items
+}
+
+#[tauri::command]
+async fn fetch_work_package_form(
+    url: String,
+    token: String,
+    ticket: String,
+) -> Result<WorkPackageFormSchemaResult, String> {
+    let clean_url = sanitize_url(&url);
+    let raw_ticket = ticket.trim().trim_start_matches('#');
+    let endpoint = format!("{}/api/v3/work_packages/{}/form", clean_url, raw_ticket);
+    let auth_value = build_auth_header(&token);
+    let client = build_http_client(15)?;
+
+    let res = client
+        .post(&endpoint)
+        .header("Authorization", &auth_value)
+        .header("Accept", "application/hal+json, application/json")
+        .header("Content-Type", "application/json")
+        .json(&serde_json::json!({}))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !res.status().is_success() {
+        return Ok(WorkPackageFormSchemaResult {
+            statuses: Vec::new(),
+            priorities: Vec::new(),
+            assignees: Vec::new(),
+            responsibles: Vec::new(),
+            versions: Vec::new(),
+        });
+    }
+
+    let form_val: serde_json::Value = res.json().await.map_err(|e| e.to_string())?;
+    let schema = &form_val["_embedded"]["schema"];
+
+    Ok(WorkPackageFormSchemaResult {
+        statuses: parse_schema_allowed_values(&schema["status"]),
+        priorities: parse_schema_allowed_values(&schema["priority"]),
+        assignees: parse_schema_allowed_values(&schema["assignee"]),
+        responsibles: parse_schema_allowed_values(&schema["responsible"]),
+        versions: parse_schema_allowed_values(&schema["version"]),
+    })
+}
+
+#[tauri::command]
+async fn update_work_package(
+    url: String,
+    token: String,
+    ticket: String,
+    payload: UpdateWorkPackagePayload,
+) -> Result<i64, String> {
+    let clean_url = sanitize_url(&url);
+    let raw_ticket = ticket.trim().trim_start_matches('#');
+    let wp_endpoint = format!("{}/api/v3/work_packages/{}", clean_url, raw_ticket);
+    let auth_value = build_auth_header(&token);
+    let client = build_http_client(15)?;
+
+    let lock_version = match payload.lock_version {
+        Some(lv) => lv,
+        None => {
+            let wp_res = client
+                .get(&wp_endpoint)
+                .header("Authorization", &auth_value)
+                .header("Accept", "application/hal+json, application/json")
+                .send()
+                .await
+                .map_err(|e| e.to_string())?;
+            if !wp_res.status().is_success() {
+                return Err(format!("HTTP {}", wp_res.status()));
+            }
+            let wp_val: serde_json::Value = wp_res.json().await.map_err(|e| e.to_string())?;
+            wp_val["lockVersion"].as_i64().unwrap_or(0)
+        }
+    };
+
+    let mut body = serde_json::Map::new();
+    body.insert("lockVersion".to_string(), serde_json::json!(lock_version));
+
+    if let Some(subject) = payload.subject {
+        body.insert("subject".to_string(), serde_json::json!(subject));
+    }
+    if let Some(desc) = payload.description_raw {
+        body.insert(
+            "description".to_string(),
+            serde_json::json!({ "format": "markdown", "raw": desc }),
+        );
+    }
+    if payload.clear_start_date.unwrap_or(false) {
+        body.insert("startDate".to_string(), serde_json::Value::Null);
+    } else if let Some(sd) = payload.start_date {
+        body.insert("startDate".to_string(), serde_json::json!(sd));
+    }
+    if payload.clear_due_date.unwrap_or(false) {
+        body.insert("dueDate".to_string(), serde_json::Value::Null);
+    } else if let Some(dd) = payload.due_date {
+        body.insert("dueDate".to_string(), serde_json::json!(dd));
+    }
+    if let Some(est) = payload.estimated_time {
+        body.insert("estimatedTime".to_string(), serde_json::json!(est));
+    }
+
+    let mut links = serde_json::Map::new();
+    if let Some(sid) = payload.status_id {
+        links.insert("status".to_string(), serde_json::json!({ "href": format!("/api/v3/statuses/{}", sid) }));
+    }
+    if let Some(pid) = payload.priority_id {
+        links.insert("priority".to_string(), serde_json::json!({ "href": format!("/api/v3/priorities/{}", pid) }));
+    }
+    if payload.clear_assignee.unwrap_or(false) {
+        links.insert("assignee".to_string(), serde_json::json!({ "href": serde_json::Value::Null }));
+    } else if let Some(aid) = payload.assignee_id {
+        links.insert("assignee".to_string(), serde_json::json!({ "href": format!("/api/v3/users/{}", aid) }));
+    }
+    if payload.clear_responsible.unwrap_or(false) {
+        links.insert("responsible".to_string(), serde_json::json!({ "href": serde_json::Value::Null }));
+    } else if let Some(rid) = payload.responsible_id {
+        links.insert("responsible".to_string(), serde_json::json!({ "href": format!("/api/v3/users/{}", rid) }));
+    }
+    if payload.clear_version.unwrap_or(false) {
+        links.insert("version".to_string(), serde_json::json!({ "href": serde_json::Value::Null }));
+    } else if let Some(vid) = payload.version_id {
+        links.insert("version".to_string(), serde_json::json!({ "href": format!("/api/v3/versions/{}", vid) }));
+    }
+
+    if !links.is_empty() {
+        body.insert("_links".to_string(), serde_json::Value::Object(links));
+    }
+
+    let patch_res = client
+        .patch(&wp_endpoint)
+        .header("Authorization", &auth_value)
+        .header("Accept", "application/hal+json, application/json")
+        .header("Content-Type", "application/json")
+        .json(&serde_json::Value::Object(body))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !patch_res.status().is_success() {
+        let status = patch_res.status();
+        let err_text = patch_res.text().await.unwrap_or_default();
+        return Err(format!("HTTP {}: {}", status, err_text));
+    }
+
+    let updated: serde_json::Value = patch_res.json().await.map_err(|e| e.to_string())?;
+    Ok(updated["lockVersion"].as_i64().unwrap_or(lock_version + 1))
+}
+
+#[tauri::command]
+async fn add_work_package_comment(
+    url: String,
+    token: String,
+    ticket: String,
+    comment: String,
+) -> Result<(), String> {
+    let clean_url = sanitize_url(&url);
+    let raw_ticket = ticket.trim().trim_start_matches('#');
+    let endpoint = format!("{}/api/v3/work_packages/{}/activities", clean_url, raw_ticket);
+    let auth_value = build_auth_header(&token);
+    let client = build_http_client(15)?;
+
+    let res = client
+        .post(&endpoint)
+        .header("Authorization", &auth_value)
+        .header("Accept", "application/hal+json, application/json")
+        .header("Content-Type", "application/json")
+        .json(&serde_json::json!({
+            "comment": {
+                "format": "markdown",
+                "raw": comment
+            }
+        }))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !res.status().is_success() {
+        let status = res.status();
+        let err_text = res.text().await.unwrap_or_default();
+        return Err(format!("HTTP {}: {}", status, err_text));
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn fetch_work_package_time_entries(
+    url: String,
+    token: String,
+    ticket: String,
+) -> Result<Vec<PlatformTimeEntryItem>, String> {
+    let clean_url = sanitize_url(&url);
+    let raw_ticket = ticket.trim().trim_start_matches('#');
+    let auth_value = build_auth_header(&token);
+    let client = build_http_client(15)?;
+
+    let endpoint = format!(
+        "{}/api/v3/work_packages/{}/time_entries?pageSize=100",
+        clean_url, raw_ticket
+    );
+    let mut res = client
+        .get(&endpoint)
+        .header("Authorization", &auth_value)
+        .header("Accept", "application/hal+json, application/json")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if res.status().as_u16() == 404 {
+        let filter_json = serde_json::json!([{
+            "workPackage": { "operator": "=", "values": [raw_ticket] }
+        }])
+        .to_string();
+        let fallback_url = format!("{}/api/v3/time_entries", clean_url);
+        res = client
+            .get(&fallback_url)
+            .query(&[("pageSize", "100"), ("filters", &filter_json)])
+            .header("Authorization", &auth_value)
+            .header("Accept", "application/hal+json, application/json")
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+
+    if !res.status().is_success() {
+        return Ok(Vec::new());
+    }
+
+    let json_val: serde_json::Value = res.json().await.map_err(|e| e.to_string())?;
+    let mut entries = Vec::new();
+    if let Some(elements) = json_val["_embedded"]["elements"].as_array() {
+        for el in elements {
+            let id = el["id"]
+                .as_i64()
+                .map(|n| n.to_string())
+                .unwrap_or_default();
+            let hours = el["hours"].as_str().unwrap_or("PT0H").to_string();
+            let spent_on = el["spentOn"].as_str().unwrap_or("").to_string();
+            let comment = el["comment"]["raw"]
+                .as_str()
+                .or_else(|| el["comment"]["html"].as_str())
+                .unwrap_or("")
+                .to_string();
+            let user_name = el["_links"]["user"]["title"]
+                .as_str()
+                .unwrap_or("Usuario")
+                .to_string();
+            let activity_name = el["_links"]["activity"]["title"]
+                .as_str()
+                .unwrap_or("")
+                .to_string();
+            let created_at = el["createdAt"].as_str().map(|s| s.to_string());
+
+            entries.push(PlatformTimeEntryItem {
+                id,
+                hours,
+                spent_on,
+                comment,
+                user_name,
+                activity_name,
+                created_at,
+            });
+        }
+    }
+
+    Ok(entries)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -2295,6 +2907,10 @@ pub fn run() {
             fetch_project_boards,
             fetch_board_columns,
             move_work_package_to_board_column,
+            fetch_work_package_form,
+            update_work_package,
+            add_work_package_comment,
+            fetch_work_package_time_entries,
             get_database_path,
             get_ai_stats,
             get_favorite_tickets,

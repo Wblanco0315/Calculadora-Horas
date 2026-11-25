@@ -21,14 +21,79 @@ export interface BoardOption {
   name: string;
 }
 
+export interface BoardWorkPackageCard {
+  id: number;
+  subject: string;
+  typeName?: string;
+  typeColor?: string;
+  statusId?: string;
+  statusName?: string;
+  statusColor?: string;
+  priorityName?: string;
+  assigneeName?: string;
+  projectName?: string;
+  startDate?: string | null;
+  dueDate?: string | null;
+  lockVersion?: number;
+}
+
 export interface BoardColumnOption {
   queryId: string;
   name: string;
   widgetId: number;
   startColumn: number;
   workPackageIds: number[];
+  workPackages?: BoardWorkPackageCard[];
   statusId?: string;
   statusName?: string;
+}
+
+export interface BoardColumnDropPosition {
+  targetIndex: number;
+  targetTicketIds: number[];
+}
+
+export interface WorkPackageOptionItem {
+  id: string;
+  name: string;
+  color?: string;
+}
+
+export interface WorkPackageFormSchema {
+  statuses: WorkPackageOptionItem[];
+  priorities: WorkPackageOptionItem[];
+  assignees: WorkPackageOptionItem[];
+  responsibles: WorkPackageOptionItem[];
+  versions: WorkPackageOptionItem[];
+}
+
+export interface UpdateWorkPackagePayload {
+  lockVersion?: number;
+  subject?: string;
+  descriptionRaw?: string;
+  startDate?: string | null;
+  clearStartDate?: boolean;
+  dueDate?: string | null;
+  clearDueDate?: boolean;
+  estimatedTime?: string;
+  statusId?: string;
+  priorityId?: string;
+  assigneeId?: string | null;
+  clearAssignee?: boolean;
+  responsibleId?: string | null;
+  clearResponsible?: boolean;
+  versionId?: string | null;
+  clearVersion?: boolean;
+}
+
+export interface PlatformTimeEntry {
+  id: string;
+  hours: string;
+  spentOn: string;
+  comment: string;
+  userName: string;
+  activityName: string;
+  createdAt?: string;
 }
 
 export interface BoardLocation {
@@ -101,6 +166,14 @@ export interface TicketContextResult {
   success: boolean;
   ticket: string;
   subject?: string | null;
+  typeName?: string | null;
+  type_name?: string | null;
+  authorName?: string | null;
+  author_name?: string | null;
+  createdAt?: string | null;
+  created_at?: string | null;
+  updatedAt?: string | null;
+  updated_at?: string | null;
   description?: TicketDescription | null;
   comments?: TicketComment[] | null;
   attachments?: TicketAttachment[] | null;

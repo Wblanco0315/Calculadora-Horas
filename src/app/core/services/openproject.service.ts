@@ -6,7 +6,9 @@ import {
   StatusOption,
   VersionOption,
   BoardOption,
+  BoardColumnDropPosition,
   BoardColumnOption,
+  BoardWorkPackageCard,
   BoardLocation,
   TimeEntryActivityType,
   TicketInfoResult,
@@ -15,6 +17,10 @@ import {
   TicketComment,
   TicketAttachment,
   CreateTimeEntryParams,
+  WorkPackageOptionItem,
+  WorkPackageFormSchema,
+  UpdateWorkPackagePayload,
+  PlatformTimeEntry,
 } from '../interfaces/openproject.interface';
 
 @Injectable({
@@ -80,6 +86,33 @@ export class OpenprojectService {
   minutesToISO(minutes: number): string {
     const hours = parseFloat((Math.max(0, minutes) / 60).toFixed(2));
     return `PT${hours}H`;
+  }
+
+  /**
+   * Converts an ISO 8601 duration string (e.g. "PT1H30M", "PT1.5H") to total minutes
+   */
+  isoDurationToMinutes(iso?: string | null): number {
+    if (!iso) return 0;
+    const match = iso.match(/P(?:(\d+(?:\.\d+)?)D)?T?(?:(\d+(?:\.\d+)?)H)?(?:(\d+(?:\.\d+)?)M)?(?:(\d+(?:\.\d+)?)S)?/i);
+    if (!match) return 0;
+    const days = parseFloat(match[1] || '0');
+    const hours = parseFloat(match[2] || '0');
+    const mins = parseFloat(match[3] || '0');
+    const secs = parseFloat(match[4] || '0');
+    return Math.round(days * 8 * 60 + hours * 60 + mins + secs / 60);
+  }
+
+  invalidateBoardCache(projectId?: string, gridId?: string): void {
+    if (projectId) {
+      this.boardsCache.delete(projectId);
+    } else if (!gridId) {
+      this.boardsCache.clear();
+    }
+    if (gridId) {
+      this.boardColumnsCache.delete(gridId);
+    } else if (!projectId) {
+      this.boardColumnsCache.clear();
+    }
   }
 
   // ──────────────────────────────────────────────
@@ -1088,9 +1121,11 @@ export class OpenprojectService {
     }
   }
 
-  async getBoardColumns(gridId: string): Promise<BoardColumnOption[]> {
+  async getBoardColumns(gridId: string, forceRefresh = false): Promise<BoardColumnOption[]> {
     if (!gridId) return [];
-    if (this.boardColumnsCache.has(gridId)) {
+    if (forceRefresh) {
+      this.boardColumnsCache.delete(gridId);
+    } else if (this.boardColumnsCache.has(gridId)) {
       return this.boardColumnsCache.get(gridId)!;
     }
 
@@ -1131,7 +1166,22 @@ export class OpenprojectService {
             const qRes = await fetch(`${url}/api/v3/queries/${queryId}`, { headers });
             if (!qRes.ok) return null;
             const qData = await qRes.json();
-            const elements: Array<{ id: number }> = qData._embedded?.results?._embedded?.elements ?? [];
+            const elements: Array<Record<string, any>> = qData._embedded?.results?._embedded?.elements ?? [];
+            const workPackages: BoardWorkPackageCard[] = elements.map((el) => ({
+              id: Number(el['id']),
+              subject: String(el['subject'] || ''),
+              typeName: el['_links']?.['type']?.['title'] || undefined,
+              typeColor: el['_embedded']?.['type']?.['color'] || undefined,
+              statusId: el['_links']?.['status']?.['href']?.split('/').pop() || undefined,
+              statusName: el['_links']?.['status']?.['title'] || undefined,
+              statusColor: el['_embedded']?.['status']?.['color'] || undefined,
+              priorityName: el['_links']?.['priority']?.['title'] || undefined,
+              assigneeName: el['_links']?.['assignee']?.['title'] || undefined,
+              projectName: el['_links']?.['project']?.['title'] || undefined,
+              startDate: el['startDate'] ?? null,
+              dueDate: el['dueDate'] ?? null,
+              lockVersion: typeof el['lockVersion'] === 'number' ? el['lockVersion'] : undefined,
+            }));
 
             let statusId: string | undefined;
             let statusName: string | undefined;
@@ -1158,7 +1208,8 @@ export class OpenprojectService {
               name: qData.name ?? `Columna ${queryId}`,
               widgetId: widget.id,
               startColumn: widget.startColumn,
-              workPackageIds: elements.map((e) => e.id),
+              workPackageIds: elements.map((e) => Number(e['id'])),
+              workPackages,
               statusId,
               statusName,
             } as BoardColumnOption;
@@ -1214,7 +1265,8 @@ export class OpenprojectService {
     ticket: string,
     targetQueryId: string,
     sourceQueryId?: string,
-    targetStatusId?: string
+    targetStatusId?: string,
+    dropPosition?: BoardColumnDropPosition
   ): Promise<{ ok: boolean; statusId?: string; error?: string }> {
     const rawTicket = ticket.trim().replace(/^#/, '');
     const ticketNum = parseInt(rawTicket, 10);
@@ -1234,6 +1286,8 @@ export class OpenprojectService {
             targetQueryId,
             sourceQueryId: sourceQueryId || null,
             targetStatusId: targetStatusId || null,
+            targetPositionIndex: dropPosition?.targetIndex ?? null,
+            targetTicketIds: dropPosition?.targetTicketIds ?? null,
           }
         );
 
@@ -1266,11 +1320,13 @@ export class OpenprojectService {
       }
 
       // 2. If it is an action board for status, update the ticket status in OpenProject
-      if (effectiveStatusId) {
+      let statusWasUpdated = false;
+      if (effectiveStatusId && sourceQueryId !== targetQueryId) {
         const statusRes = await this.updateWorkPackageStatus(rawTicket, effectiveStatusId);
         if (!statusRes.ok) {
-          console.warn('Could not update work package status directly:', statusRes.error);
+          return { ok: false, error: statusRes.error || 'Could not update work package status.' };
         }
+        statusWasUpdated = true;
       }
 
       // 3. Remove order from source query if distinct (-1 tells OpenProject to remove_order)
@@ -1282,38 +1338,37 @@ export class OpenprojectService {
         }).catch((err) => console.warn('Could not remove previous order:', err));
       }
 
-      // 4. Update order position in target query (positioned at top / first position)
-      let targetPosition = 0;
+      // 4. Persist the requested drop position, or keep the legacy first-position behavior.
+      let orderMap: Record<string, number> = {};
       try {
         const orderRes = await fetch(`${url}/api/v3/queries/${targetQueryId}/order`, {
           method: 'GET',
           headers,
         });
-        if (orderRes.ok) {
-          const orderMap: Record<string, number> = await orderRes.json();
-          const existingPositions: number[] = [];
-          for (const [wpId, pos] of Object.entries(orderMap)) {
-            if (wpId !== String(ticketNum) && typeof pos === 'number') {
-              existingPositions.push(pos);
-            }
+        if (!orderRes.ok) {
+          if (dropPosition) {
+            const error = await orderRes.text();
+            return { ok: false, error: error || `HTTP ${orderRes.status}` };
           }
-          if (existingPositions.length > 0) {
-            const minPos = Math.min(...existingPositions);
-            targetPosition = minPos - 8192;
-          }
+        } else {
+          orderMap = await orderRes.json();
         }
-      } catch (err) {
-        console.warn('Could not check existing query order:', err);
+      } catch (error) {
+        if (dropPosition) {
+          return { ok: false, error: error instanceof Error ? error.message : String(error) };
+        }
+        console.warn('Could not check existing query order:', error);
       }
 
+      const orderDelta = buildQueryOrderDelta(ticketNum, orderMap, dropPosition);
       const putRes = await fetch(`${url}/api/v3/queries/${targetQueryId}/order`, {
         method: 'PATCH',
         headers,
-        body: JSON.stringify({ delta: { [String(ticketNum)]: targetPosition } }),
+        body: JSON.stringify({ delta: orderDelta }),
       });
 
       if (!putRes.ok) {
-        if (!effectiveStatusId) {
+        if (!statusWasUpdated) {
           const errData = await putRes.json().catch(() => null);
           return { ok: false, error: errData?.message || `HTTP ${putRes.status}` };
         }
@@ -1331,4 +1386,344 @@ export class OpenprojectService {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
   }
+
+  // ──────────────────────────────────────────────
+  // Work Package Form, Update, Comments & Time Entries
+  // ──────────────────────────────────────────────
+
+  private parseSchemaAllowedValues(schemaField: any): WorkPackageOptionItem[] {
+    const raw =
+      schemaField?._embedded?.allowedValues ??
+      schemaField?.allowedValues ??
+      schemaField?._links?.allowedValues;
+    if (!Array.isArray(raw)) return [];
+
+    return raw
+      .map((v: Record<string, any>) => ({
+        id: String(
+          v['id'] ||
+            v['href']?.split('/').pop() ||
+            v['_links']?.['self']?.['href']?.split('/').pop() ||
+            ''
+        ),
+        name: String(v['name'] || v['title'] || v['_links']?.['self']?.['title'] || ''),
+        color: typeof v['color'] === 'string' ? v['color'] : undefined,
+      }))
+      .filter((item) => item.id && item.name);
+  }
+
+  async getWorkPackageForm(ticket: string): Promise<WorkPackageFormSchema> {
+    const empty: WorkPackageFormSchema = {
+      statuses: [],
+      priorities: [],
+      assignees: [],
+      responsibles: [],
+      versions: [],
+    };
+    const rawTicket = ticket.trim().replace(/^#/, '');
+    if (!rawTicket) return empty;
+    const token = this.getToken();
+    if (!token) return empty;
+    const url = this.sanitizeUrl();
+
+    if (this.isTauriApp()) {
+      try {
+        return await invoke<WorkPackageFormSchema>('fetch_work_package_form', {
+          url,
+          token,
+          ticket: rawTicket,
+        });
+      } catch (err) {
+        console.warn('Could not fetch work package form via Tauri:', err);
+        return empty;
+      }
+    }
+
+    try {
+      const res = await fetch(`${url}/api/v3/work_packages/${rawTicket}/form`, {
+        method: 'POST',
+        headers: this.buildAuthHeaders(token),
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) return empty;
+      const formData = await res.json();
+      const schema = formData?._embedded?.schema ?? {};
+      return {
+        statuses: this.parseSchemaAllowedValues(schema['status']),
+        priorities: this.parseSchemaAllowedValues(schema['priority']),
+        assignees: this.parseSchemaAllowedValues(schema['assignee']),
+        responsibles: this.parseSchemaAllowedValues(schema['responsible']),
+        versions: this.parseSchemaAllowedValues(schema['version']),
+      };
+    } catch (err) {
+      console.warn('Web fetch work package form error:', err);
+      return empty;
+    }
+  }
+
+  async updateWorkPackage(
+    ticket: string,
+    payload: UpdateWorkPackagePayload
+  ): Promise<{ ok: boolean; lockVersion?: number; error?: string }> {
+    const rawTicket = ticket.trim().replace(/^#/, '');
+    if (!rawTicket) return { ok: false, error: 'No ticket ID' };
+    const token = this.getToken();
+    if (!token) return { ok: false, error: 'No token' };
+    const url = this.sanitizeUrl();
+
+    if (this.isTauriApp()) {
+      try {
+        const lockVersion = await invoke<number>('update_work_package', {
+          url,
+          token,
+          ticket: rawTicket,
+          payload,
+        });
+        return { ok: true, lockVersion };
+      } catch (err: unknown) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+
+    try {
+      const headers = this.buildAuthHeaders(token);
+      const wpEndpoint = `${url}/api/v3/work_packages/${rawTicket}`;
+      let lockVersion = payload.lockVersion;
+
+      if (lockVersion === undefined) {
+        const wpRes = await fetch(wpEndpoint, { headers });
+        if (!wpRes.ok) return { ok: false, error: `HTTP ${wpRes.status}` };
+        const wpData = await wpRes.json();
+        lockVersion = wpData.lockVersion;
+      }
+
+      const body: Record<string, any> = { lockVersion };
+      if (payload.subject !== undefined) body['subject'] = payload.subject;
+      if (payload.descriptionRaw !== undefined) {
+        body['description'] = { format: 'markdown', raw: payload.descriptionRaw };
+      }
+      if (payload.clearStartDate) {
+        body['startDate'] = null;
+      } else if (payload.startDate !== undefined) {
+        body['startDate'] = payload.startDate;
+      }
+      if (payload.clearDueDate) {
+        body['dueDate'] = null;
+      } else if (payload.dueDate !== undefined) {
+        body['dueDate'] = payload.dueDate;
+      }
+      if (payload.estimatedTime !== undefined) {
+        body['estimatedTime'] = payload.estimatedTime;
+      }
+
+      const links: Record<string, { href: string | null }> = {};
+      if (payload.statusId) links['status'] = { href: `/api/v3/statuses/${payload.statusId}` };
+      if (payload.priorityId) links['priority'] = { href: `/api/v3/priorities/${payload.priorityId}` };
+      if (payload.clearAssignee) {
+        links['assignee'] = { href: null };
+      } else if (payload.assigneeId) {
+        links['assignee'] = { href: `/api/v3/users/${payload.assigneeId}` };
+      }
+      if (payload.clearResponsible) {
+        links['responsible'] = { href: null };
+      } else if (payload.responsibleId) {
+        links['responsible'] = { href: `/api/v3/users/${payload.responsibleId}` };
+      }
+      if (payload.clearVersion) {
+        links['version'] = { href: null };
+      } else if (payload.versionId) {
+        links['version'] = { href: `/api/v3/versions/${payload.versionId}` };
+      }
+
+      if (Object.keys(links).length > 0) {
+        body['_links'] = links;
+      }
+
+      const patchRes = await fetch(wpEndpoint, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(body),
+      });
+
+      if (!patchRes.ok) {
+        const errJson = await patchRes.json().catch(() => null);
+        return { ok: false, error: errJson?.message || `HTTP ${patchRes.status}` };
+      }
+
+      const updated = await patchRes.json();
+      return { ok: true, lockVersion: updated.lockVersion };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+
+  async addWorkPackageComment(
+    ticket: string,
+    comment: string
+  ): Promise<{ ok: boolean; error?: string }> {
+    const rawTicket = ticket.trim().replace(/^#/, '');
+    if (!rawTicket) return { ok: false, error: 'No ticket ID' };
+    const trimmed = comment.trim();
+    if (!trimmed) return { ok: false, error: 'Comment is empty' };
+    const token = this.getToken();
+    if (!token) return { ok: false, error: 'No token' };
+    const url = this.sanitizeUrl();
+
+    if (this.isTauriApp()) {
+      try {
+        await invoke('add_work_package_comment', {
+          url,
+          token,
+          ticket: rawTicket,
+          comment: trimmed,
+        });
+        return { ok: true };
+      } catch (err: unknown) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+
+    try {
+      const res = await fetch(`${url}/api/v3/work_packages/${rawTicket}/activities`, {
+        method: 'POST',
+        headers: this.buildAuthHeaders(token),
+        body: JSON.stringify({ comment: { format: 'markdown', raw: trimmed } }),
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        return { ok: false, error: errJson?.message || `HTTP ${res.status}` };
+      }
+      return { ok: true };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+
+  async getWorkPackageTimeEntries(ticket: string): Promise<PlatformTimeEntry[]> {
+    const rawTicket = ticket.trim().replace(/^#/, '');
+    if (!rawTicket) return [];
+    const token = this.getToken();
+    if (!token) return [];
+    const url = this.sanitizeUrl();
+
+    if (this.isTauriApp()) {
+      try {
+        return await invoke<PlatformTimeEntry[]>('fetch_work_package_time_entries', {
+          url,
+          token,
+          ticket: rawTicket,
+        });
+      } catch (err) {
+        console.warn('Could not fetch work package time entries via Tauri:', err);
+        return [];
+      }
+    }
+
+    try {
+      const headers = this.buildAuthHeaders(token);
+      let res = await fetch(`${url}/api/v3/work_packages/${rawTicket}/time_entries?pageSize=100`, {
+        headers,
+      });
+
+      if (res.status === 404) {
+        const filterParam = encodeURIComponent(
+          JSON.stringify([{ workPackage: { operator: '=', values: [rawTicket] } }])
+        );
+        res = await fetch(`${url}/api/v3/time_entries?pageSize=100&filters=${filterParam}`, {
+          headers,
+        });
+      }
+
+      if (!res.ok) return [];
+      const data = await res.json();
+      const elements: Array<Record<string, any>> = data?._embedded?.elements ?? [];
+      return elements.map((el) => ({
+        id: String(el['id']),
+        hours: String(el['hours'] || 'PT0H'),
+        spentOn: String(el['spentOn'] || ''),
+        comment: String(el['comment']?.['raw'] || el['comment']?.['html'] || ''),
+        userName: String(el['_links']?.['user']?.['title'] || 'Usuario'),
+        activityName: String(el['_links']?.['activity']?.['title'] || ''),
+        createdAt: el['createdAt'] || undefined,
+      }));
+    } catch (err) {
+      console.warn('Web fetch work package time entries error:', err);
+      return [];
+    }
+  }
+}
+
+function buildQueryOrderDelta(
+  ticketId: number,
+  orderMap: Record<string, number>,
+  dropPosition?: BoardColumnDropPosition
+): Record<string, number> {
+  const orderGap = 8192;
+  const orderedEntry = Object.entries(orderMap)
+    .map(([id, value]) => ({ id: Number(id), position: Number(value) }))
+    .filter((entry) => Number.isSafeInteger(entry.id) && entry.id !== ticketId && Number.isFinite(entry.position))
+    .sort((first, second) => first.position - second.position || first.id - second.id);
+
+  if (!dropPosition) {
+    const firstPosition = orderedEntry[0]?.position;
+    return { [String(ticketId)]: firstPosition === undefined ? 0 : firstPosition - orderGap };
+  }
+
+  const targetTicketIds = [...new Set(dropPosition.targetTicketIds)]
+    .filter((id) => Number.isSafeInteger(id) && id > 0 && id !== ticketId);
+  const targetIndex = Math.max(0, Math.min(dropPosition.targetIndex, targetTicketIds.length));
+  const previousTicketId = targetTicketIds[targetIndex - 1];
+  const nextTicketId = targetTicketIds[targetIndex];
+  const positionById = new Map(orderedEntry.map((entry) => [entry.id, entry.position]));
+  const orderedTicketIds = orderedEntry.map((entry) => entry.id);
+
+  for (let index = 0; index < targetTicketIds.length; index += 1) {
+    const targetTicketId = targetTicketIds[index];
+    if (orderedTicketIds.includes(targetTicketId)) continue;
+
+    const nextKnownId = targetTicketIds.slice(index + 1).find((id) => orderedTicketIds.includes(id));
+    if (nextKnownId !== undefined) {
+      orderedTicketIds.splice(orderedTicketIds.indexOf(nextKnownId), 0, targetTicketId);
+      continue;
+    }
+
+    const previousKnownId = targetTicketIds
+      .slice(0, index)
+      .reverse()
+      .find((id) => orderedTicketIds.includes(id));
+    if (previousKnownId !== undefined) {
+      orderedTicketIds.splice(orderedTicketIds.indexOf(previousKnownId) + 1, 0, targetTicketId);
+      continue;
+    }
+
+    orderedTicketIds.splice(Math.min(index, orderedTicketIds.length), 0, targetTicketId);
+  }
+
+  const nextIndex = nextTicketId === undefined ? -1 : orderedTicketIds.indexOf(nextTicketId);
+  const previousIndex = previousTicketId === undefined ? -1 : orderedTicketIds.indexOf(previousTicketId);
+  const insertionIndex = nextIndex >= 0
+    ? nextIndex
+    : previousIndex >= 0
+      ? previousIndex + 1
+      : Math.min(targetIndex, orderedTicketIds.length);
+  const previousPosition = insertionIndex > 0 ? positionById.get(orderedTicketIds[insertionIndex - 1]) : undefined;
+  const nextPosition = insertionIndex < orderedTicketIds.length
+    ? positionById.get(orderedTicketIds[insertionIndex])
+    : undefined;
+
+  if (previousPosition !== undefined && nextPosition !== undefined && nextPosition - previousPosition > 1) {
+    return { [String(ticketId)]: previousPosition + Math.floor((nextPosition - previousPosition) / 2) };
+  }
+  if (previousPosition !== undefined && insertionIndex === orderedTicketIds.length) {
+    return { [String(ticketId)]: previousPosition + orderGap };
+  }
+  if (nextPosition !== undefined && insertionIndex === 0) {
+    return { [String(ticketId)]: nextPosition - orderGap };
+  }
+  if (orderedTicketIds.length === 0) {
+    return { [String(ticketId)]: 0 };
+  }
+
+  orderedTicketIds.splice(insertionIndex, 0, ticketId);
+  return Object.fromEntries(orderedTicketIds.map((id, index) => [String(id), index * orderGap]));
 }
