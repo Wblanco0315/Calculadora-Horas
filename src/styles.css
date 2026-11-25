@@ -244,3 +244,33 @@ router-outlet {
   overflow-y: auto !important;
   flex: 1 1 auto !important;
 }
+
+.cdk-drag-preview {
+  box-sizing: border-box;
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 18%);
+}
+
+.cdk-drag-placeholder {
+  opacity: 0.35;
+}
+
+.cdk-drag-animating,
+.cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
+  transition: transform 180ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.ticket-detail-page {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.ticket-detail-page .ticket-detail-layout {
+  grid-template-rows: minmax(0, 1fr) minmax(14rem, 0.85fr);
+}
+
+@media (min-width: 1024px) {
+  .ticket-detail-page .ticket-detail-layout {
+    grid-template-rows: minmax(0, 1fr);
+  }
+}

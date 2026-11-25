@@ -20,6 +20,7 @@ import {
   tablerChevronRight,
   tablerAppWindow,
   tablerDownload,
+  tablerFolder,
 } from '@ng-icons/tabler-icons';
 import { StorageService } from '../../../core/services/storage.service';
 import { ThemeService } from '../../../core/services/theme.service';
@@ -74,6 +75,7 @@ export interface NavGroup {
       tablerChevronRight,
       tablerAppWindow,
       tablerDownload,
+      tablerFolder,
     }),
   ],
   templateUrl: './dashboard.page.html',
@@ -115,6 +117,11 @@ export class DashboardPage implements OnInit, OnDestroy {
   readonly isSettings = computed(() => {
     const url = this.currentUrl();
     return url.startsWith('/dashboard/setting');
+  });
+
+  readonly isProjects = computed(() => {
+    const url = this.currentUrl();
+    return url.startsWith('/dashboard/projects') || url.startsWith('/dashboard/boards');
   });
 
   readonly userInitials = computed(() => {
@@ -174,6 +181,16 @@ export class DashboardPage implements OnInit, OnDestroy {
           label: this.languageService.t('settings.tabSystem'),
         });
       }
+    } else if (this.isProjects()) {
+      items.push({
+        label: this.languageService.t('dashboard.projects'),
+        routerLink: '/dashboard/projects',
+      });
+      if (url.startsWith('/dashboard/boards')) {
+        items.push({
+          label: this.languageService.t('dashboard.boards'),
+        });
+      }
     } else {
       items.push({
         label: this.languageService.t('dashboard.overview'),
@@ -187,6 +204,7 @@ export class DashboardPage implements OnInit, OnDestroy {
   readonly navGroups = computed<NavGroup[]>(() => {
     this.languageService.currentLang();
     const overviewActive = this.isOverview();
+    const projectsActive = this.isProjects();
     const settingsActive = this.isSettings();
 
     return [
@@ -199,6 +217,13 @@ export class DashboardPage implements OnInit, OnDestroy {
             label: this.languageService.t('dashboard.overview'),
             isActive: overviewActive,
             action: () => this.navigateTo('/dashboard/overview'),
+          },
+          {
+            id: 'projects',
+            icon: 'tablerFolder',
+            label: this.languageService.t('dashboard.projects'),
+            isActive: projectsActive,
+            action: () => this.navigateTo('/dashboard/projects'),
           },
           {
             id: 'settings',
