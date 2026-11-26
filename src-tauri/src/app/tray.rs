@@ -3,9 +3,10 @@
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    App, Manager,
+    App,
 };
 
+use crate::app::window::show_main_window;
 use crate::ipc;
 
 pub(crate) fn build_tray(app: &App) -> tauri::Result<()> {
@@ -26,23 +27,12 @@ pub(crate) fn build_tray(app: &App) -> tauri::Result<()> {
                 ..
             } = event
             {
-                let app = tray.app_handle();
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.unminimize();
-                    let _ = window.show();
-                    let _ = window.set_focus();
-                }
+                show_main_window(tray.app_handle());
             }
         })
         .on_menu_event(|app, event| {
             match event.id.as_ref() {
-                "show" => {
-                    if let Some(window) = app.get_webview_window("main") {
-                        let _ = window.unminimize();
-                        let _ = window.show();
-                        let _ = window.set_focus();
-                    }
-                }
+                "show" => show_main_window(app),
                 "quit" => {
                     ipc::cleanup_ipc_file(app);
                     app.exit(0);

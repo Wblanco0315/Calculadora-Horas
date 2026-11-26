@@ -69,4 +69,5 @@ Rules:
 - **Compact settings** (`/setup?edit=true`): saving or closing only navigates back to `/compact` (`returnToCompact`).
 - **End of onboarding** (`setCompactMode({ reset: true })`): un-maximizes and centers the default compact size.
 - **Minimize / close**: the minimize button minimizes to the taskbar (`minimize`). The close button hides the window into the tray (hidden icons, `hideToTray`) and the app keeps running; Rust does the same for Alt+F4 / taskbar close (`app/window.rs`). The app exits only from the tray menu ("Salir"). There is no close confirmation dialog.
+- **Single instance**: `tauri-plugin-single-instance` (first plugin in `lib.rs`). Opening the app again (shortcut, autostart) does not start a second process: the running instance's window is restored, shown and focused (`app::window::show_main_window`, also used by the tray).
 - **Startup** (behind the `index.html` loader): restores the last bounds if they are on a connected monitor, otherwise the current mode's size centered; full mode then opens `/dashboard/overview`.

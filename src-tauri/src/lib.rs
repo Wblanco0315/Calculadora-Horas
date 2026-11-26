@@ -18,6 +18,11 @@ use crate::command::{
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // Must be the first plugin: a second launch (shortcut, autostart) exits and brings the
+        // running instance's window back instead of opening another one.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            app::window::show_main_window(app);
+        }))
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
