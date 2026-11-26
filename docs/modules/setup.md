@@ -16,6 +16,7 @@ src/app/modules/setup/
 │   ├── schedule-step/        # Paso 2: Configuración de Jornada y Horario
 │   ├── lunch-step/           # Paso 3: Tiempo de Almuerzo / Descanso
 │   ├── openproject-step/     # Paso 4: Conexión con la API de OpenProject
+│   ├── settings-panel/       # Panel de configuración compartido (modo edición del setup y /dashboard/settings)
 │   ├── mcp-section/          # Integración MCP (usa `McpService`); el prompt viene de `get_mcp_contract`
 │   └── mcp-status/           # Panel de compatibilidad MCP (también en Configuración → Sistema)
 ├── interfaces/

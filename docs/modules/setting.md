@@ -1,6 +1,6 @@
-# Módulo: Setting (Ajustes y Configuración del Sistema)
+# Módulo: Setting (Configuración en modo completo)
 
-El módulo `setting` centraliza la gestión de configuración de **PocketProject** en una vista organizada por pestañas (`p-tabs`). Se estructura siguiendo una arquitectura modular con componentes independientes por cada pestaña o sección (`user-section` y `system-section`), facilitando su mantenimiento y escalabilidad.
+El módulo `setting` muestra la configuración de **PocketProject** dentro del dashboard. No tiene secciones propias: usa el mismo panel que la ventana compacta (`SettingsPanelComponent` del módulo `setup`), así que ambos modos comparten exactamente las mismas pestañas, componentes y estado; solo cambia la disposición.
 
 ---
 
@@ -11,55 +11,27 @@ El módulo `setting` centraliza la gestión de configuración de **PocketProject
 
 ```
 src/app/modules/setting/
-├── components/
-│   ├── user-section/
-│   │   └── user-section.component.ts       # Sección 'User': datos de perfil y gestión de horario
-│   ├── system-section/
-│   │   └── system-section.component.ts     # Sección 'System': apariencia, idioma, OpenProject, actualizaciones y compatibilidad MCP (`app-mcp-status` del módulo setup)
-│   └── user-card/
-│       └── user-card.component.{ts,html}   # Tarjeta de perfil (solo la usa la sección User)
 ├── pages/
-│   └── setting/setting.page.{ts,html,css}  # Smart component con lectura de query params (?tab=)
+│   └── setting/setting.page.{ts,html,css}  # Título + <app-settings-panel layout="full" />, sincroniza ?tab=
 └── setting.routes.ts                       # Enrutador del módulo con carga diferida
 ```
 
 ---
 
-## 2. Componentes de Sección del Módulo
+## 2. Panel compartido (`app-settings-panel`)
 
-### 2.1. Sección de Usuario (`app-user-section`)
-- **Ubicación**: `src/app/modules/setting/components/user-section/user-section.component.ts`
-- **Responsabilidad**:
-  - Aloja la tarjeta de perfil [user-card.component.ts](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/modules/setting/components/user-card/user-card.component.ts) con avatar, nombre editable, login de OpenProject y métricas rápidas.
-  - Integra el editor de jornada laboral [schedule-editor.component.ts](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/shared/components/schedule-editor/schedule-editor.component.ts) con soporte para entrada/salida, días agrupados, tiempo de descanso/almuerzo (`[showLunch]="true"`) y control de horas mínimas diarias a registrar (`[showMinHours]="true"`).
-  - Gestiona el guardado persistente del horario (`saveSchedule()`) con notificaciones de éxito reactivas.
-
-### 2.2. Sección de Sistema (`app-system-section`)
-- **Ubicación**: `src/app/modules/setting/components/system-section/system-section.component.ts`
-- **Responsabilidad**:
-  - Disposición en cuadrícula responsiva (1 columna en móvil, 2 columnas en escritorio).
-  - Aloja [appearance-editor.component.ts](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/shared/components/appearance-editor/appearance-editor.component.ts) para el control de modo de tema (Sistema, Claro, Oscuro), idioma de interfaz (`p-select`) y color de acento con selector de paleta y hexadecimal.
-  - Aloja [openproject-connection.component.ts](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/shared/components/openproject-connection/openproject-connection.component.ts) para el endpoint del servidor, token de acceso personal con máscara, guía modal de obtención de token ([token-guide-modal.component.ts](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/shared/components/token-guide-modal/token-guide-modal.component.ts)), prueba de conectividad y guardado.
-  - Aloja [update-section.component.ts](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/shared/components/update-section/update-section.component.ts) para consultar la versión instalada, verificar disponibilidad de nuevas versiones en GitHub Releases e iniciar la descarga e instalación.
+- **Ubicación**: `src/app/modules/setup/components/settings-panel/settings-panel.component.{ts,html}`.
+- **Pestañas** (`SETTINGS_TABS`, `p-tabs` desplazable): Apariencia, Horario, Almuerzo, OpenProject, Actualizaciones y Servidor MCP & IA. Cada pestaña es el mismo componente de paso del setup (`appearance-step`, `schedule-step`, `lunch-step`, `openproject-step`, `update-section`, `mcp-section`).
+- **Estado**: `SetupService` (borrador de toda la configuración). La página llama a `SetupService.init()` al entrar para cargar la configuración guardada.
+- **Guardar**: un único botón guarda todas las pestañas.
+  - `layout="compact"` (ventana compacta, `/setup?edit=true`): botón **Cerrar** y, al guardar, `completeSetup()` vuelve al modo compacto.
+  - `layout="full"` (dashboard): sin botón Cerrar; `saveSettings()` guarda sin cambiar de ventana y muestra el toast `toast.settingsSaved`.
+- **Responsive**: en compacto ocupa la ventana con contenido `max-w-4xl`; en completo se muestra como tarjeta con bordes dentro del dashboard, contenido `max-w-5xl` y la barra de pestañas con desplazamiento horizontal en anchos pequeños.
 
 ---
 
-## 3. Componentes Compartidos Reutilizables
+## 3. Pestaña en la URL y breadcrumb
 
-El módulo reutiliza componentes transversales ubicados en `src/app/shared/components/`:
-- `UserCardComponent` (`user-card.component.ts`)
-- `ScheduleEditorComponent` (`schedule-editor.component.ts`)
-- `AppearanceEditorComponent` (`appearance-editor.component.ts`)
-- `OpenprojectConnectionComponent` (`openproject-connection.component.ts`)
-- `TokenGuideModalComponent` (`token-guide-modal.component.ts`)
-- `UpdateDialogComponent` (`update-dialog.component.ts`)
-
----
-
-## 4. Pestañas y Navegación Reactiva
-
-Implementa `<p-tabs>` de PrimeNG sincronizado bidireccionalmente con la URL:
-- `/dashboard/settings?tab=user` activa la pestaña **User**.
-- `/dashboard/settings?tab=system` activa la pestaña **System**.
-- Al interactuar con las pestañas, se actualiza el parámetro de la URL mediante `onTabChange()` sin recargar la página, sincronizando de inmediato el breadcrumb en el encabezado del Dashboard.
-- **Garantía de Visualización Permanente de Navegación**: El componente `p-tablist` cuenta con protección contra colapso flex (`shrink-0` y `flex-shrink: 0 !important; min-height: 44px`) y anclaje superior (`sticky top-0 z-10`), asegurando que la barra de navegación nunca se oculte ni colapse en pantallas de computadoras portátiles (laptops) o con espacio vertical reducido; el desplazamiento vertical (`overflow-y-auto`) se aísla de forma exclusiva en `p-tabpanels`.
+- `?tab=` acepta `appearance`, `schedule`, `lunch`, `openproject`, `update` o `mcp` (`SETTINGS_TABS[].key`). Al entrar con `?tab=` se activa esa pestaña; al cambiar de pestaña la URL se actualiza (`replaceUrl`).
+- El breadcrumb del dashboard muestra `Configuración > {pestaña}` usando las etiquetas `setup.step1`…`setup.step6`.
+- El menú de cuenta del pie de la barra lateral abre **Horario** (`?tab=schedule`) y **Configuración** (`?tab=appearance`).

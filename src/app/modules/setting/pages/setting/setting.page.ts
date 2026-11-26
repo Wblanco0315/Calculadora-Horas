@@ -1,72 +1,53 @@
-import { Component, inject, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, DestroyRef, OnInit, effect, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primeng/tabs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerUser, tablerSettings } from '@ng-icons/tabler-icons';
+import { tablerSettings } from '@ng-icons/tabler-icons';
 import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
-import { ScheduleService } from '../../../../core/services/schedule.service';
-import { UserSectionComponent } from '../../components/user-section/user-section.component';
-import { SystemSectionComponent } from '../../components/system-section/system-section.component';
+import { SetupService } from '../../../setup/services/setup.service';
+import {
+  SETTINGS_TABS,
+  SettingsPanelComponent,
+} from '../../../setup/components/settings-panel/settings-panel.component';
 
+/**
+ * Full-mode settings: the same `SettingsPanelComponent` the compact window uses. The active tab is
+ * kept in the `?tab=` query param (`appearance`, `schedule`, `lunch`, `openproject`, `update`, `mcp`).
+ */
 @Component({
   selector: 'app-setting-page',
   standalone: true,
-  imports: [
-    CommonModule,
-    Tabs,
-    TabList,
-    Tab,
-    TabPanels,
-    TabPanel,
-    NgIcon,
-    TranslatePipe,
-    UserSectionComponent,
-    SystemSectionComponent,
-  ],
-  viewProviders: [
-    provideIcons({
-      tablerUser,
-      tablerSettings,
-    }),
-  ],
+  imports: [NgIcon, TranslatePipe, SettingsPanelComponent],
+  viewProviders: [provideIcons({ tablerSettings })],
   templateUrl: './setting.page.html',
   styleUrl: './setting.page.css',
 })
 export class SettingPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly scheduleService = inject(ScheduleService);
+  private readonly setupService = inject(SetupService);
+  private readonly destroyRef = inject(DestroyRef);
 
-  activeTab = 'user';
-
-  ngOnInit(): void {
-    // Check if a specific tab was requested via query params (?tab=user or ?tab=system)
-    const tabParam = this.route.snapshot.queryParamMap.get('tab');
-    if (tabParam === 'user' || tabParam === 'system') {
-      this.activeTab = tabParam;
-    }
-
-    // React to queryParam changes dynamically
-    this.route.queryParamMap.subscribe((params) => {
-      const tab = params.get('tab');
-      if (tab === 'user' || tab === 'system') {
-        this.activeTab = tab;
+  constructor() {
+    // Reflect the active tab in the URL (breadcrumb, account menu links, reloads).
+    effect(() => {
+      const tab = SETTINGS_TABS.find((item) => item.step === this.setupService.activeStep());
+      if (tab && this.route.snapshot.queryParamMap.get('tab') !== tab.key) {
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { tab: tab.key },
+          queryParamsHandling: 'merge',
+          replaceUrl: true,
+        });
       }
     });
-
-    // Initialize schedule editor state with saved config
-    this.scheduleService.resetFromCurrentConfig();
   }
 
-  onTabChange(tabValue: string | number | undefined): void {
-    const tab = String(tabValue || 'user');
-    this.activeTab = tab;
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { tab },
-      queryParamsHandling: 'merge',
-      replaceUrl: true,
+  async ngOnInit(): Promise<void> {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      const tab = SETTINGS_TABS.find((item) => item.key === params.get('tab'));
+      if (tab) this.setupService.goToStep(tab.step);
     });
+    await this.setupService.init();
   }
 }

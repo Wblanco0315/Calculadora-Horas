@@ -425,7 +425,15 @@ export class SetupService {
     }
   }
 
+  /** Onboarding / compact settings: saves and returns to the compact window. */
   async completeSetup(): Promise<void> {
+    if (await this.saveSettings()) {
+      await this.windowService.setCompactMode();
+    }
+  }
+
+  /** Saves the settings draft (all tabs) without changing the window mode. Returns whether it saved. */
+  async saveSettings(): Promise<boolean> {
     this.isSaving.set(true);
 
     const scheduleConfig: WorkScheduleConfig = {
@@ -456,10 +464,11 @@ export class SetupService {
       await this.storageService.saveConfig(configToSave);
       this.themeService.setTheme(configToSave.theme_mode);
       this.themeService.setPrimaryColor(configToSave.primary_color);
-      await this.windowService.setCompactMode();
+      return true;
     } catch (err) {
       console.error('Error al guardar configuración:', err);
       alert('Error guardando la configuración en la base de datos local SQLite.');
+      return false;
     } finally {
       this.isSaving.set(false);
     }

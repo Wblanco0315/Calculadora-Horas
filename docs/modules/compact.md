@@ -167,7 +167,7 @@ La barra de navegación inferior (`<nav>`) de 3 posiciones permite la conmutaci�
 2. **Botón Central (Icono de historial `tablerHistory`)**:
    - Inactivo / deshabilitado con título "Próximamente" (tal como en la versión original).
 3. **Botón Derecho (Icono de ajustes `tablerSettings`)**:
-   - Abre la configuración del sistema en Modo Completo (`/dashboard/settings?tab=user`).
+   - Abre la configuración (`/setup?edit=true`): el mismo `SettingsPanelComponent` que usa `/dashboard/settings` en modo completo, con disposición compacta.
 
 ---
 

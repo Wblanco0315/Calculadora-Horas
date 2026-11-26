@@ -2,19 +2,11 @@ import { Component, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Stepper, StepList, Step } from 'primeng/stepper';
-import { Tabs, TabList, Tab } from 'primeng/tabs';
 import { ButtonDirective } from 'primeng/button';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   tablerArrowLeft,
   tablerArrowRight,
-  tablerPalette,
-  tablerCalendar,
-  tablerCoffee,
-  tablerLink,
-  tablerCheck,
-  tablerDownload,
-  tablerRobot,
 } from '@ng-icons/tabler-icons';
 import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 import { SetupService } from '../../services/setup.service';
@@ -26,8 +18,7 @@ import { ScheduleStepComponent } from '../../components/schedule-step/schedule-s
 import { LunchStepComponent } from '../../components/lunch-step/lunch-step.component';
 import { AppearanceStepComponent } from '../../components/appearance-step/appearance-step.component';
 import { OpenprojectStepComponent } from '../../components/openproject-step/openproject-step.component';
-import { UpdateSectionComponent } from '../../../../shared/components/update-section/update-section.component';
-import { McpSectionComponent } from '../../components/mcp-section/mcp-section.component';
+import { SettingsPanelComponent } from '../../components/settings-panel/settings-panel.component';
 import { CloseConfirmModalComponent } from '../../../../shared/components/close-confirm-modal/close-confirm-modal.component';
 
 @Component({
@@ -38,9 +29,6 @@ import { CloseConfirmModalComponent } from '../../../../shared/components/close-
     Stepper,
     StepList,
     Step,
-    Tabs,
-    TabList,
-    Tab,
     ButtonDirective,
     NgIcon,
     TranslatePipe,
@@ -49,21 +37,13 @@ import { CloseConfirmModalComponent } from '../../../../shared/components/close-
     LunchStepComponent,
     AppearanceStepComponent,
     OpenprojectStepComponent,
-    UpdateSectionComponent,
-    McpSectionComponent,
+    SettingsPanelComponent,
     CloseConfirmModalComponent,
   ],
   viewProviders: [
     provideIcons({
       tablerArrowLeft,
       tablerArrowRight,
-      tablerPalette,
-      tablerCalendar,
-      tablerCoffee,
-      tablerLink,
-      tablerCheck,
-      tablerDownload,
-      tablerRobot,
     }),
   ],
   templateUrl: './setup.page.html',

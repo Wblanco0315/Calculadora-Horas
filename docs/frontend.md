@@ -20,7 +20,9 @@ Current owners of components shared between modules:
 - `modules/board/pages/ticket-detail/ticket-detail.page`: also embedded in the time log drawer.
 - `shared/components/close-confirm-modal`: window close confirmation (compact, dashboard, setup).
 
-Components used by a single module live in it: `compact/modals/ticket-context-modal`, `setup/components/mcp-section`, `setting/components/user-card`.
+- `modules/setup/components/settings-panel`: the settings tabs shown by the compact window (`/setup` in edit mode) and the full dashboard (`/dashboard/settings`).
+
+Components used by a single module live in it: `compact/modals/ticket-context-modal`, `setup/components/mcp-section`.
 
 ## Core services
 

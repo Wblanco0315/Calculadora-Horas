@@ -50,6 +50,7 @@ import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 import { AppHeaderComponent } from '../../../../shared/components/app-header/app-header.component';
 import { AppLogoComponent } from '../../../../shared/components/app-logo/app-logo.component';
 import { CloseConfirmModalComponent } from '../../../../shared/components/close-confirm-modal/close-confirm-modal.component';
+import { SETTINGS_TABS } from '../../../setup/components/settings-panel/settings-panel.component';
 
 export interface NavItem {
   icon: string;
@@ -348,14 +349,10 @@ export class DashboardPage implements OnInit, OnDestroy {
         routerLink: '/dashboard/settings',
       });
 
-      if (url.includes('tab=user')) {
-        items.push({
-          label: this.languageService.t('settings.tabUser'),
-        });
-      } else if (url.includes('tab=system')) {
-        items.push({
-          label: this.languageService.t('settings.tabSystem'),
-        });
+      const tabKey = new URLSearchParams(url.split('?')[1] ?? '').get('tab');
+      const tab = SETTINGS_TABS.find((item) => item.key === tabKey);
+      if (tab) {
+        items.push({ label: this.languageService.t(tab.label) });
       }
     } else if (this.isTimeEntries()) {
       items.push({ label: this.languageService.t('timeEntry.title') });
@@ -446,14 +443,14 @@ export class DashboardPage implements OnInit, OnDestroy {
         label: this.userName(),
         items: [
           {
-            label: this.languageService.t('settings.tabUser'),
+            label: this.languageService.t('setup.step2'),
             icon: 'tablerUserCog',
-            command: () => this.navigateTo('/dashboard/settings', { tab: 'user' }),
+            command: () => this.navigateTo('/dashboard/settings', { tab: 'schedule' }),
           },
           {
-            label: this.languageService.t('settings.tabSystem'),
+            label: this.languageService.t('dashboard.settings'),
             icon: 'tablerAdjustmentsHorizontal',
-            command: () => this.navigateTo('/dashboard/settings', { tab: 'system' }),
+            command: () => this.navigateTo('/dashboard/settings', { tab: 'appearance' }),
           },
         ],
       },
