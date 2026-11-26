@@ -262,4 +262,6 @@ Todo agente o asistente que opere con el servidor MCP de PocketProject debe cump
   - **Prueba Fallida**: Si el ticket está en **"Prueba fallida"**, la solución previa no funcionó. Investigar leyendo la descripción, sugiriendo revisar comentarios y pidiendo permiso para revisar archivos.
   - **Pase a Producción y Cierre**: Tras desplegarse, superar QA y estar en producción sin inconvenientes, el PM o el asignado delegado pasan a estado **"Cerrado"** y columna **"FINALIZADO"**.
   - **Confirmación Obligatoria**: Cualquier cambio en OpenProject es inmediato. Ante cualquier duda o transición, **PREGUNTAR SIEMPRE AL USUARIO** a qué columna o estado mover, mostrando las opciones disponibles. Jamás ejecutar transiciones a ciegas.
+  - **Confirmación Obligatoria para Asignado (Assignee)**: Antes de asignar o modificar el campo **Asignado** (`assignee`) de cualquier ticket vía MCP, el agente **DEBE SIEMPRE preguntar al usuario** a quién asignar (mostrando las opciones disponibles si las conoce). Jamás asignar un ticket sin confirmación explícita del usuario.
+  - **Diferenciación Local vs. Plataforma**: Al consultar o reportar tiempos de un ticket, distinguir explícitamente entre los registros locales de PocketProject (pendientes o sincronizados en SQLite) y los tiempos reales registrados directamente en la plataforma OpenProject.
 
