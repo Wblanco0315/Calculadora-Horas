@@ -21,7 +21,7 @@ src-tauri/src/
 ├── lib.rs                  Module declarations and run(): plugins, setup, generate_handler!
 ├── ipc.rs                  Local HTTP server for the PocketProject MCP (/ping, /notify, /show)
 ├── app/                    Application bootstrap
-│   ├── setup.rs            Tauri setup hook: IPC server, autostart, --minimized, tray
+│   ├── setup.rs            Tauri setup hook: IPC server, autostart (release builds only), --minimized, tray
 │   ├── tray.rs             System tray icon and menu
 │   └── window.rs           Window events (close is delegated to the frontend)
 ├── command/                Thin #[tauri::command] handlers, one file per domain
