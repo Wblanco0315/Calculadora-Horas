@@ -55,6 +55,9 @@ export class ActivityService {
     title?: string;
     projectId?: string;
     projectName?: string;
+    statusId?: string;
+    statusName?: string;
+    statusColor?: string;
   } | null>(null);
   readonly showSyncModal = signal<boolean>(false);
   readonly singleSyncActivity = signal<Activity | null>(null);
@@ -833,6 +836,9 @@ export class ActivityService {
     title?: string;
     projectId?: string;
     projectName?: string;
+    statusId?: string;
+    statusName?: string;
+    statusColor?: string;
   }): void {
     this.editingActivity.set(null);
     this.presetActivity.set(preset || null);

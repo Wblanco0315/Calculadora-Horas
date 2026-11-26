@@ -100,6 +100,29 @@ pub struct WorkPackageFormSchemaResult {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct WorkPackageUpdateStreamResult {
+    pub available: bool,
+    pub has_updates: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkPackageRevisionItem {
+    pub id: String,
+    pub lock_version: i64,
+    pub updated_at: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkPackageCostSummaryItem {
+    pub labor_costs: Option<String>,
+    pub material_costs: Option<String>,
+    pub overall_costs: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateWorkPackagePayload {
     pub lock_version: Option<i64>,
     pub subject: Option<String>,
@@ -125,10 +148,39 @@ pub struct PlatformTimeEntryItem {
     pub id: String,
     pub hours: String,
     pub spent_on: String,
+    pub start_time: Option<String>,
     pub comment: String,
+    pub user_id: Option<String>,
     pub user_name: String,
     pub activity_name: String,
+    pub activity_id: Option<String>,
+    pub project_name: Option<String>,
+    pub work_package_name: Option<String>,
+    pub registered_by_name: Option<String>,
+    pub costs: Option<String>,
     pub created_at: Option<String>,
+    pub updated_at: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateTimeEntryPayload {
+    pub hours: String,
+    pub spent_on: String,
+    pub comment: String,
+    pub activity_id: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct TimeCostReportFilter {
+    pub ticket_id: Option<String>,
+    pub project_id: Option<String>,
+    pub user_id: Option<String>,
+    pub activity_id: Option<String>,
+    pub spent_on_from: Option<String>,
+    pub spent_on_to: Option<String>,
+    pub include_descendants: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -506,6 +558,7 @@ Tu objetivo es registrar y gestionar de forma proactiva, exacta y profesional el
 - **Roles**: El PM crea o se le solicita el ticket. El Responsable supervisa y el Asignado implementa y solventa la tarea.
 - **Inicio y Borrador para el PM**: Al iniciar, si el usuario no tiene número de ticket, pedirle el número o indicarle que lo solicite al PM. Si se le va a pedir al PM, el agente debe ofrecer generarle el borrador en texto con el formato estructurado (Nombre de ticket, Descripción, Tiempo, Fecha Inicio y Fin).
 - **Comprobación de Columnas Reales**: El agente DEBE SIEMPRE extraer y verificar las columnas reales del tablero ('get_board_columns') antes de intentar mover un ticket, sin asumir nombres fijos sin contrastar.
+- **Protección contra cambios concurrentes**: Antes de modificar un estado o mover una tarjeta, consulta 'get_ticket_context' y envía el 'lockVersion' actual como 'lock_version'. Si el stream o lockVersion indica cambios remotos, no reintentes ni descartes el contexto automáticamente; vuelve a consultar y pide confirmación al usuario.
 - **En Desarrollo**: Al trabajar en la tarea, colocar en estado "En desarrollo" y mover a columna real correspondiente ("HACER HOY" o "EN CURSO", consultando al usuario cuál prefiere).
 - **Justificado**: Si el problema no tiene solución técnica viable o es el comportamiento esperado del sistema, estado "Justificado".
 - **Bloqueo / Dependencia**: Si depende de otra tarea para avanzar, estado "En espera" y columna "BLOQUEANTE".
@@ -547,6 +600,40 @@ fn sanitize_url(url: &str) -> String {
         clean = clean[..clean.len() - 7].to_string();
     }
     clean
+}
+
+/// Returns the scheme + host (+ port) portion of an absolute URL.
+fn openproject_origin(url: &str) -> String {
+    match url.find("://") {
+        Some(scheme_end) => {
+            let after = &url[scheme_end + 3..];
+            match after.find('/') {
+                Some(path_start) => url[..scheme_end + 3 + path_start].to_string(),
+                None => url.to_string(),
+            }
+        }
+        None => url.to_string(),
+    }
+}
+
+/// Resolves an OpenProject href (absolute, root-relative or relative) against the configured
+/// base URL, avoiding a duplicated relative root (e.g. `/openproject/openproject/api/v3/...`).
+fn resolve_openproject_href(clean_url: &str, href: &str) -> String {
+    let href = href.trim();
+    if href.starts_with("http://") || href.starts_with("https://") {
+        return href.to_string();
+    }
+    let origin = openproject_origin(clean_url);
+    let base_path = clean_url[origin.len()..].trim_end_matches('/');
+    if href.starts_with('/') {
+        if !base_path.is_empty()
+            && (href == base_path || href.starts_with(&format!("{}/", base_path)))
+        {
+            return format!("{}{}", origin, href);
+        }
+        return format!("{}{}", clean_url, href);
+    }
+    format!("{}/{}", clean_url, href)
 }
 
 const BROWSER_USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
@@ -1253,16 +1340,7 @@ async fn fetch_attachment_content(
     download_url: String,
 ) -> Result<String, String> {
     let clean_url = sanitize_url(&url);
-    let full_url = if download_url.starts_with("http") {
-        download_url
-    } else {
-        format!(
-            "{}{}{}",
-            clean_url,
-            if download_url.starts_with('/') { "" } else { "/" },
-            download_url
-        )
-    };
+    let full_url = resolve_openproject_href(&clean_url, &download_url);
     let auth_value = build_auth_header(&token);
     let client = reqwest::Client::builder()
         .user_agent(BROWSER_USER_AGENT)
@@ -1284,19 +1362,18 @@ async fn fetch_attachment_content(
         redirects += 1;
         if let Some(loc) = current_res.headers().get("location") {
             let loc_str = loc.to_str().map_err(|e| e.to_string())?;
-            current_url = if loc_str.starts_with("http") {
-                loc_str.to_string()
+            let next_url = resolve_openproject_href(&clean_url, loc_str);
+            // Only forward credentials to the OpenProject host; external storages (S3, etc.)
+            // use pre-signed URLs and reject unexpected Authorization headers.
+            let same_host = openproject_origin(&clean_url) == openproject_origin(&next_url);
+            current_url = next_url;
+            let request = client.get(&current_url);
+            let request = if same_host {
+                request.header("Authorization", &auth_value)
             } else {
-                format!(
-                    "{}{}{}",
-                    clean_url,
-                    if loc_str.starts_with('/') { "" } else { "/" },
-                    loc_str
-                )
+                request
             };
-            current_res = client
-                .get(&current_url)
-                .header("Authorization", &auth_value)
+            current_res = request
                 .send()
                 .await
                 .map_err(|e| format!("Error en conexión: {}", e))?;
@@ -2293,6 +2370,7 @@ async fn move_work_package_to_board_column(
     target_status_id: Option<String>,
     target_position_index: Option<usize>,
     target_ticket_ids: Option<Vec<i64>>,
+    expected_lock_version: Option<i64>,
 ) -> Result<MoveColumnResult, String> {
     let clean_url = sanitize_url(&url);
     let raw_ticket = ticket.trim().trim_start_matches('#');
@@ -2302,6 +2380,33 @@ async fn move_work_package_to_board_column(
         .map_err(|_| "Ticket ID inválido".to_string())?;
     let auth_value = build_auth_header(&token);
     let client = build_http_client(12)?;
+    let wp_url = format!("{}/api/v3/work_packages/{}", clean_url, raw_ticket);
+    let snapshot_response = client
+        .get(&wp_url)
+        .header("Authorization", &auth_value)
+        .header("Accept", "application/hal+json, application/json")
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if !snapshot_response.status().is_success() {
+        return Ok(MoveColumnResult {
+            ok: false,
+            status_id: None,
+            error: Some(format!("No se pudo validar el ticket (HTTP {})", snapshot_response.status())),
+        });
+    }
+    let snapshot: serde_json::Value = snapshot_response.json().await.map_err(|error| error.to_string())?;
+    let current_lock_version = snapshot["lockVersion"].as_i64().unwrap_or(0);
+    if expected_lock_version.is_some_and(|expected| expected != current_lock_version) {
+        return Ok(MoveColumnResult {
+            ok: false,
+            status_id: None,
+            error: Some(format!(
+                "WORK_PACKAGE_CONFLICT: el ticket cambió en OpenProject (versión actual {}). Recarga antes de moverlo.",
+                current_lock_version
+            )),
+        });
+    }
 
     // 1. Determine target status
     let mut resolved_status_id = target_status_id;
@@ -2349,21 +2454,8 @@ async fn move_work_package_to_board_column(
     let mut status_was_updated = false;
     if !same_query {
         if let Some(ref sid) = resolved_status_id {
-            let wp_url = format!("{}/api/v3/work_packages/{}", clean_url, raw_ticket);
-            let lv = if let Ok(wp_res) = client
-                .get(&wp_url)
-                .header("Authorization", &auth_value)
-                .send()
-                .await
-            {
-                let wp_val: serde_json::Value = wp_res.json().await.unwrap_or_default();
-                wp_val["lockVersion"].as_i64().unwrap_or(0)
-            } else {
-                0
-            };
-
             let patch_body = serde_json::json!({
-                "lockVersion": lv,
+                "lockVersion": current_lock_version,
                 "_links": {
                     "status": { "href": format!("/api/v3/statuses/{}", sid) }
                 }
@@ -2492,45 +2584,259 @@ fn exit_app(app: AppHandle) {
     app.exit(0);
 }
 
-fn parse_schema_allowed_values(
-    schema_field: &serde_json::Value,
-) -> Vec<WorkPackageOptionItem> {
-    let mut items = Vec::new();
-    let arr = schema_field["_embedded"]["allowedValues"]
+fn parse_allowed_value_items(list: &[serde_json::Value]) -> Vec<WorkPackageOptionItem> {
+    list.iter()
+        .filter_map(|value| {
+            let id = value["id"]
+                .as_i64()
+                .map(|number| number.to_string())
+                .or_else(|| value["id"].as_str().map(|value| value.to_string()))
+                .or_else(|| {
+                    value["href"]
+                        .as_str()
+                        .or_else(|| value["_links"]["self"]["href"].as_str())
+                        .and_then(|href| {
+                            href.split('/').filter(|segment| !segment.is_empty()).last()
+                        })
+                        .map(|value| value.to_string())
+                })?;
+            let name = value["name"]
+                .as_str()
+                .or_else(|| value["title"].as_str())
+                .or_else(|| value["_links"]["self"]["title"].as_str())?;
+            Some(WorkPackageOptionItem {
+                id,
+                name: name.to_string(),
+                color: value["color"].as_str().map(|value| value.to_string()),
+            })
+        })
+        .collect()
+}
+
+fn parse_schema_allowed_values(schema_field: &serde_json::Value) -> Vec<WorkPackageOptionItem> {
+    let list = schema_field["_embedded"]["allowedValues"]
         .as_array()
         .or_else(|| schema_field["allowedValues"].as_array())
+        .or_else(|| schema_field["_embedded"]["elements"].as_array())
+        .or_else(|| schema_field["elements"].as_array())
         .or_else(|| schema_field["_links"]["allowedValues"].as_array());
+    list.map(|values| parse_allowed_value_items(values))
+        .unwrap_or_default()
+}
 
-    if let Some(list) = arr {
-        for v in list {
-            let id = v["id"]
-                .as_i64()
-                .map(|n| n.to_string())
-                .or_else(|| v["id"].as_str().map(|s| s.to_string()))
-                .or_else(|| {
-                    v["href"]
-                        .as_str()
-                        .or_else(|| v["_links"]["self"]["href"].as_str())
-                        .and_then(|h| h.split('/').filter(|s| !s.is_empty()).last())
-                        .map(|s| s.to_string())
-                })
-                .unwrap_or_default();
-
-            let name = v["name"]
-                .as_str()
-                .or_else(|| v["title"].as_str())
-                .or_else(|| v["_links"]["self"]["title"].as_str())
-                .unwrap_or("")
-                .to_string();
-
-            let color = v["color"].as_str().map(|s| s.to_string());
-
-            if !id.is_empty() && !name.is_empty() {
-                items.push(WorkPackageOptionItem { id, name, color });
-            }
-        }
+async fn fetch_schema_allowed_values(
+    schema_field: &serde_json::Value,
+    client: &reqwest::Client,
+    clean_url: &str,
+    auth_value: &str,
+) -> Vec<WorkPackageOptionItem> {
+    let embedded = parse_schema_allowed_values(schema_field);
+    if !embedded.is_empty() {
+        return embedded;
     }
+
+    let Some(href) = schema_field["_links"]["allowedValues"]["href"].as_str() else {
+        return Vec::new();
+    };
+    let Ok(base_url) = reqwest::Url::parse(&format!("{}/", clean_url.trim_end_matches('/'))) else {
+        return Vec::new();
+    };
+
+    let resolve_href = |href: &str| -> Option<String> {
+        let target = if href.starts_with("/api/v3/") {
+            reqwest::Url::parse(&format!("{}{}", clean_url.trim_end_matches('/'), href)).ok()?
+        } else {
+            base_url.join(href).ok()?
+        };
+        (target.origin() == base_url.origin()).then(|| target.to_string())
+    };
+
+    let mut next_url = resolve_href(href);
+    let mut visited = Vec::new();
+    let mut items = Vec::new();
+
+    while let Some(endpoint) = next_url {
+        if visited.len() >= 20 || visited.contains(&endpoint) {
+            break;
+        }
+        visited.push(endpoint.clone());
+
+        let response = match client
+            .get(&endpoint)
+            .header("Authorization", auth_value)
+            .header("Accept", "application/hal+json, application/json")
+            .send()
+            .await
+        {
+            Ok(response) if response.status().is_success() => response,
+            _ => break,
+        };
+        let data: serde_json::Value = match response.json().await {
+            Ok(data) => data,
+            Err(_) => break,
+        };
+
+        let list = data["_embedded"]["elements"]
+            .as_array()
+            .or_else(|| data["_embedded"]["allowedValues"].as_array())
+            .or_else(|| data["elements"].as_array())
+            .or_else(|| data.as_array());
+        if let Some(list) = list {
+            items.extend(parse_allowed_value_items(list));
+        } else {
+            items.extend(parse_schema_allowed_values(&data));
+        }
+
+        next_url = data["_links"]["next"]["href"]
+            .as_str()
+            .and_then(resolve_href);
+    }
+
     items
+}
+
+async fn fetch_available_people(
+    client: &reqwest::Client,
+    clean_url: &str,
+    auth_value: &str,
+    ticket: &str,
+    field: &str,
+) -> Vec<WorkPackageOptionItem> {
+    let endpoint = format!(
+        "{}/api/v3/work_packages/{}/available_{}?filters=%5B%5D&pageSize=-1&select=elements%2Fid%2Celements%2Fname%2Celements%2Femail%2Celements%2Fself%2Ctotal%2Ccount%2CpageSize",
+        clean_url,
+        ticket,
+        field
+    );
+    let response = match client
+        .get(&endpoint)
+        .header("Authorization", auth_value)
+        .header("Accept", "application/json, application/hal+json")
+        .send()
+        .await
+    {
+        Ok(response) if response.status().is_success() => response,
+        _ => return Vec::new(),
+    };
+    let data: serde_json::Value = match response.json().await {
+        Ok(data) => data,
+        Err(_) => return Vec::new(),
+    };
+    parse_schema_allowed_values(&data)
+}
+
+#[tauri::command]
+async fn fetch_work_package_revisions(
+    url: String,
+    token: String,
+    ticket_ids: Vec<String>,
+) -> Result<Vec<WorkPackageRevisionItem>, String> {
+    let clean_url = sanitize_url(&url);
+    let ticket_ids: Vec<String> = ticket_ids
+        .into_iter()
+        .map(|ticket| ticket.trim().trim_start_matches('#').to_string())
+        .filter(|ticket| !ticket.is_empty() && ticket.chars().all(|character| character.is_ascii_digit()))
+        .collect();
+    if ticket_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let endpoint = format!("{}/api/v3/work_packages", clean_url);
+    let page_size = ticket_ids.len().to_string();
+    let filters = serde_json::json!([{
+        "id": { "operator": "=", "values": ticket_ids }
+    }])
+    .to_string();
+    let auth_value = build_auth_header(&token);
+    let client = build_http_client(12)?;
+    let response = client
+        .get(&endpoint)
+        .query(&[
+            ("filters", filters.as_str()),
+            ("offset", "1"),
+            ("pageSize", page_size.as_str()),
+            ("valid_subset", "true"),
+        ])
+        .header("Authorization", &auth_value)
+        .header("Accept", "application/hal+json, application/json")
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!("HTTP {}", response.status()));
+    }
+
+    let data: serde_json::Value = response.json().await.map_err(|error| error.to_string())?;
+    Ok(data["_embedded"]["elements"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|work_package| {
+            let id = work_package["id"]
+                .as_i64()
+                .map(|id| id.to_string())
+                .or_else(|| work_package["id"].as_str().map(|id| id.to_string()))?;
+            let lock_version = work_package["lockVersion"].as_i64()?;
+            Some(WorkPackageRevisionItem {
+                id,
+                lock_version,
+                updated_at: work_package["updatedAt"].as_str().map(|value| value.to_string()),
+            })
+        })
+        .collect())
+}
+
+#[tauri::command]
+async fn fetch_work_package_update_stream(
+    url: String,
+    token: String,
+    ticket: String,
+    last_update_timestamp: String,
+) -> Result<WorkPackageUpdateStreamResult, String> {
+    let clean_url = sanitize_url(&url);
+    let raw_ticket = ticket.trim().trim_start_matches('#');
+    let endpoint = format!(
+        "{}/work_packages/{}/activities/update_streams",
+        clean_url, raw_ticket
+    );
+    let auth_value = build_auth_header(&token);
+    let client = build_http_client(12)?;
+
+    let response = match client
+        .get(&endpoint)
+        .query(&[
+            ("sortBy", "asc"),
+            ("filter", "all"),
+            ("last_update_timestamp", last_update_timestamp.as_str()),
+        ])
+        .header("Authorization", &auth_value)
+        .header("Accept", "text/vnd.turbo-stream.html, */*")
+        .header("X-Requested-With", "XMLHttpRequest")
+        .send()
+        .await
+    {
+        Ok(response) if response.status().is_success() => response,
+        _ => {
+            return Ok(WorkPackageUpdateStreamResult {
+                available: false,
+                has_updates: false,
+            });
+        }
+    };
+
+    let content_type = response
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("")
+        .to_string();
+    let body = response.text().await.unwrap_or_default();
+    let available = content_type.contains("turbo-stream") || body.contains("<turbo-stream");
+
+    Ok(WorkPackageUpdateStreamResult {
+        available,
+        has_updates: available && body.contains("<turbo-stream"),
+    })
 }
 
 #[tauri::command]
@@ -2545,7 +2851,12 @@ async fn fetch_work_package_form(
     let auth_value = build_auth_header(&token);
     let client = build_http_client(15)?;
 
-    let res = client
+    let mut assignees =
+        fetch_available_people(&client, &clean_url, &auth_value, raw_ticket, "assignees").await;
+    let mut responsibles =
+        fetch_available_people(&client, &clean_url, &auth_value, raw_ticket, "responsibles").await;
+
+    let form_val: serde_json::Value = match client
         .post(&endpoint)
         .header("Authorization", &auth_value)
         .header("Accept", "application/hal+json, application/json")
@@ -2553,27 +2864,50 @@ async fn fetch_work_package_form(
         .json(&serde_json::json!({}))
         .send()
         .await
-        .map_err(|e| e.to_string())?;
-
-    if !res.status().is_success() {
-        return Ok(WorkPackageFormSchemaResult {
-            statuses: Vec::new(),
-            priorities: Vec::new(),
-            assignees: Vec::new(),
-            responsibles: Vec::new(),
-            versions: Vec::new(),
-        });
-    }
-
-    let form_val: serde_json::Value = res.json().await.map_err(|e| e.to_string())?;
+    {
+        Ok(response) if response.status().is_success() => {
+            response.json().await.unwrap_or(serde_json::Value::Null)
+        }
+        _ => serde_json::Value::Null,
+    };
     let schema = &form_val["_embedded"]["schema"];
 
+    if assignees.is_empty() {
+        assignees = fetch_schema_allowed_values(
+            &schema["assignee"],
+            &client,
+            &clean_url,
+            &auth_value,
+        )
+        .await;
+    }
+    if responsibles.is_empty() {
+        responsibles = fetch_schema_allowed_values(
+            &schema["responsible"],
+            &client,
+            &clean_url,
+            &auth_value,
+        )
+        .await;
+    }
+    if responsibles.is_empty() {
+        responsibles = assignees.clone();
+    }
+
     Ok(WorkPackageFormSchemaResult {
-        statuses: parse_schema_allowed_values(&schema["status"]),
-        priorities: parse_schema_allowed_values(&schema["priority"]),
-        assignees: parse_schema_allowed_values(&schema["assignee"]),
-        responsibles: parse_schema_allowed_values(&schema["responsible"]),
-        versions: parse_schema_allowed_values(&schema["version"]),
+        statuses: fetch_schema_allowed_values(&schema["status"], &client, &clean_url, &auth_value)
+            .await,
+        priorities: fetch_schema_allowed_values(
+            &schema["priority"],
+            &client,
+            &clean_url,
+            &auth_value,
+        )
+        .await,
+        assignees,
+        responsibles,
+        versions: fetch_schema_allowed_values(&schema["version"], &client, &clean_url, &auth_value)
+            .await,
     })
 }
 
@@ -2718,87 +3052,398 @@ async fn add_work_package_comment(
     Ok(())
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UploadedAttachment {
+    pub id: String,
+    pub file_name: String,
+    pub content_type: String,
+    pub download_url: String,
+}
+
+#[tauri::command]
+async fn upload_work_package_attachment(
+    url: String,
+    token: String,
+    ticket: String,
+    file_name: String,
+    content_type: String,
+    data_base64: String,
+) -> Result<UploadedAttachment, String> {
+    let clean_url = sanitize_url(&url);
+    let raw_ticket = ticket.trim().trim_start_matches('#');
+    let endpoint = format!("{}/api/v3/work_packages/{}/attachments", clean_url, raw_ticket);
+    let auth_value = build_auth_header(&token);
+    let client = build_http_client(60)?;
+
+    let bytes = BASE64
+        .decode(data_base64.as_bytes())
+        .map_err(|e| format!("Invalid file content: {}", e))?;
+    let mime = if content_type.trim().is_empty() {
+        "application/octet-stream".to_string()
+    } else {
+        content_type
+    };
+    let file_part = reqwest::multipart::Part::bytes(bytes)
+        .file_name(file_name.clone())
+        .mime_str(&mime)
+        .map_err(|e| e.to_string())?;
+    let metadata = serde_json::json!({ "fileName": file_name }).to_string();
+    let metadata_part = reqwest::multipart::Part::text(metadata)
+        .mime_str("application/json")
+        .map_err(|e| e.to_string())?;
+    let form = reqwest::multipart::Form::new()
+        .part("metadata", metadata_part)
+        .part("file", file_part);
+
+    let res = client
+        .post(&endpoint)
+        .header("Authorization", &auth_value)
+        .header("Accept", "application/hal+json, application/json")
+        .multipart(form)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !res.status().is_success() {
+        let status = res.status();
+        let err_text = res.text().await.unwrap_or_default();
+        return Err(format!("HTTP {}: {}", status, err_text));
+    }
+
+    let data: serde_json::Value = res.json().await.map_err(|e| e.to_string())?;
+    Ok(UploadedAttachment {
+        id: data["id"]
+            .as_i64()
+            .map(|id| id.to_string())
+            .unwrap_or_default(),
+        file_name: data["fileName"].as_str().unwrap_or(&file_name).to_string(),
+        content_type: data["contentType"].as_str().unwrap_or(&mime).to_string(),
+        download_url: data["_links"]["downloadLocation"]["href"]
+            .as_str()
+            .unwrap_or_default()
+            .to_string(),
+    })
+}
+
+#[tauri::command]
+async fn fetch_work_package_cost_summary(
+    url: String,
+    token: String,
+    ticket: String,
+) -> Result<WorkPackageCostSummaryItem, String> {
+    let clean_url = sanitize_url(&url);
+    let raw_ticket = ticket.trim().trim_start_matches('#');
+    let endpoint = format!("{}/api/v3/work_packages/{}", clean_url, raw_ticket);
+    let auth_value = build_auth_header(&token);
+    let client = build_http_client(12)?;
+    let response = client
+        .get(&endpoint)
+        .header("Authorization", &auth_value)
+        .header("Accept", "application/hal+json, application/json")
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Ok(WorkPackageCostSummaryItem::default());
+    }
+    let data: serde_json::Value = response.json().await.map_err(|error| error.to_string())?;
+    Ok(WorkPackageCostSummaryItem {
+        labor_costs: data["laborCosts"].as_str().map(|value| value.to_string()),
+        material_costs: data["materialCosts"].as_str().map(|value| value.to_string()),
+        overall_costs: data["overallCosts"].as_str().map(|value| value.to_string()),
+    })
+}
+
+#[tauri::command]
+async fn fetch_current_user_id(url: String, token: String) -> Result<String, String> {
+    let clean_url = sanitize_url(&url);
+    let endpoint = format!("{}/api/v3/users/me", clean_url);
+    let auth_value = build_auth_header(&token);
+    let client = build_http_client(12)?;
+    let response = client
+        .get(&endpoint)
+        .header("Authorization", &auth_value)
+        .header("Accept", "application/hal+json, application/json")
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!("HTTP {}", response.status()));
+    }
+    let user: serde_json::Value = response.json().await.map_err(|error| error.to_string())?;
+    user["id"]
+        .as_i64()
+        .map(|id| id.to_string())
+        .or_else(|| user["id"].as_str().map(|id| id.to_string()))
+        .ok_or_else(|| "OpenProject no devolvió el identificador del usuario actual".to_string())
+}
+
+#[tauri::command]
+async fn update_work_package_time_entry(
+    url: String,
+    token: String,
+    entry_id: String,
+    payload: UpdateTimeEntryPayload,
+) -> Result<(), String> {
+    let clean_url = sanitize_url(&url);
+    let raw_entry_id = entry_id.trim();
+    let endpoint = format!("{}/api/v3/time_entries/{}", clean_url, raw_entry_id);
+    let auth_value = build_auth_header(&token);
+    let client = build_http_client(15)?;
+    let mut body = serde_json::json!({
+        "hours": payload.hours,
+        "spentOn": payload.spent_on,
+        "comment": { "format": "plain", "raw": payload.comment }
+    });
+    if let Some(activity_id) = payload.activity_id {
+        body["_links"]["activity"] =
+            serde_json::json!({ "href": format!("/api/v3/time_entries/activities/{}", activity_id) });
+    }
+    let response = client
+        .patch(&endpoint)
+        .header("Authorization", &auth_value)
+        .header("Accept", "application/hal+json, application/json")
+        .header("Content-Type", "application/json")
+        .json(&body)
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        let status = response.status();
+        let message = response.text().await.unwrap_or_default();
+        return Err(format!("HTTP {}: {}", status, message));
+    }
+    Ok(())
+}
+
+async fn fetch_work_package_descendant_ids(
+    client: &reqwest::Client,
+    clean_url: &str,
+    auth_value: &str,
+    root_id: &str,
+) -> Vec<String> {
+    let mut all_ids = vec![root_id.to_string()];
+    let mut frontier = vec![root_id.to_string()];
+    let mut depth = 0;
+
+    while !frontier.is_empty() && depth < 50 {
+        depth += 1;
+        let mut children = Vec::new();
+        let filters = serde_json::json!([{
+            "parent": { "operator": "=", "values": frontier }
+        }])
+        .to_string();
+        let mut offset = 1;
+        let mut has_next_page = true;
+
+        while has_next_page {
+            let endpoint = format!("{}/api/v3/work_packages", clean_url);
+            let offset_value = offset.to_string();
+            let response = match client
+                .get(&endpoint)
+                .query(&[
+                    ("filters", filters.as_str()),
+                    ("offset", offset_value.as_str()),
+                    ("pageSize", "100"),
+                    ("valid_subset", "true"),
+                ])
+                .header("Authorization", auth_value)
+                .header("Accept", "application/hal+json, application/json")
+                .send()
+                .await
+            {
+                Ok(response) if response.status().is_success() => response,
+                _ => return all_ids,
+            };
+            let data: serde_json::Value = match response.json().await {
+                Ok(data) => data,
+                Err(_) => return all_ids,
+            };
+            let elements = data["_embedded"]["elements"].as_array().cloned().unwrap_or_default();
+            for work_package in &elements {
+                let Some(child_id) = work_package["id"]
+                    .as_i64()
+                    .map(|id| id.to_string())
+                    .or_else(|| work_package["id"].as_str().map(|id| id.to_string()))
+                else {
+                    continue;
+                };
+                if !all_ids.contains(&child_id) {
+                    all_ids.push(child_id.clone());
+                    children.push(child_id);
+                }
+            }
+            has_next_page = elements.len() == 100;
+            offset += 1;
+        }
+        frontier = children;
+    }
+
+    all_ids
+}
+
+fn parse_platform_time_entry(el: &serde_json::Value) -> Option<PlatformTimeEntryItem> {
+    let id = el["id"]
+        .as_i64()
+        .map(|value| value.to_string())
+        .or_else(|| el["id"].as_str().map(|value| value.to_string()))?;
+    let user_href = el["_links"]["user"]["href"].as_str().unwrap_or("");
+    let activity_href = el["_links"]["activity"]["href"].as_str().unwrap_or("");
+    let user_id = user_href
+        .split('/')
+        .filter(|segment| !segment.is_empty())
+        .last()
+        .map(|value| value.to_string());
+    let activity_id = activity_href
+        .split('/')
+        .filter(|segment| !segment.is_empty())
+        .last()
+        .map(|value| value.to_string());
+
+    Some(PlatformTimeEntryItem {
+        id,
+        hours: el["hours"].as_str().unwrap_or("PT0H").to_string(),
+        spent_on: el["spentOn"].as_str().unwrap_or("").to_string(),
+        start_time: el["startTime"].as_str().map(|value| value.to_string()),
+        comment: el["comment"]["raw"]
+            .as_str()
+            .or_else(|| el["comment"]["html"].as_str())
+            .unwrap_or("")
+            .to_string(),
+        user_id,
+        user_name: el["_links"]["user"]["title"]
+            .as_str()
+            .unwrap_or("Usuario")
+            .to_string(),
+        activity_name: el["_links"]["activity"]["title"]
+            .as_str()
+            .unwrap_or("")
+            .to_string(),
+        activity_id,
+        project_name: el["_links"]["project"]["title"].as_str().map(|value| value.to_string()),
+        work_package_name: el["_links"]["entity"]["title"]
+            .as_str()
+            .or_else(|| el["_links"]["workPackage"]["title"].as_str())
+            .map(|value| value.to_string()),
+        registered_by_name: el["_links"]["author"]["title"]
+            .as_str()
+            .or_else(|| el["_links"]["user"]["title"].as_str())
+            .map(|value| value.to_string()),
+        costs: el["costs"]
+            .as_str()
+            .map(|value| value.to_string())
+            .or_else(|| el["overallCosts"].as_str().map(|value| value.to_string())),
+        created_at: el["createdAt"].as_str().map(|value| value.to_string()),
+        updated_at: el["updatedAt"].as_str().map(|value| value.to_string()),
+    })
+}
+
+async fn load_time_cost_report_entries(
+    url: String,
+    token: String,
+    filter: TimeCostReportFilter,
+) -> Result<Vec<PlatformTimeEntryItem>, String> {
+    let clean_url = sanitize_url(&url);
+    let auth_value = build_auth_header(&token);
+    let client = build_http_client(15)?;
+    let mut filters = vec![serde_json::json!({
+        "entity_type": { "operator": "=", "values": ["WorkPackage"] }
+    })];
+
+    if let Some(ticket_id) = filter.ticket_id.as_deref() {
+        let raw_ticket = ticket_id.trim().trim_start_matches('#');
+        if raw_ticket.is_empty() {
+            return Ok(Vec::new());
+        }
+        let work_package_ids = if filter.include_descendants.unwrap_or(true) {
+            fetch_work_package_descendant_ids(&client, &clean_url, &auth_value, raw_ticket).await
+        } else {
+            vec![raw_ticket.to_string()]
+        };
+        filters.push(serde_json::json!({
+            "entity_id": { "operator": "=", "values": work_package_ids }
+        }));
+    }
+    if let Some(project_id) = filter.project_id.as_deref().filter(|value| !value.trim().is_empty()) {
+        filters.push(serde_json::json!({
+            "project_id": { "operator": "=", "values": [project_id] }
+        }));
+    }
+    if let Some(user_id) = filter.user_id.as_deref().filter(|value| !value.trim().is_empty()) {
+        filters.push(serde_json::json!({ "user_id": { "operator": "=", "values": [user_id] } }));
+    }
+    if let Some(activity_id) = filter.activity_id.as_deref().filter(|value| !value.trim().is_empty()) {
+        filters.push(serde_json::json!({
+            "activity_id": { "operator": "=", "values": [activity_id] }
+        }));
+    }
+    if let Some(spent_on_from) = filter.spent_on_from.as_deref().filter(|value| !value.trim().is_empty()) {
+        filters.push(serde_json::json!({ "spent_on": { "operator": ">=", "values": [spent_on_from] } }));
+    }
+    if let Some(spent_on_to) = filter.spent_on_to.as_deref().filter(|value| !value.trim().is_empty()) {
+        filters.push(serde_json::json!({ "spent_on": { "operator": "<=", "values": [spent_on_to] } }));
+    }
+
+    let endpoint = format!("{}/api/v3/time_entries", clean_url);
+    let filter_json = serde_json::Value::Array(filters).to_string();
+    let mut offset = 1;
+    let mut elements: Vec<serde_json::Value> = Vec::new();
+    loop {
+        let offset_value = offset.to_string();
+        let response = client
+            .get(&endpoint)
+            .query(&[
+                ("filters", filter_json.as_str()),
+                ("offset", offset_value.as_str()),
+                ("pageSize", "100"),
+            ])
+            .header("Authorization", &auth_value)
+            .header("Accept", "application/hal+json, application/json")
+            .send()
+            .await
+            .map_err(|error| error.to_string())?;
+        if !response.status().is_success() {
+            return Ok(Vec::new());
+        }
+        let data: serde_json::Value = response.json().await.map_err(|error| error.to_string())?;
+        let page = data["_embedded"]["elements"].as_array().cloned().unwrap_or_default();
+        let has_next_page = page.len() == 100;
+        elements.extend(page);
+        if !has_next_page {
+            break;
+        }
+        offset += 1;
+    }
+
+    Ok(elements.iter().filter_map(parse_platform_time_entry).collect())
+}
+
+#[tauri::command]
+async fn fetch_time_cost_report_entries(
+    url: String,
+    token: String,
+    filter: TimeCostReportFilter,
+) -> Result<Vec<PlatformTimeEntryItem>, String> {
+    load_time_cost_report_entries(url, token, filter).await
+}
+
 #[tauri::command]
 async fn fetch_work_package_time_entries(
     url: String,
     token: String,
     ticket: String,
 ) -> Result<Vec<PlatformTimeEntryItem>, String> {
-    let clean_url = sanitize_url(&url);
-    let raw_ticket = ticket.trim().trim_start_matches('#');
-    let auth_value = build_auth_header(&token);
-    let client = build_http_client(15)?;
-
-    let endpoint = format!(
-        "{}/api/v3/work_packages/{}/time_entries?pageSize=100",
-        clean_url, raw_ticket
-    );
-    let mut res = client
-        .get(&endpoint)
-        .header("Authorization", &auth_value)
-        .header("Accept", "application/hal+json, application/json")
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-
-    if res.status().as_u16() == 404 {
-        let filter_json = serde_json::json!([{
-            "workPackage": { "operator": "=", "values": [raw_ticket] }
-        }])
-        .to_string();
-        let fallback_url = format!("{}/api/v3/time_entries", clean_url);
-        res = client
-            .get(&fallback_url)
-            .query(&[("pageSize", "100"), ("filters", &filter_json)])
-            .header("Authorization", &auth_value)
-            .header("Accept", "application/hal+json, application/json")
-            .send()
-            .await
-            .map_err(|e| e.to_string())?;
-    }
-
-    if !res.status().is_success() {
-        return Ok(Vec::new());
-    }
-
-    let json_val: serde_json::Value = res.json().await.map_err(|e| e.to_string())?;
-    let mut entries = Vec::new();
-    if let Some(elements) = json_val["_embedded"]["elements"].as_array() {
-        for el in elements {
-            let id = el["id"]
-                .as_i64()
-                .map(|n| n.to_string())
-                .unwrap_or_default();
-            let hours = el["hours"].as_str().unwrap_or("PT0H").to_string();
-            let spent_on = el["spentOn"].as_str().unwrap_or("").to_string();
-            let comment = el["comment"]["raw"]
-                .as_str()
-                .or_else(|| el["comment"]["html"].as_str())
-                .unwrap_or("")
-                .to_string();
-            let user_name = el["_links"]["user"]["title"]
-                .as_str()
-                .unwrap_or("Usuario")
-                .to_string();
-            let activity_name = el["_links"]["activity"]["title"]
-                .as_str()
-                .unwrap_or("")
-                .to_string();
-            let created_at = el["createdAt"].as_str().map(|s| s.to_string());
-
-            entries.push(PlatformTimeEntryItem {
-                id,
-                hours,
-                spent_on,
-                comment,
-                user_name,
-                activity_name,
-                created_at,
-            });
-        }
-    }
-
-    Ok(entries)
+    load_time_cost_report_entries(
+        url,
+        token,
+        TimeCostReportFilter {
+            ticket_id: Some(ticket),
+            include_descendants: Some(true),
+            ..TimeCostReportFilter::default()
+        },
+    )
+    .await
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -2908,8 +3553,15 @@ pub fn run() {
             fetch_board_columns,
             move_work_package_to_board_column,
             fetch_work_package_form,
+            fetch_work_package_revisions,
+            fetch_work_package_update_stream,
             update_work_package,
             add_work_package_comment,
+            upload_work_package_attachment,
+            fetch_work_package_cost_summary,
+            fetch_current_user_id,
+            update_work_package_time_entry,
+            fetch_time_cost_report_entries,
             fetch_work_package_time_entries,
             get_database_path,
             get_ai_stats,

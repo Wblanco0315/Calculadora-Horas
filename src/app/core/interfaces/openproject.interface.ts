@@ -67,6 +67,30 @@ export interface WorkPackageFormSchema {
   versions: WorkPackageOptionItem[];
 }
 
+export interface WorkPackageRevision {
+  id: string;
+  lockVersion: number;
+  updatedAt?: string;
+}
+
+export interface WorkPackageCostSummary {
+  laborCosts?: string | null;
+  materialCosts?: string | null;
+  overallCosts?: string | null;
+}
+
+export interface TimeCostReportFilter {
+  ticketId?: string;
+  projectId?: string;
+  userId?: string;
+  activityId?: string;
+  spentOnFrom?: string;
+  spentOnTo?: string;
+  includeDescendants?: boolean;
+}
+
+export type TimeCostReportGroup = 'none' | 'spentOn' | 'user' | 'activity' | 'project' | 'workPackage';
+
 export interface UpdateWorkPackagePayload {
   lockVersion?: number;
   subject?: string;
@@ -90,10 +114,18 @@ export interface PlatformTimeEntry {
   id: string;
   hours: string;
   spentOn: string;
+  startTime?: string | null;
   comment: string;
+  userId?: string | null;
   userName: string;
   activityName: string;
+  activityId?: string | null;
+  projectName?: string | null;
+  workPackageName?: string | null;
+  registeredByName?: string | null;
+  costs?: string | number | null;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface BoardLocation {
@@ -133,6 +165,13 @@ export interface TicketComment {
   comment_html?: string;
   created_at?: string;
   user_name?: string;
+}
+
+export interface UploadedAttachment {
+  id: string;
+  fileName: string;
+  contentType: string;
+  downloadUrl: string;
 }
 
 export interface TicketAttachment {

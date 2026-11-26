@@ -89,7 +89,8 @@ O en `~/.gemini/config/mcp_config.json`:
 | `get_user_info` | Ninguno | Obtiene el perfil completo del usuario autenticado en OpenProject (ID, nombre, correo, login, admin, horario). |
 | `get_projects` | `query`, `active`, `limit` | Lista y busca proyectos accesibles en OpenProject con ID, nombre, slug y jerarquía. |
 | `get_statuses` | Ninguno | Retorna la lista oficial de estados disponibles en OpenProject (ID, nombre, color hexadecimal). |
-| `update_ticket_status` | `ticket` (req), `status_id` (req), `lock_version` (opc) | Actualiza el estado de un ticket en OpenProject con soporte de concurrencia optimista. |
+| `get_time_cost_report` | `ticket`, `project_id`, `user_id`, `activity_id`, `date_from`, `date_to`, `include_descendants`, `group_by` | Consulta entradas de tiempo con filtros equivalentes a la página de informes, incluye paquetes hijos y agrupa por fecha/usuario/actividad/proyecto/ticket. Devuelve totales de costo del paquete cuando OpenProject los permite; la API no expone costo monetario por entrada. |
+| `update_ticket_status` | `ticket` (req), `status_id` (req), `lock_version` (req) | Actualiza el estado de un ticket en OpenProject con soporte de concurrencia optimista. |
 | `get_project_boards` | `project_id` (req), `project_identifier` (opc) | Lista los tableros Kanban / de acción disponibles en el proyecto indicado. |
 | `get_board_columns` | `board_id` (req) | Retorna las columnas del tablero seleccionado con sus queries, estados asignados y tickets contenidos. |
 | `move_ticket_column` | `ticket` (req), `target_query_id` (req), `source_query_id` (opc), `target_status_id` (opc) | Desplaza un ticket a otra columna del tablero, ajustando su posición y sincronizando su estado en OpenProject. |
@@ -110,6 +111,7 @@ Eres un asistente de ingeniería de software conectado a PocketProject vía Mode
 - "¿Quién soy?", "Información de mi usuario" -> 'get_user_info'.
 - "Listar proyectos", "Ver proyectos" -> 'get_projects'.
 - "Listar estados", "¿Cuáles son los estados?" -> 'get_statuses'.
+- "Informe de tiempo/costos", "Horas registradas por ticket/proyecto" -> 'get_time_cost_report' con los filtros y agrupación solicitados.
 - "Cambiar estado del ticket 11111 a En progreso" -> 'update_ticket_status'.
 - "Ver tableros del proyecto", "Columnas del tablero" -> 'get_project_boards' / 'get_board_columns'.
 - "Mover ticket 11111 a la columna Hecho" -> 'move_ticket_column'.

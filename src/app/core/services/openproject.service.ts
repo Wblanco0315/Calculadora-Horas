@@ -21,6 +21,10 @@ import {
   WorkPackageFormSchema,
   UpdateWorkPackagePayload,
   PlatformTimeEntry,
+  WorkPackageRevision,
+  WorkPackageCostSummary,
+  TimeCostReportFilter,
+  UploadedAttachment,
 } from '../interfaces/openproject.interface';
 
 @Injectable({
@@ -33,6 +37,7 @@ export class OpenprojectService {
   private readonly boardsCache = new Map<string, BoardOption[]>();
   private readonly boardColumnsCache = new Map<string, BoardColumnOption[]>();
   private statusesCache: StatusOption[] | null = null;
+  private readonly inlineImageCache = new Map<string, Promise<string>>();
 
   private isTauriApp(): boolean {
     try {
@@ -278,6 +283,104 @@ export class OpenprojectService {
         success: false,
         message: err instanceof Error ? err.message : String(err),
       };
+    }
+  }
+
+  async getWorkPackageRevisions(ticketIdList: string[]): Promise<WorkPackageRevision[]> {
+    const ticketIds = [...new Set(ticketIdList.map((ticket) => ticket.trim().replace(/^#/, '')))]
+      .filter((ticket) => /^\d+$/.test(ticket));
+    const token = this.getToken();
+    if (ticketIds.length === 0 || !token) return [];
+    const url = this.sanitizeUrl();
+
+    if (this.isTauriApp()) {
+      try {
+        return await invoke<WorkPackageRevision[]>('fetch_work_package_revisions', {
+          url,
+          token,
+          ticketIds,
+        });
+      } catch {
+        return [];
+      }
+    }
+
+    const query = new URLSearchParams({
+      filters: JSON.stringify([{ id: { operator: '=', values: ticketIds } }]),
+      offset: '1',
+      pageSize: String(ticketIds.length),
+      valid_subset: 'true',
+    });
+    try {
+      const response = await fetch(`${url}/api/v3/work_packages?${query.toString()}`, {
+        headers: this.buildAuthHeaders(token),
+      });
+      if (!response.ok) return [];
+      const data = await response.json();
+      const elements = data?._embedded?.elements;
+      if (!Array.isArray(elements)) return [];
+      return elements
+        .filter((item: any) => item?.id !== undefined && typeof item?.lockVersion === 'number')
+        .map((item: any) => ({
+          id: String(item.id),
+          lockVersion: item.lockVersion,
+          updatedAt: typeof item.updatedAt === 'string' ? item.updatedAt : undefined,
+        }));
+    } catch {
+      return [];
+    }
+  }
+
+  async getWorkPackageLockVersion(ticket: string): Promise<number | null> {
+    const rawTicket = ticket.trim().replace(/^#/, '');
+    const revision = (await this.getWorkPackageRevisions([rawTicket])).find((item) => item.id === rawTicket);
+    return revision?.lockVersion ?? null;
+  }
+
+  async getWorkPackageUpdateStream(
+    ticket: string,
+    lastUpdateTimestamp: string
+  ): Promise<{ available: boolean; hasUpdates: boolean }> {
+    const rawTicket = ticket.trim().replace(/^#/, '');
+    const token = this.getToken();
+    if (!rawTicket || !token) return { available: false, hasUpdates: false };
+    const url = this.sanitizeUrl();
+
+    if (this.isTauriApp()) {
+      try {
+        return await invoke<{ available: boolean; hasUpdates: boolean }>(
+          'fetch_work_package_update_stream',
+          { url, token, ticket: rawTicket, lastUpdateTimestamp }
+        );
+      } catch {
+        return { available: false, hasUpdates: false };
+      }
+    }
+
+    const query = new URLSearchParams({
+      sortBy: 'asc',
+      filter: 'all',
+      last_update_timestamp: lastUpdateTimestamp,
+    });
+    try {
+      const response = await fetch(
+        `${url}/work_packages/${rawTicket}/activities/update_streams?${query.toString()}`,
+        {
+          headers: {
+            ...this.buildAuthHeaders(token),
+            Accept: 'text/vnd.turbo-stream.html, */*',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+          credentials: 'include',
+        }
+      );
+      if (!response.ok) return { available: false, hasUpdates: false };
+      const contentType = response.headers.get('content-type') || '';
+      const body = await response.text();
+      const available = contentType.includes('turbo-stream') || body.includes('<turbo-stream');
+      return { available, hasUpdates: available && body.includes('<turbo-stream') };
+    } catch {
+      return { available: false, hasUpdates: false };
     }
   }
 
@@ -528,9 +631,7 @@ export class OpenprojectService {
     }
 
     // Web Fallback
-    const fullUrl = downloadUrl.startsWith('http')
-      ? downloadUrl
-      : `${url}${downloadUrl.startsWith('/') ? '' : '/'}${downloadUrl}`;
+    const fullUrl = this.resolveHref(downloadUrl);
     const res = await fetch(fullUrl, {
       headers: {
         Authorization: this.buildAuthHeaders(token)['Authorization'],
@@ -543,6 +644,165 @@ export class OpenprojectService {
 
     const blob = await res.blob();
     return URL.createObjectURL(blob);
+  }
+
+  /**
+   * Resolves an OpenProject href (absolute, root-relative or relative) against the configured
+   * base URL without duplicating the relative root (e.g. `/openproject/openproject/...`).
+   */
+  resolveHref(href: string): string {
+    const trimmed = href.trim();
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    const base = this.sanitizeUrl();
+    let origin = base;
+    let basePath = '';
+    try {
+      const parsed = new URL(base);
+      origin = parsed.origin;
+      basePath = parsed.pathname.replace(/\/+$/, '');
+    } catch {
+      // Keep the raw base when it cannot be parsed
+    }
+    if (trimmed.startsWith('/')) {
+      if (basePath && (trimmed === basePath || trimmed.startsWith(`${basePath}/`))) {
+        return `${origin}${trimmed}`;
+      }
+      return `${base}${trimmed}`;
+    }
+    return `${base}/${trimmed}`;
+  }
+
+  /**
+   * True when an image source points to an OpenProject attachment / asset that needs authentication.
+   */
+  isOpenProjectImageSource(src: string): boolean {
+    if (!src || /^(data|blob):/i.test(src)) return false;
+    if (/\/attachments\/\d+/i.test(src) || !/^https?:\/\//i.test(src)) return true;
+    try {
+      return src.startsWith(new URL(this.sanitizeUrl()).origin);
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Downloads an OpenProject image with the API token and returns a cached object URL usable in `<img src>`.
+   */
+  getAttachmentImageUrl(href: string): Promise<string> {
+    const cacheKey = this.attachmentCacheKey(href);
+    const cached = this.inlineImageCache.get(cacheKey);
+    if (cached) return cached;
+    const pending = this.fetchAttachmentContent(this.resolveHref(href))
+      .then((url) => toObjectUrl(url))
+      .catch((err) => {
+        this.inlineImageCache.delete(cacheKey);
+        throw err;
+      });
+    this.inlineImageCache.set(cacheKey, pending);
+    return pending;
+  }
+
+  /**
+   * Registers a local object URL for an attachment (e.g. right after uploading it) to avoid re-downloading it.
+   */
+  cacheAttachmentImageUrl(href: string, objectUrl: string): void {
+    this.inlineImageCache.set(this.attachmentCacheKey(href), Promise.resolve(objectUrl));
+  }
+
+  private attachmentCacheKey(href: string): string {
+    const match = /\/attachments\/(\d+)/i.exec(href);
+    return match ? `attachment:${match[1]}` : href;
+  }
+
+  /**
+   * Replaces OpenProject attachment image sources inside rendered HTML with authenticated
+   * data/blob URLs so they can be displayed inside the app (the webview cannot send the token).
+   */
+  async resolveInlineAttachmentImages(html: string | null | undefined): Promise<string> {
+    if (!html || typeof DOMParser === 'undefined') return html || '';
+    const doc = new DOMParser().parseFromString(`<div id="op-root">${html}</div>`, 'text/html');
+    const root = doc.getElementById('op-root');
+    if (!root) return html;
+
+    const images = Array.from(root.querySelectorAll('img'));
+    if (images.length === 0) return html;
+
+    await Promise.all(
+      images.map(async (img) => {
+        const src = img.getAttribute('src') || '';
+        if (!this.isOpenProjectImageSource(src)) return;
+        try {
+          img.setAttribute('src', await this.getAttachmentImageUrl(src));
+          img.setAttribute('data-op-src', src);
+          img.setAttribute('loading', 'lazy');
+        } catch (err) {
+          img.setAttribute('data-op-broken', 'true');
+          console.warn('Could not load inline image:', src, err);
+        }
+      })
+    );
+
+    return root.innerHTML;
+  }
+
+  /**
+   * Uploads a file as an attachment of the given work package and returns its metadata.
+   */
+  async uploadWorkPackageAttachment(
+    ticket: string,
+    file: File
+  ): Promise<{ ok: boolean; attachment?: UploadedAttachment; error?: string }> {
+    const rawTicket = ticket.trim().replace(/^#/, '');
+    if (!rawTicket) return { ok: false, error: 'No ticket ID' };
+    const token = this.getToken();
+    if (!token) return { ok: false, error: 'No token' };
+    const url = this.sanitizeUrl();
+    const fileName = file.name || `image-${Date.now()}.png`;
+    const contentType = file.type || 'application/octet-stream';
+
+    if (this.isTauriApp()) {
+      try {
+        const dataBase64 = await fileToBase64(file);
+        const attachment = await invoke<UploadedAttachment>('upload_work_package_attachment', {
+          url,
+          token,
+          ticket: rawTicket,
+          fileName,
+          contentType,
+          dataBase64,
+        });
+        return { ok: true, attachment };
+      } catch (err: unknown) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+
+    try {
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify({ fileName })], { type: 'application/json' }));
+      form.append('file', file, fileName);
+      const res = await fetch(`${url}/api/v3/work_packages/${rawTicket}/attachments`, {
+        method: 'POST',
+        headers: { Authorization: this.buildAuthHeaders(token)['Authorization'] },
+        body: form,
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        return { ok: false, error: errJson?.message || `HTTP ${res.status}` };
+      }
+      const data: any = await res.json();
+      return {
+        ok: true,
+        attachment: {
+          id: String(data.id ?? ''),
+          fileName: data.fileName || fileName,
+          contentType: data.contentType || contentType,
+          downloadUrl: data._links?.downloadLocation?.href || '',
+        },
+      };
+    } catch (err: unknown) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
   }
 
   // ──────────────────────────────────────────────
@@ -1266,8 +1526,9 @@ export class OpenprojectService {
     targetQueryId: string,
     sourceQueryId?: string,
     targetStatusId?: string,
-    dropPosition?: BoardColumnDropPosition
-  ): Promise<{ ok: boolean; statusId?: string; error?: string }> {
+    dropPosition?: BoardColumnDropPosition,
+    expectedLockVersion?: number
+  ): Promise<{ ok: boolean; statusId?: string; error?: string; conflict?: boolean }> {
     const rawTicket = ticket.trim().replace(/^#/, '');
     const ticketNum = parseInt(rawTicket, 10);
     if (isNaN(ticketNum)) return { ok: false, error: 'Invalid ticket ID' };
@@ -1288,6 +1549,7 @@ export class OpenprojectService {
             targetStatusId: targetStatusId || null,
             targetPositionIndex: dropPosition?.targetIndex ?? null,
             targetTicketIds: dropPosition?.targetTicketIds ?? null,
+            expectedLockVersion: expectedLockVersion ?? null,
           }
         );
 
@@ -1298,15 +1560,34 @@ export class OpenprojectService {
             }
           });
         }
-        return res;
+        return res.ok ? res : { ...res, conflict: isWorkPackageConflict(res.error || '') };
       } catch (err: any) {
-        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+        const error = err instanceof Error ? err.message : String(err);
+        return { ok: false, error, conflict: isWorkPackageConflict(error) };
       }
     }
 
     const headers = this.buildAuthHeaders(token);
 
     try {
+      const workPackageEndpoint = `${url}/api/v3/work_packages/${rawTicket}`;
+      const snapshotResponse = await fetch(workPackageEndpoint, { headers });
+      if (!snapshotResponse.ok) return { ok: false, error: `HTTP ${snapshotResponse.status}` };
+      const snapshot = await snapshotResponse.json();
+      const currentLockVersion = Number(snapshot.lockVersion);
+      if (
+        expectedLockVersion !== undefined &&
+        Number.isFinite(currentLockVersion) &&
+        currentLockVersion !== expectedLockVersion
+      ) {
+        return {
+          ok: false,
+          conflict: true,
+          error: 'The ticket changed in OpenProject. Refresh it before moving the card.',
+        };
+      }
+      const patchLockVersion = expectedLockVersion ?? currentLockVersion;
+
       // 1. Resolve target status if not explicitly passed
       let effectiveStatusId = targetStatusId;
       if (!effectiveStatusId) {
@@ -1322,7 +1603,7 @@ export class OpenprojectService {
       // 2. If it is an action board for status, update the ticket status in OpenProject
       let statusWasUpdated = false;
       if (effectiveStatusId && sourceQueryId !== targetQueryId) {
-        const statusRes = await this.updateWorkPackageStatus(rawTicket, effectiveStatusId);
+        const statusRes = await this.updateWorkPackageStatus(rawTicket, effectiveStatusId, patchLockVersion);
         if (!statusRes.ok) {
           return { ok: false, error: statusRes.error || 'Could not update work package status.' };
         }
@@ -1395,7 +1676,9 @@ export class OpenprojectService {
     const raw =
       schemaField?._embedded?.allowedValues ??
       schemaField?.allowedValues ??
-      schemaField?._links?.allowedValues;
+      schemaField?._embedded?.elements ??
+      schemaField?.elements ??
+      (Array.isArray(schemaField?._links?.allowedValues) ? schemaField._links.allowedValues : undefined);
     if (!Array.isArray(raw)) return [];
 
     return raw
@@ -1412,6 +1695,72 @@ export class OpenprojectService {
       .filter((item) => item.id && item.name);
   }
 
+  private async fetchAvailablePeople(
+    ticket: string,
+    field: 'assignees' | 'responsibles',
+    url: string,
+    headers: HeadersInit
+  ): Promise<WorkPackageOptionItem[]> {
+    const query =
+      'filters=%5B%5D&pageSize=-1&select=elements%2Fid%2Celements%2Fname%2Celements%2Femail%2Celements%2Fself%2Ctotal%2Ccount%2CpageSize';
+    const endpoint = `${url}/api/v3/work_packages/${ticket}/available_${field}?${query}`;
+
+    try {
+      const response = await fetch(endpoint, { headers, credentials: 'include' });
+      if (!response.ok) return [];
+      return this.parseSchemaAllowedValues(await response.json());
+    } catch {
+      return [];
+    }
+  }
+
+  private async loadSchemaAllowedValues(
+    schemaField: any,
+    url: string,
+    headers: HeadersInit
+  ): Promise<WorkPackageOptionItem[]> {
+    const embeddedValues = this.parseSchemaAllowedValues(schemaField);
+    if (embeddedValues.length > 0) return embeddedValues;
+
+    const allowedValuesLink = schemaField?._links?.allowedValues;
+    const href = Array.isArray(allowedValuesLink)
+      ? allowedValuesLink[0]?.href
+      : allowedValuesLink?.href;
+    if (typeof href !== 'string' || !href) return [];
+
+    const apiBase = url.endsWith('/') ? url.slice(0, -1) : url;
+    let nextUrl: string | null = this.resolveAllowedValuesUrl(href, apiBase);
+    const result: WorkPackageOptionItem[] = [];
+    const visited = new Set<string>();
+
+    while (nextUrl && !visited.has(nextUrl) && visited.size < 20) {
+      visited.add(nextUrl);
+      try {
+        const response = await fetch(nextUrl, { headers });
+        if (!response.ok) break;
+        const data = await response.json();
+        result.push(...this.parseSchemaAllowedValues(data));
+        const nextHref = data?._links?.next?.href;
+        nextUrl = typeof nextHref === 'string' ? this.resolveAllowedValuesUrl(nextHref, apiBase) : null;
+      } catch {
+        break;
+      }
+    }
+
+    return result;
+  }
+
+  private resolveAllowedValuesUrl(href: string, apiBase: string): string | null {
+    try {
+      const target = href.startsWith('/api/v3/')
+        ? new URL(`${apiBase}${href}`)
+        : new URL(href, `${apiBase}/`);
+      return target.origin === new URL(apiBase).origin ? target.toString() : null;
+    } catch {
+      return null;
+    }
+  }
+
   async getWorkPackageForm(ticket: string): Promise<WorkPackageFormSchema> {
     const empty: WorkPackageFormSchema = {
       statuses: [],
@@ -1425,6 +1774,8 @@ export class OpenprojectService {
     const token = this.getToken();
     if (!token) return empty;
     const url = this.sanitizeUrl();
+    let availableAssignees: WorkPackageOptionItem[] = [];
+    let availableResponsibles: WorkPackageOptionItem[] = [];
 
     if (this.isTauriApp()) {
       try {
@@ -1440,31 +1791,57 @@ export class OpenprojectService {
     }
 
     try {
+      const headers = this.buildAuthHeaders(token);
+      [availableAssignees, availableResponsibles] = await Promise.all([
+        this.fetchAvailablePeople(rawTicket, 'assignees', url, headers),
+        this.fetchAvailablePeople(rawTicket, 'responsibles', url, headers),
+      ]);
       const res = await fetch(`${url}/api/v3/work_packages/${rawTicket}/form`, {
         method: 'POST',
-        headers: this.buildAuthHeaders(token),
+        headers,
         body: JSON.stringify({}),
       });
-      if (!res.ok) return empty;
+      if (!res.ok) {
+        return {
+          ...empty,
+          assignees: availableAssignees,
+          responsibles: availableResponsibles.length > 0 ? availableResponsibles : availableAssignees,
+        };
+      }
+
       const formData = await res.json();
       const schema = formData?._embedded?.schema ?? {};
-      return {
-        statuses: this.parseSchemaAllowedValues(schema['status']),
-        priorities: this.parseSchemaAllowedValues(schema['priority']),
-        assignees: this.parseSchemaAllowedValues(schema['assignee']),
-        responsibles: this.parseSchemaAllowedValues(schema['responsible']),
-        versions: this.parseSchemaAllowedValues(schema['version']),
-      };
+      const [statuses, priorities, versions] = await Promise.all([
+        this.loadSchemaAllowedValues(schema['status'], url, headers),
+        this.loadSchemaAllowedValues(schema['priority'], url, headers),
+        this.loadSchemaAllowedValues(schema['version'], url, headers),
+      ]);
+      const [schemaAssignees, schemaResponsibles] = await Promise.all([
+        availableAssignees.length > 0
+          ? Promise.resolve([])
+          : this.loadSchemaAllowedValues(schema['assignee'], url, headers),
+        availableResponsibles.length > 0
+          ? Promise.resolve([])
+          : this.loadSchemaAllowedValues(schema['responsible'], url, headers),
+      ]);
+      const assignees = availableAssignees.length > 0 ? availableAssignees : schemaAssignees;
+      const responsibles =
+        availableResponsibles.length > 0
+          ? availableResponsibles
+          : schemaResponsibles.length > 0
+            ? schemaResponsibles
+            : assignees;
+      return { statuses, priorities, assignees, responsibles, versions };
     } catch (err) {
       console.warn('Web fetch work package form error:', err);
-      return empty;
+      return { ...empty, assignees: availableAssignees, responsibles: availableResponsibles };
     }
   }
 
   async updateWorkPackage(
     ticket: string,
     payload: UpdateWorkPackagePayload
-  ): Promise<{ ok: boolean; lockVersion?: number; error?: string }> {
+  ): Promise<{ ok: boolean; lockVersion?: number; error?: string; conflict?: boolean }> {
     const rawTicket = ticket.trim().replace(/^#/, '');
     if (!rawTicket) return { ok: false, error: 'No ticket ID' };
     const token = this.getToken();
@@ -1481,7 +1858,8 @@ export class OpenprojectService {
         });
         return { ok: true, lockVersion };
       } catch (err: unknown) {
-        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+        const error = err instanceof Error ? err.message : String(err);
+        return { ok: false, error, conflict: isWorkPackageConflict(error) };
       }
     }
 
@@ -1547,7 +1925,15 @@ export class OpenprojectService {
 
       if (!patchRes.ok) {
         const errJson = await patchRes.json().catch(() => null);
-        return { ok: false, error: errJson?.message || `HTTP ${patchRes.status}` };
+        const error = errJson?.message || `HTTP ${patchRes.status}`;
+        return {
+          ok: false,
+          error,
+          conflict:
+            patchRes.status === 409 ||
+            String(errJson?.errorIdentifier || '').includes('Conflict') ||
+            /lock.?version|concurrent|changed since/i.test(error),
+        };
       }
 
       const updated = await patchRes.json();
@@ -1599,58 +1985,258 @@ export class OpenprojectService {
     }
   }
 
-  async getWorkPackageTimeEntries(ticket: string): Promise<PlatformTimeEntry[]> {
-    const rawTicket = ticket.trim().replace(/^#/, '');
-    if (!rawTicket) return [];
+  async getCurrentUserId(): Promise<string | null> {
     const token = this.getToken();
-    if (!token) return [];
+    if (!token) return null;
     const url = this.sanitizeUrl();
 
     if (this.isTauriApp()) {
       try {
-        return await invoke<PlatformTimeEntry[]>('fetch_work_package_time_entries', {
+        return await invoke<string>('fetch_current_user_id', { url, token });
+      } catch {
+        return null;
+      }
+    }
+
+    try {
+      const response = await fetch(`${url}/api/v3/users/me`, {
+        headers: this.buildAuthHeaders(token),
+      });
+      if (!response.ok) return null;
+      const user = await response.json();
+      return user?.id !== undefined ? String(user.id) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async updateTimeEntry(
+    entryId: string,
+    payload: { hours: string; spentOn: string; comment: string; activityId?: string | null }
+  ): Promise<{ ok: boolean; error?: string }> {
+    const rawEntryId = entryId.trim();
+    const token = this.getToken();
+    if (!rawEntryId || !token) return { ok: false, error: 'Time entry or OpenProject token is missing.' };
+    const url = this.sanitizeUrl();
+
+    if (this.isTauriApp()) {
+      try {
+        await invoke('update_work_package_time_entry', {
+          url,
+          token,
+          entryId: rawEntryId,
+          payload,
+        });
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, error: error instanceof Error ? error.message : String(error) };
+      }
+    }
+
+    try {
+      const body: Record<string, unknown> = {
+        hours: payload.hours,
+        spentOn: payload.spentOn,
+        comment: { format: 'plain', raw: payload.comment },
+      };
+      if (payload.activityId) {
+        body['_links'] = { activity: { href: `/api/v3/time_entries/activities/${payload.activityId}` } };
+      }
+      const response = await fetch(`${url}/api/v3/time_entries/${rawEntryId}`, {
+        method: 'PATCH',
+        headers: this.buildAuthHeaders(token),
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => null);
+        return { ok: false, error: error?.message || `HTTP ${response.status}` };
+      }
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  async getWorkPackageCostSummary(ticket: string): Promise<WorkPackageCostSummary> {
+    const rawTicket = ticket.trim().replace(/^#/, '');
+    const token = this.getToken();
+    const empty: WorkPackageCostSummary = { laborCosts: null, materialCosts: null, overallCosts: null };
+    if (!rawTicket || !token) return empty;
+    const url = this.sanitizeUrl();
+
+    if (this.isTauriApp()) {
+      try {
+        return await invoke<WorkPackageCostSummary>('fetch_work_package_cost_summary', {
           url,
           token,
           ticket: rawTicket,
         });
-      } catch (err) {
-        console.warn('Could not fetch work package time entries via Tauri:', err);
+      } catch {
+        return empty;
+      }
+    }
+
+    try {
+      const response = await fetch(`${url}/api/v3/work_packages/${rawTicket}`, {
+        headers: this.buildAuthHeaders(token),
+      });
+      if (!response.ok) return empty;
+      const workPackage = await response.json();
+      return {
+        laborCosts: typeof workPackage.laborCosts === 'string' ? workPackage.laborCosts : null,
+        materialCosts: typeof workPackage.materialCosts === 'string' ? workPackage.materialCosts : null,
+        overallCosts: typeof workPackage.overallCosts === 'string' ? workPackage.overallCosts : null,
+      };
+    } catch {
+      return empty;
+    }
+  }
+
+  getCostReportUrl(ticket: string, projectIdentifier: string): string {
+    const query = new URLSearchParams({
+      'fields[]': 'WorkPackageId',
+      'operators[WorkPackageId]': '=_child_work_packages',
+      'values[WorkPackageId]': ticket.trim().replace(/^#/, ''),
+      set_filter: '1',
+    });
+    return `${this.sanitizeUrl()}/projects/${encodeURIComponent(projectIdentifier)}/cost_reports?${query.toString()}`;
+  }
+
+  private async getWorkPackageDescendantIds(
+    rootTicket: string,
+    url: string,
+    headers: Record<string, string>
+  ): Promise<string[]> {
+    const visited = new Set<string>([rootTicket]);
+    let frontier = [rootTicket];
+    let depth = 0;
+
+    while (frontier.length > 0 && depth < 50) {
+      depth += 1;
+      const children: string[] = [];
+      let offset = 1;
+      let hasNextPage = true;
+
+      while (hasNextPage) {
+        const query = new URLSearchParams({
+          filters: JSON.stringify([{ parent: { operator: '=', values: frontier } }]),
+          offset: String(offset),
+          pageSize: '100',
+          valid_subset: 'true',
+        });
+        const response = await fetch(`${url}/api/v3/work_packages?${query.toString()}`, { headers });
+        if (!response.ok) return [...visited];
+        const collection = await response.json();
+        const elementList: Array<{ id?: number | string }> = collection?._embedded?.elements ?? [];
+
+        for (const element of elementList) {
+          if (element.id === undefined) continue;
+          const childId = String(element.id);
+          if (visited.has(childId)) continue;
+          visited.add(childId);
+          children.push(childId);
+        }
+
+        hasNextPage = elementList.length === 100;
+        offset += 1;
+      }
+
+      frontier = children;
+    }
+
+    return [...visited];
+  }
+
+  private mapPlatformTimeEntry(elements: Array<Record<string, any>>): PlatformTimeEntry[] {
+    return elements.map((entry) => {
+      const userHref = String(entry['_links']?.['user']?.['href'] || '');
+      const activityHref = String(entry['_links']?.['activity']?.['href'] || '');
+      return {
+        id: String(entry['id']),
+        hours: String(entry['hours'] || 'PT0H'),
+        spentOn: String(entry['spentOn'] || ''),
+        startTime: typeof entry['startTime'] === 'string' ? entry['startTime'] : null,
+        comment: String(entry['comment']?.['raw'] || entry['comment']?.['html'] || ''),
+        userId: userHref.split('/').filter(Boolean).pop() || null,
+        userName: String(entry['_links']?.['user']?.['title'] || 'Usuario'),
+        activityName: String(entry['_links']?.['activity']?.['title'] || ''),
+        activityId: activityHref.split('/').filter(Boolean).pop() || null,
+        projectName: entry['_links']?.['project']?.['title'] || null,
+        workPackageName: entry['_links']?.['entity']?.['title'] || entry['_links']?.['workPackage']?.['title'] || null,
+        registeredByName: entry['_links']?.['author']?.['title'] || entry['_links']?.['user']?.['title'] || null,
+        costs: entry['costs'] ?? entry['overallCosts'] ?? null,
+        createdAt: entry['createdAt'] || undefined,
+        updatedAt: entry['updatedAt'] || undefined,
+      };
+    });
+  }
+
+  async getTimeCostReportEntries(filter: TimeCostReportFilter): Promise<PlatformTimeEntry[]> {
+    const token = this.getToken();
+    if (!token) return [];
+    const url = this.sanitizeUrl();
+    const queryFilter: TimeCostReportFilter = { ...filter };
+    if (queryFilter.ticketId) queryFilter.ticketId = queryFilter.ticketId.trim().replace(/^#/, '');
+
+    if (this.isTauriApp()) {
+      try {
+        return await invoke<PlatformTimeEntry[]>('fetch_time_cost_report_entries', {
+          url,
+          token,
+          filter: queryFilter,
+        });
+      } catch (error) {
+        console.warn('Could not fetch time and cost report entries via Tauri:', error);
         return [];
       }
     }
 
     try {
       const headers = this.buildAuthHeaders(token);
-      let res = await fetch(`${url}/api/v3/work_packages/${rawTicket}/time_entries?pageSize=100`, {
-        headers,
-      });
+      const filters: Array<Record<string, { operator: string; values: string[] }>> = [
+        { entity_type: { operator: '=', values: ['WorkPackage'] } },
+      ];
+      if (queryFilter.ticketId) {
+        const workPackageIds = queryFilter.includeDescendants === false
+          ? [queryFilter.ticketId]
+          : await this.getWorkPackageDescendantIds(queryFilter.ticketId, url, headers);
+        filters.push({ entity_id: { operator: '=', values: workPackageIds } });
+      }
+      if (queryFilter.projectId) filters.push({ project_id: { operator: '=', values: [queryFilter.projectId] } });
+      if (queryFilter.userId) filters.push({ user_id: { operator: '=', values: [queryFilter.userId] } });
+      if (queryFilter.activityId) filters.push({ activity_id: { operator: '=', values: [queryFilter.activityId] } });
+      if (queryFilter.spentOnFrom) filters.push({ spent_on: { operator: '>=', values: [queryFilter.spentOnFrom] } });
+      if (queryFilter.spentOnTo) filters.push({ spent_on: { operator: '<=', values: [queryFilter.spentOnTo] } });
 
-      if (res.status === 404) {
-        const filterParam = encodeURIComponent(
-          JSON.stringify([{ workPackage: { operator: '=', values: [rawTicket] } }])
-        );
-        res = await fetch(`${url}/api/v3/time_entries?pageSize=100&filters=${filterParam}`, {
-          headers,
-        });
+      const filterJson = JSON.stringify(filters);
+      const entries: Array<Record<string, any>> = [];
+      const pageSize = 100;
+      let offset = 1;
+      while (true) {
+        const query = new URLSearchParams({ filters: filterJson, pageSize: String(pageSize), offset: String(offset) });
+        const response = await fetch(`${url}/api/v3/time_entries?${query.toString()}`, { headers });
+        if (!response.ok) return [];
+        const data = await response.json();
+        const page: Array<Record<string, any>> = data?._embedded?.elements ?? [];
+        entries.push(...page);
+        if (page.length < pageSize) break;
+        offset += 1;
       }
 
-      if (!res.ok) return [];
-      const data = await res.json();
-      const elements: Array<Record<string, any>> = data?._embedded?.elements ?? [];
-      return elements.map((el) => ({
-        id: String(el['id']),
-        hours: String(el['hours'] || 'PT0H'),
-        spentOn: String(el['spentOn'] || ''),
-        comment: String(el['comment']?.['raw'] || el['comment']?.['html'] || ''),
-        userName: String(el['_links']?.['user']?.['title'] || 'Usuario'),
-        activityName: String(el['_links']?.['activity']?.['title'] || ''),
-        createdAt: el['createdAt'] || undefined,
-      }));
-    } catch (err) {
-      console.warn('Web fetch work package time entries error:', err);
+      return this.mapPlatformTimeEntry(entries);
+    } catch (error) {
+      console.warn('Could not fetch time and cost report entries:', error);
       return [];
     }
   }
+
+  async getWorkPackageTimeEntries(ticket: string): Promise<PlatformTimeEntry[]> {
+    return this.getTimeCostReportEntries({ ticketId: ticket, includeDescendants: true });
+  }
+}
+
+function isWorkPackageConflict(message: string): boolean {
+  return /http 409|lock.?version|concurrent|changed since|conflict/i.test(message);
 }
 
 function buildQueryOrderDelta(
@@ -1726,4 +2312,22 @@ function buildQueryOrderDelta(
 
   orderedTicketIds.splice(insertionIndex, 0, ticketId);
   return Object.fromEntries(orderedTicketIds.map((id, index) => [String(id), index * orderGap]));
+}
+
+function fileToBase64(file: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || '');
+      resolve(result.slice(result.indexOf(',') + 1));
+    };
+    reader.onerror = () => reject(reader.error ?? new Error('Could not read file'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function toObjectUrl(url: string): Promise<string> {
+  if (!url.startsWith('data:')) return url;
+  const blob = await (await fetch(url)).blob();
+  return URL.createObjectURL(blob);
 }
