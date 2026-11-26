@@ -396,6 +396,22 @@ export class StorageService {
     this.languageService.setLanguage(configWithJson.language);
   }
 
+  /**
+   * Quick light/dark toggle (app header, dashboard). Applies it at once and persists it in the saved
+   * configuration, so reloading the config (e.g. opening the settings) keeps it. During onboarding
+   * nothing is saved yet: the setup wizard stores the current theme when it finishes.
+   */
+  async toggleTheme(): Promise<void> {
+    const mode = this.themeService.isDark() ? 'light' : 'dark';
+    this.themeService.setTheme(mode);
+    if (!this.config().is_configured) return;
+    try {
+      await this.saveConfig({ ...this.config(), theme_mode: mode });
+    } catch (err) {
+      console.error('Error saving theme mode:', err);
+    }
+  }
+
   async testConnection(url: string, token: string): Promise<ConnectionTestResult> {
     if (this.isTauriApp()) {
       return await invoke<ConnectionTestResult>('test_openproject_connection', {

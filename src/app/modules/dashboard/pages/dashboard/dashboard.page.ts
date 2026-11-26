@@ -649,8 +649,7 @@ export class DashboardPage implements OnInit, OnDestroy {
   }
 
   toggleTheme(): void {
-    const isDark = this.themeService.isDark();
-    this.themeService.setTheme(isDark ? 'light' : 'dark');
+    void this.storageService.toggleTheme();
   }
 }
 

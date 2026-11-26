@@ -160,11 +160,6 @@ export class ThemeService {
     document.documentElement.setAttribute('data-light-style', 'warm');
   }
 
-  toggleTheme(): void {
-    const isDark = this.isDark();
-    this.setTheme(isDark ? 'light' : 'dark');
-  }
-
   setPrimaryColor(color: PrimaryColor, force: boolean = false): void {
     const isSame = this.primaryColor() === color;
     this.primaryColor.set(color);

@@ -34,7 +34,7 @@ La fila de actividad y los modales de actividad (`app-activity-row`, `app-activi
 - **Responsabilidad y Diseño**:
   - Altura nativa de 32px (`h-8`), coincidiendo con la barra de título original de Windows.
   - Barra de título unificada y reutilizable con arrastre programático fluido (`WindowService.startDragging`) en todo el encabezado con exclusión automática de controles interactivos, isologo oficial (`app-logo`), título de la aplicación y versión actual (`v{{ version }}`).
-  - Botón de alternancia de tema claro/oscuro (`tablerSun` / `tablerMoon`), botón de minimizar (oculta a la bandeja del sistema / iconos ocultos), botón de maximizar / restaurar y botón de cerrar que invoca el modal de confirmación `app-close-confirm-modal`.
+  - Botón de alternancia de tema claro/oscuro (`tablerSun` / `tablerMoon`): `StorageService.toggleTheme()` aplica el tema y lo guarda en la configuración (SQLite y `localStorage`), igual que el botón del dashboard, para que no se pierda al recargar la configuración (por ejemplo al abrir los ajustes). Durante el onboarding solo se aplica; el asistente lo guarda al terminar. Botón de minimizar (oculta a la bandeja del sistema / iconos ocultos), botón de maximizar / restaurar y botón de cerrar que invoca el modal de confirmación `app-close-confirm-modal`.
 
 ### 2.2. Panel de Estadísticas Hero (`app-stats-hero`)
 - **Ubicación**: `components/stats-hero/stats-hero.component.ts`
