@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { OpenprojectService } from './openproject.service';
+import { WorkPackageApiService } from './openproject/work-package-api.service';
 
 export interface WorkPackageChangeCheck {
   changed: boolean;
@@ -12,7 +12,7 @@ export interface WorkPackageChangeCheck {
 
 @Injectable({ providedIn: 'root' })
 export class WorkPackageChangeService {
-  private readonly openprojectService = inject(OpenprojectService);
+  private readonly workPackageApi = inject(WorkPackageApiService);
 
   async checkForChanges(
     ticket: string,
@@ -22,8 +22,8 @@ export class WorkPackageChangeService {
   ): Promise<WorkPackageChangeCheck> {
     const checkedAt = new Date().toISOString();
     const [revisionList, stream] = await Promise.all([
-      this.openprojectService.getWorkPackageRevisions([ticket]),
-      this.openprojectService.getWorkPackageUpdateStream(ticket, updateCursor),
+      this.workPackageApi.getWorkPackageRevisions([ticket]),
+      this.workPackageApi.getWorkPackageUpdateStream(ticket, updateCursor),
     ]);
     const ticketId = ticket.trim().replace(/^#/, '');
     const revision = revisionList.find((item) => item.id === ticketId);

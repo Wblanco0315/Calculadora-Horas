@@ -15,17 +15,17 @@ src/app/modules/setup/
 │   ├── appearance-step/      # Paso 1: Apariencia, Tema y Color de Acento
 │   ├── schedule-step/        # Paso 2: Configuración de Jornada y Horario
 │   ├── lunch-step/           # Paso 3: Tiempo de Almuerzo / Descanso
-│   └── openproject-step/     # Paso 4: Conexión con la API de OpenProject
+│   ├── openproject-step/     # Paso 4: Conexión con la API de OpenProject
+│   └── mcp-section/          # Integración MCP (usa `McpService`)
 ├── interfaces/
 │   └── setup.interface.ts    # Modelos y contratos de UI del wizard
-├── modals/
-│   └── close-confirm-modal/  # Diálogo de confirmación al cerrar la aplicación
+├── services/
+│   ├── setup.service.ts      # Estado centralizado del wizard (Signals)
+│   └── mcp.service.ts        # MCP: ruta de la base local, estadísticas IA, instalación en clientes y reglas IA
 ├── pages/
 │   ├── setup.page.html       # Estructura del Stepper y navegación compartida
 │   ├── setup.page.ts         # Smart component controlador del flujo
 │   └── setup.page.css        # Estilos específicos de la página
-├── services/
-│   └── setup.service.ts      # Estado centralizado del wizard (Signals)
 └── setup.router.ts           # Configuración de rutas lazy-loaded
 ```
 

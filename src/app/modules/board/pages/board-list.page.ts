@@ -6,7 +6,7 @@ import { SortIcon, SortableColumn, Table } from 'primeng/table';
 import { Skeleton } from 'primeng/skeleton';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerLayoutKanban, tablerRefresh } from '@ng-icons/tabler-icons';
-import { OpenprojectService } from '../../../core/services/openproject.service';
+import { BoardApiService } from '../../../core/services/openproject/board-api.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { BoardOption } from '../../../core/interfaces/openproject.interface';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
@@ -47,7 +47,7 @@ const ACTION_ATTRIBUTES = ['status', 'assignee', 'version', 'subproject', 'subta
 })
 export class BoardListPage {
   private readonly route = inject(ActivatedRoute);
-  private readonly openprojectService = inject(OpenprojectService);
+  private readonly boardApi = inject(BoardApiService);
   private readonly languageService = inject(LanguageService);
 
   readonly projectId = signal<string>('');
@@ -83,8 +83,8 @@ export class BoardListPage {
     this.projectIdentifier.set(queryParams.get('identifier') || '');
     this.isLoading.set(true);
     try {
-      if (forceRefresh) this.openprojectService.invalidateBoardCache(projectId);
-      const boards = await this.openprojectService.getProjectBoards(projectId, this.projectIdentifier() || undefined);
+      if (forceRefresh) this.boardApi.invalidateBoardCache(projectId);
+      const boards = await this.boardApi.getProjectBoards(projectId, this.projectIdentifier() || undefined);
       if (projectId === this.projectId()) this.boards.set(boards);
     } finally {
       if (projectId === this.projectId()) this.isLoading.set(false);

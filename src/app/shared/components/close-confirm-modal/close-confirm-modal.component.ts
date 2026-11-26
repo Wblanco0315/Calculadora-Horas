@@ -4,8 +4,8 @@ import { Dialog } from 'primeng/dialog';
 import { ButtonDirective } from 'primeng/button';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerAlertTriangle, tablerMinimize, tablerPower } from '@ng-icons/tabler-icons';
-import { WindowService } from '../../../../core/services/window.service';
-import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
+import { WindowService } from '../../../core/services/window.service';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 
 @Component({
   selector: 'app-close-confirm-modal',

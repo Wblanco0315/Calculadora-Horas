@@ -27,8 +27,8 @@ import { LunchStepComponent } from '../components/lunch-step/lunch-step.componen
 import { AppearanceStepComponent } from '../components/appearance-step/appearance-step.component';
 import { OpenprojectStepComponent } from '../components/openproject-step/openproject-step.component';
 import { UpdateSectionComponent } from '../../../shared/components/update-section/update-section.component';
-import { McpSectionComponent } from '../../../shared/components/mcp-section/mcp-section.component';
-import { CloseConfirmModalComponent } from '../modals/close-confirm-modal/close-confirm-modal.component';
+import { McpSectionComponent } from '../components/mcp-section/mcp-section.component';
+import { CloseConfirmModalComponent } from '../../../shared/components/close-confirm-modal/close-confirm-modal.component';
 
 @Component({
   selector: 'app-setup-page',

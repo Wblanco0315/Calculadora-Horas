@@ -7,7 +7,7 @@ Provides a full-page time and cost report for OpenProject work packages. It supp
 - `src/app/modules/report/report.router.ts`: Lazy-loaded dashboard route for reports.
 - `src/app/modules/report/pages/time-cost-report.page.ts`: Filter state, API query orchestration, grouping, aggregate display, report link, and own-entry editing.
 - `src/app/modules/report/pages/time-cost-report.page.html`: Full-page query builder and sortable results table.
-- `src/app/core/services/openproject.service.ts`: Filters and paginates time-entry API queries and resolves descendant work packages.
+- `src/app/core/services/openproject/time-entry-api.service.ts` (`TimeEntryApiService`): Filters and paginates time-entry API queries and resolves descendant work packages.
 - `src/app/core/interfaces/openproject.interface.ts`: `TimeCostReportFilter` and time-entry contracts.
 - `src-tauri/src/lib.rs`: Tauri implementation of the same filtered query for the desktop app.
 - MCP counterpart: `pocketproject-mcp/src/services/openproject.client.ts` and `src/tools/index.ts` expose `get_time_cost_report` using equivalent filters and grouping.
@@ -23,7 +23,7 @@ Provides a full-page time and cost report for OpenProject work packages. It supp
 
 ## Reactive State & Services
 - Signals: report filter values, activity/project options, result entries, group rows, aggregate cost summary, loading/error state, and time-entry edit form state.
-- Services: `OpenprojectService`, `ActivatedRoute`, `Router`, and the corresponding Tauri commands for desktop API access.
+- Services: `TimeEntryApiService`, `ProjectApiService`, `WorkPackageApiService`, `OpenprojectService`, `ActivatedRoute`, `Router`, and the corresponding Tauri commands for desktop API access.
 
 ## Layout
 - Filters use an auto-fill grid (`.report-filter-grid`, min 14rem per column) with every field stacked as label + control; PrimeNG controls use `[fluid]="true"` so selects, date pickers and inputs share the same width and bottom edge. The descendants checkbox and run button share the last cell, aligned to the controls' height.

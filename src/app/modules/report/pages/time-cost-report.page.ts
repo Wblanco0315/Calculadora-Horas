@@ -15,7 +15,10 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerArrowLeft, tablerExternalLink, tablerRefresh, tablerReportAnalytics, tablerSearch } from '@ng-icons/tabler-icons';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { TimeCostReportFilter, TimeEntryActivityType, PlatformTimeEntry, Project, WorkPackageCostSummary } from '../../../core/interfaces/openproject.interface';
-import { OpenprojectService } from '../../../core/services/openproject.service';
+import { OpenprojectService } from '../../../core/services/openproject/openproject.service';
+import { WorkPackageApiService } from '../../../core/services/openproject/work-package-api.service';
+import { ProjectApiService } from '../../../core/services/openproject/project-api.service';
+import { TimeEntryApiService } from '../../../core/services/openproject/time-entry-api.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { formatIsoDuration, formatTimeMinutes } from '../../../shared/format/time';
 
@@ -148,6 +151,9 @@ export class TimeCostReportPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly openprojectService = inject(OpenprojectService);
+  private readonly workPackageApi = inject(WorkPackageApiService);
+  private readonly projectApi = inject(ProjectApiService);
+  private readonly timeEntryApi = inject(TimeEntryApiService);
   private readonly routeQueryParams = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,
   });
@@ -247,7 +253,7 @@ export class TimeCostReportPage {
 
   private async resolveTicketProject(ticketId: string): Promise<void> {
     try {
-      const context = await this.openprojectService.getTicketContext(ticketId, {
+      const context = await this.workPackageApi.getTicketContext(ticketId, {
         includeDescription: false,
         includeComments: false,
         includeAttachments: false,
@@ -329,8 +335,8 @@ export class TimeCostReportPage {
 
   async loadReportOptions(): Promise<void> {
     const [projectOption, activityOption] = await Promise.all([
-      this.openprojectService.getProjects(),
-      this.openprojectService.getTimeEntryActivities(this.ticketId() || undefined),
+      this.projectApi.getProjects(),
+      this.timeEntryApi.getTimeEntryActivities(this.ticketId() || undefined),
     ]);
     this.projectOption.set(projectOption);
     this.activityOption.set(activityOption);
@@ -373,14 +379,14 @@ export class TimeCostReportPage {
         spentOnTo: this.spentOnTo() ? this.toIsoDate(this.spentOnTo()!) : undefined,
         includeDescendants: ticketId ? this.includeDescendants() : false,
       };
-      const entries = await this.openprojectService.getTimeCostReportEntries(filter);
+      const entries = await this.timeEntryApi.getTimeCostReportEntries(filter);
       this.timeEntry.set(entries);
       this.syncQueryParams(filter);
 
       const canShowWholePackageCosts = !!ticketId && !filter.userId && !filter.activityId && !filter.spentOnFrom && !filter.spentOnTo;
       this.costSummary.set(
         canShowWholePackageCosts
-          ? await this.openprojectService.getWorkPackageCostSummary(ticketId)
+          ? await this.workPackageApi.getWorkPackageCostSummary(ticketId)
           : null
       );
     } catch (error) {
@@ -427,7 +433,7 @@ export class TimeCostReportPage {
     this.isSavingEntry.set(true);
     this.editError.set(null);
     try {
-      const result = await this.openprojectService.updateTimeEntry(entry.id, {
+      const result = await this.timeEntryApi.updateTimeEntry(entry.id, {
         hours: `PT${Number(hours.toFixed(2))}H`,
         spentOn: this.toIsoDate(spentOn),
         comment: this.editingComment().trim(),
@@ -449,7 +455,7 @@ export class TimeCostReportPage {
     const project = this.projectOption().find((item) => item.id === this.projectId());
     const identifier = this.projectIdentifier() || project?.identifier || '';
     if (!ticketId || !identifier) return;
-    const url = this.openprojectService.getCostReportUrl(ticketId, identifier);
+    const url = this.timeEntryApi.getCostReportUrl(ticketId, identifier);
     try {
       await openUrl(url);
     } catch {

@@ -17,8 +17,8 @@ import {
   tablerShieldCheck,
   tablerClock,
 } from '@ng-icons/tabler-icons';
-import { ActivityService } from '../../../core/services/activity.service';
-import { TranslatePipe } from '../../pipes/translate.pipe';
+import { McpService } from '../../services/mcp.service';
+import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 
 export type McpClientType = 'quick_setup' | 'antigravity' | 'agy_cli' | 'cursor' | 'claude_desktop' | 'claude_code';
 
@@ -42,183 +42,10 @@ export type McpClientType = 'quick_setup' | 'antigravity' | 'agy_cli' | 'cursor'
       tablerClock,
     }),
   ],
-  template: `
-    <div class="space-y-4">
-      <!-- Section Header -->
-      <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
-        <div class="flex items-center gap-2">
-          <ng-icon name="tablerRobot" size="1.25rem" class="text-primary-600 dark:text-primary-400 shrink-0" />
-          <h2 class="text-sm sm:text-base font-bold text-slate-900 dark:text-zinc-100">
-            {{ 'setup.mcp.title' | translate }}
-          </h2>
-        </div>
-
-      </div>
-
-      <!-- Step 1: Automated Client Setup -->
-      <div class="p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-50/60 dark:bg-zinc-900/40 space-y-3">
-        <div class="space-y-2.5">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
-            1. {{ 'setup.mcp.clientConfigTitle' | translate }}
-          </span>
-
-          <!-- PrimeNG Tabs for Client Selection -->
-          <p-tabs [value]="selectedClient()" (valueChange)="selectClient($event)">
-            <p-tablist class="w-full flex gap-1 overflow-x-auto border-b border-slate-200/80 dark:border-zinc-800">
-              <p-tab value="quick_setup" class="cursor-pointer py-1.5 px-3 text-xs font-medium">
-                {{ 'setup.mcp.clientSetupCli' | translate }}
-              </p-tab>
-              <p-tab value="antigravity" class="cursor-pointer py-1.5 px-3 text-xs font-medium">
-                {{ 'setup.mcp.clientAntigravity' | translate }}
-              </p-tab>
-              <p-tab value="agy_cli" class="cursor-pointer py-1.5 px-3 text-xs font-medium">
-                {{ 'setup.mcp.clientAgyCli' | translate }}
-              </p-tab>
-              <p-tab value="cursor" class="cursor-pointer py-1.5 px-3 text-xs font-medium">
-                {{ 'setup.mcp.clientCursor' | translate }}
-              </p-tab>
-              <p-tab value="claude_desktop" class="cursor-pointer py-1.5 px-3 text-xs font-medium">
-                {{ 'setup.mcp.clientClaudeDesktop' | translate }}
-              </p-tab>
-              <p-tab value="claude_code" class="cursor-pointer py-1.5 px-3 text-xs font-medium">
-                {{ 'setup.mcp.clientClaudeCode' | translate }}
-              </p-tab>
-            </p-tablist>
-          </p-tabs>
-        </div>
-
-        <!-- Target hint -->
-        <p class="text-[11px] text-slate-500 dark:text-zinc-400 font-mono">
-          {{ currentHintKey() | translate }}
-        </p>
-
-        <!-- Action bar: Auto-install or Copy -->
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-1">
-          <div class="flex items-center gap-2 flex-wrap">
-            @if (canAutoInstall()) {
-              <button
-                pButton
-                type="button"
-                severity="primary"
-                size="small"
-                [loading]="isInstalling()"
-                (click)="autoInstall()"
-                class="!py-1.5 !px-3.5 text-xs font-semibold"
-              >
-                <ng-icon name="tablerBolt" size="0.95rem" class="mr-1" />
-                <span>{{ 'setup.mcp.autoInstall' | translate }}</span>
-              </button>
-            }
-
-            <button
-              pButton
-              type="button"
-              severity="secondary"
-              variant="outlined"
-              size="small"
-              (click)="copySnippet()"
-              class="!py-1.5 !px-3 text-xs font-semibold"
-            >
-              @if (copiedSnippet()) {
-                <ng-icon name="tablerCheck" size="0.85rem" class="mr-1 text-emerald-500" />
-                <span>{{ (isCliMode() ? 'setup.mcp.commandCopied' : 'setup.mcp.snippetCopied') | translate }}</span>
-              } @else {
-                <ng-icon [name]="isCliMode() ? 'tablerTerminal2' : 'tablerCopy'" size="0.85rem" class="mr-1" />
-                <span>{{ (isCliMode() ? 'setup.mcp.copyCommand' : 'setup.mcp.copySnippet') | translate }}</span>
-              }
-            </button>
-          </div>
-
-          @if (installFeedback()) {
-            <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 truncate">
-              <ng-icon name="tablerCheck" size="0.9rem" />
-              <span class="truncate">{{ installFeedback() }}</span>
-            </span>
-          }
-        </div>
-
-        <!-- Code/Command Display -->
-        <pre class="p-3 rounded-xl bg-slate-900 text-slate-100 dark:bg-zinc-950 border border-slate-800 font-mono text-[11px] leading-relaxed overflow-x-auto select-all max-h-28">{{ currentSnippet() }}</pre>
-      </div>
-
-      <!-- Step 2: Agent Rules Automation -->
-      <div class="p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-50/60 dark:bg-zinc-900/40 space-y-2.5">
-        <div class="flex items-center justify-between gap-2 flex-wrap">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
-            2. {{ 'setup.mcp.instructionsTitle' | translate }}
-          </span>
-
-          <div class="flex items-center gap-2">
-            <button
-              pButton
-              type="button"
-              severity="primary"
-              size="small"
-              [loading]="isInjectingRules()"
-              (click)="autoInjectRules()"
-              class="!py-1.5 !px-3 text-xs font-semibold"
-            >
-              <ng-icon name="tablerBolt" size="0.9rem" class="mr-1" />
-              <span>{{ 'setup.mcp.autoInjectRules' | translate }}</span>
-            </button>
-
-            <button
-              pButton
-              type="button"
-              severity="secondary"
-              variant="outlined"
-              size="small"
-              (click)="copyPrompt()"
-              class="!py-1.5 !px-3 text-xs font-semibold"
-            >
-              @if (copiedPrompt()) {
-                <ng-icon name="tablerCheck" size="0.85rem" class="mr-1 text-emerald-500" />
-                <span>{{ 'setup.mcp.promptCopied' | translate }}</span>
-              } @else {
-                <ng-icon name="tablerCopy" size="0.85rem" class="mr-1" />
-                <span>{{ 'setup.mcp.copyPrompt' | translate }}</span>
-              }
-            </button>
-          </div>
-        </div>
-
-        @if (injectFeedback()) {
-          <div class="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
-            <ng-icon name="tablerCheck" size="1rem" class="shrink-0" />
-            <span class="truncate">{{ injectFeedback() }}</span>
-          </div>
-        }
-
-        <!-- Collapsible Rules Preview -->
-        <div>
-          <button
-            type="button"
-            (click)="showPromptDetails.set(!showPromptDetails())"
-            class="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-          >
-            @if (showPromptDetails()) {
-              <ng-icon name="tablerChevronUp" size="0.85rem" />
-              <span>{{ 'setup.mcp.hidePromptDetails' | translate }}</span>
-            } @else {
-              <ng-icon name="tablerChevronDown" size="0.85rem" />
-              <span>{{ 'setup.mcp.showPromptDetails' | translate }}</span>
-            }
-          </button>
-
-          @if (showPromptDetails()) {
-            <div class="mt-2 font-mono text-[11px] bg-white dark:bg-zinc-950 p-3 rounded-xl border border-slate-200 dark:border-zinc-800 whitespace-pre-wrap select-all max-h-56 overflow-y-auto leading-relaxed text-slate-700 dark:text-zinc-300">
-              {{ aiSystemPrompt }}
-            </div>
-          }
-        </div>
-      </div>
-
-
-    </div>
-  `,
+  templateUrl: './mcp-section.component.html',
 })
 export class McpSectionComponent implements OnInit {
-  private readonly activityService = inject(ActivityService);
+  private readonly mcpService = inject(McpService);
 
   readonly dbPath = signal<string>('pocketproject.sqlite');
   readonly aiActivitiesCount = signal<number>(0);
@@ -308,10 +135,10 @@ Tu objetivo es registrar y gestionar de forma proactiva, exacta y profesional el
 - **Confirmación Obligatoria**: Ante cualquier duda o transición, PREGUNTAR SIEMPRE al usuario mostrando las opciones disponibles. NUNCA cambiar estados ni mover columnas sin autorización expresa.`;
 
   async ngOnInit(): Promise<void> {
-    const path = await this.activityService.getDatabasePath();
+    const path = await this.mcpService.getDatabasePath();
     this.dbPath.set(path);
 
-    const count = await this.activityService.getAiStats();
+    const count = await this.mcpService.getAiStats();
     this.aiActivitiesCount.set(count);
   }
 
@@ -413,7 +240,7 @@ Tu objetivo es registrar y gestionar de forma proactiva, exacta y profesional el
     this.installFeedback.set(null);
 
     try {
-      const res = await this.activityService.installMcpToClient(client);
+      const res = await this.mcpService.installMcpToClient(client);
       if (res.success) {
         this.installFeedback.set(res.message);
       } else {
@@ -431,7 +258,7 @@ Tu objetivo es registrar y gestionar de forma proactiva, exacta y profesional el
     this.injectFeedback.set(null);
 
     try {
-      const res = await this.activityService.injectAiRules();
+      const res = await this.mcpService.injectAiRules();
       if (res.success) {
         this.injectFeedback.set(res.message);
       } else {

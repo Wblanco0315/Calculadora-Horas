@@ -31,7 +31,11 @@ import {
 } from '@ng-icons/tabler-icons';
 import { openUrl, revealItemInDir } from '@tauri-apps/plugin-opener';
 import { BreadcrumbService } from '../../../core/services/breadcrumb.service';
-import { OpenprojectService } from '../../../core/services/openproject.service';
+import { OpenprojectService } from '../../../core/services/openproject/openproject.service';
+import { WorkPackageApiService } from '../../../core/services/openproject/work-package-api.service';
+import { WorkPackageFormApiService } from '../../../core/services/openproject/work-package-form-api.service';
+import { AttachmentApiService } from '../../../core/services/openproject/attachment-api.service';
+import { BoardApiService } from '../../../core/services/openproject/board-api.service';
 import { ActivityService } from '../../../core/services/activity.service';
 import { WorkPackageChangeService } from '../../../core/services/work-package-change.service';
 import {
@@ -45,7 +49,7 @@ import {
 import { Activity } from '../../../core/interfaces/activity.interface';
 import { formatIsoDuration, formatTimeMinutes } from '../../../shared/format/time';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { ActivityFormModalComponent } from '../../compact/modals/activity-form-modal/activity-form-modal.component';
+import { ActivityFormModalComponent } from '../../time-entry/modals/activity-form-modal/activity-form-modal.component';
 import { RichTextEditorComponent } from '../../../shared/components/rich-text-editor/rich-text-editor.component';
 
 const ACTIVITY_FILTERS = ['all', 'changes', 'comments'] as const;
@@ -165,6 +169,10 @@ function readStoredOption<T extends string>(key: string, allowed: readonly T[], 
 })
 export class TicketDetailPage {
   private readonly openprojectService = inject(OpenprojectService);
+  private readonly workPackageApi = inject(WorkPackageApiService);
+  private readonly workPackageFormApi = inject(WorkPackageFormApiService);
+  private readonly attachmentApi = inject(AttachmentApiService);
+  private readonly boardApi = inject(BoardApiService);
   private readonly activityService = inject(ActivityService);
   private readonly sanitizer = inject(DomSanitizer);
   private readonly route = inject(ActivatedRoute);
@@ -336,7 +344,7 @@ export class TicketDetailPage {
 
   async loadBoardColumns(boardId: string, ticketId: number | null): Promise<void> {
     try {
-      const columns = await this.openprojectService.getBoardColumns(boardId, true);
+      const columns = await this.boardApi.getBoardColumns(boardId, true);
       this.boardColumns.set(columns);
       const queryId = this.routeQueryParams().get('column');
       const requestedColumn = columns.find((column) => column.queryId === queryId);
@@ -386,12 +394,12 @@ export class TicketDetailPage {
     try {
       const ticketStr = String(id);
       const [ctx, schema] = await Promise.all([
-        this.openprojectService.getTicketContext(ticketStr, {
+        this.workPackageApi.getTicketContext(ticketStr, {
           includeDescription: true,
           includeComments: true,
           includeAttachments: true,
         }),
-        this.openprojectService.getWorkPackageForm(ticketStr),
+        this.workPackageFormApi.getWorkPackageForm(ticketStr),
       ]);
 
       if (!ctx.success) {
@@ -449,10 +457,10 @@ export class TicketDetailPage {
     );
 
     const [description, comments] = await Promise.all([
-      descriptionHtml ? this.openprojectService.resolveInlineAttachmentImages(descriptionHtml) : null,
+      descriptionHtml ? this.attachmentApi.resolveInlineAttachmentImages(descriptionHtml) : null,
       Promise.all(
         Array.from(commentHtmlById, async ([id, html]) => {
-          const resolved = await this.openprojectService.resolveInlineAttachmentImages(html);
+          const resolved = await this.attachmentApi.resolveInlineAttachmentImages(html);
           return [id, resolved] as const;
         })
       ),
@@ -632,7 +640,7 @@ export class TicketDetailPage {
       }
 
       const targetCol = this.boardColumns().find((c) => c.queryId === targetQueryId);
-      const res = await this.openprojectService.moveWorkPackageToBoardColumn(
+      const res = await this.boardApi.moveWorkPackageToBoardColumn(
         String(id),
         targetQueryId,
         sourceQueryId || undefined,
@@ -675,7 +683,7 @@ export class TicketDetailPage {
         }
       }
 
-      const res = await this.openprojectService.updateWorkPackage(String(id), {
+      const res = await this.workPackageFormApi.updateWorkPackage(String(id), {
         ...payload,
         lockVersion: this.ticketData()?.lock_version ?? undefined,
       });
@@ -700,7 +708,7 @@ export class TicketDetailPage {
 
     this.isPostingComment.set(true);
     try {
-      const res = await this.openprojectService.addWorkPackageComment(String(id), text);
+      const res = await this.workPackageFormApi.addWorkPackageComment(String(id), text);
       if (res.ok) {
         this.newComment.set('');
         this.isComposingComment.set(false);
@@ -739,7 +747,7 @@ export class TicketDetailPage {
     });
     try {
       const fileName = att.fileName || att.file_name || `attachment-${att.id}`;
-      const savedPath = await this.openprojectService.downloadAttachment(url, fileName);
+      const savedPath = await this.attachmentApi.downloadAttachment(url, fileName);
       if (savedPath) {
         this.downloadedAttachmentPaths.update((paths) => new Map(paths).set(att.id, savedPath));
       }

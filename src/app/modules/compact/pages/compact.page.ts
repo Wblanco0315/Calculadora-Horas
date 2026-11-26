@@ -40,13 +40,13 @@ import { LanguageService } from '../../../core/services/language.service';
 import { UpdateService } from '../../../core/services/update.service';
 import { AppHeaderComponent } from '../../../shared/components/app-header/app-header.component';
 import { StatsHeroComponent } from '../components/stats-hero/stats-hero.component';
-import { ActivityRowComponent } from '../components/activity-row/activity-row.component';
-import { ActivityFormModalComponent } from '../modals/activity-form-modal/activity-form-modal.component';
-import { FavoritesModalComponent } from '../modals/favorites-modal/favorites-modal.component';
-import { SyncConfirmModalComponent } from '../modals/sync-confirm-modal/sync-confirm-modal.component';
-import { ResetConfirmModalComponent } from '../modals/reset-confirm-modal/reset-confirm-modal.component';
-import { CloseConfirmModalComponent } from '../modals/close-confirm-modal/close-confirm-modal.component';
-import { TicketContextModalComponent } from '../../../shared/components/ticket-context-modal/ticket-context-modal.component';
+import { ActivityRowComponent } from '../../time-entry/components/activity-row/activity-row.component';
+import { ActivityFormModalComponent } from '../../time-entry/modals/activity-form-modal/activity-form-modal.component';
+import { FavoritesModalComponent } from '../../time-entry/modals/favorites-modal/favorites-modal.component';
+import { SyncConfirmModalComponent } from '../../time-entry/modals/sync-confirm-modal/sync-confirm-modal.component';
+import { ResetConfirmModalComponent } from '../../time-entry/modals/reset-confirm-modal/reset-confirm-modal.component';
+import { CloseConfirmModalComponent } from '../../../shared/components/close-confirm-modal/close-confirm-modal.component';
+import { TicketContextModalComponent } from '../modals/ticket-context-modal/ticket-context-modal.component';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 
 @Component({

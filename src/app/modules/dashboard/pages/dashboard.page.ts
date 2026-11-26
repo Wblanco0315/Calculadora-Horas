@@ -42,12 +42,14 @@ import { LanguageService } from '../../../core/services/language.service';
 import { WindowService } from '../../../core/services/window.service';
 import { UpdateService } from '../../../core/services/update.service';
 import { BreadcrumbService } from '../../../core/services/breadcrumb.service';
-import { OpenprojectService } from '../../../core/services/openproject.service';
+import { WorkPackageApiService } from '../../../core/services/openproject/work-package-api.service';
+import { ProjectApiService } from '../../../core/services/openproject/project-api.service';
+import { BoardApiService } from '../../../core/services/openproject/board-api.service';
 import { BoardOption, Project, WorkPackageSearchItem } from '../../../core/interfaces/openproject.interface';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { AppHeaderComponent } from '../../../shared/components/app-header/app-header.component';
 import { AppLogoComponent } from '../../../shared/components/app-logo/app-logo.component';
-import { CloseConfirmModalComponent } from '../../compact/modals/close-confirm-modal/close-confirm-modal.component';
+import { CloseConfirmModalComponent } from '../../../shared/components/close-confirm-modal/close-confirm-modal.component';
 
 export interface NavItem {
   icon: string;
@@ -119,7 +121,9 @@ export class DashboardPage implements OnInit, OnDestroy {
   readonly windowService = inject(WindowService);
   readonly updateService = inject(UpdateService);
   private readonly router = inject(Router);
-  private readonly openprojectService = inject(OpenprojectService);
+  private readonly workPackageApi = inject(WorkPackageApiService);
+  private readonly projectApi = inject(ProjectApiService);
+  private readonly boardApi = inject(BoardApiService);
 
   readonly isMobile = signal<boolean>(false);
   readonly open = signal<boolean>(true);
@@ -464,7 +468,7 @@ export class DashboardPage implements OnInit, OnDestroy {
         debounceTime(SIDEBAR_SEARCH_DEBOUNCE_MS),
         switchMap((query) =>
           isTicketSearchable(query)
-            ? from(this.openprojectService.searchWorkPackages(query)).pipe(catchError(() => of([])))
+            ? from(this.workPackageApi.searchWorkPackages(query)).pipe(catchError(() => of([])))
             : of([])
         ),
         takeUntilDestroyed()
@@ -533,7 +537,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     if (this.openingTicketId() !== null) return;
     this.openingTicketId.set(ticketId);
     try {
-      const ticket = await this.openprojectService.getTicketContext(String(ticketId), {
+      const ticket = await this.workPackageApi.getTicketContext(String(ticketId), {
         includeDescription: false,
         includeComments: false,
         includeAttachments: false,
@@ -550,7 +554,7 @@ export class DashboardPage implements OnInit, OnDestroy {
         name: project?.name || ticket.project_name || projectId,
         identifier: project?.identifier || '',
       };
-      const boardId = await this.findBoardContainingTicket(projectId, queryParams.identifier, ticketId);
+      const boardId = await this.boardApi.findBoardContainingTicket(projectId, queryParams.identifier, ticketId);
       if (boardId) {
         this.navigateTo(`/dashboard/boards/${projectId}/${boardId}/tickets/${ticketId}`, queryParams);
       } else {
@@ -562,31 +566,6 @@ export class DashboardPage implements OnInit, OnDestroy {
       this.openingTicketId.set(null);
       this.sidebarQuery.set('');
     }
-  }
-
-  private async findBoardContainingTicket(
-    projectId: string,
-    identifier: string,
-    ticketId: number
-  ): Promise<string | null> {
-    const boards = await this.openprojectService.getProjectBoards(projectId, identifier || undefined);
-    const matches = await Promise.all(
-      boards.map(async (board) => {
-        try {
-          const columns = await this.openprojectService.getBoardColumns(board.id);
-          return columns.some(
-            (column) =>
-              column.workPackageIds.includes(ticketId) ||
-              column.workPackages?.some((workPackage) => workPackage.id === ticketId)
-          )
-            ? board.id
-            : null;
-        } catch {
-          return null;
-        }
-      })
-    );
-    return matches.find((boardId) => boardId !== null) ?? null;
   }
 
   isProjectActive(projectId: string): boolean {
@@ -609,7 +588,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     if (this.isLoadingProjects() || (!force && this.sidebarProjects() !== null)) return;
     this.isLoadingProjects.set(true);
     try {
-      const projects = await this.openprojectService.getProjects();
+      const projects = await this.projectApi.getProjects();
       this.sidebarProjects.set([...projects].sort((a, b) => a.name.localeCompare(b.name)));
     } catch {
       this.sidebarProjects.set([]);
@@ -624,7 +603,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     try {
       const resolvedIdentifier =
         identifier ?? this.sidebarProjects()?.find((project) => project.id === projectId)?.identifier;
-      const boards = await this.openprojectService.getProjectBoards(projectId, resolvedIdentifier || undefined);
+      const boards = await this.boardApi.getProjectBoards(projectId, resolvedIdentifier || undefined);
       this.projectBoards.update((map) => new Map(map).set(projectId, boards));
     } catch {
       this.projectBoards.update((map) => new Map(map).set(projectId, []));

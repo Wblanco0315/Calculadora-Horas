@@ -11,9 +11,9 @@ Provides the Full Mode OpenProject project directory inside `DashboardPage`, all
 
 ## User Flow & Key Components
 1. User selects **Projects** in the dashboard sidebar.
-2. `ProjectPage` fetches projects via `OpenprojectService.getProjects()`.
+2. `ProjectPage` fetches projects via `ProjectApiService.getProjects()`.
 3. User filters by name, identifier, or ID and clicks a project card (`ProjectCardComponent`) to navigate to `BoardPage`.
 
 ## Reactive State & Services
 - Local Signals: `projects`, `searchQuery`, `isLoaded`, `isRefreshing`, `filteredProjects` (`computed`).
-- Services: `OpenprojectService`, `Router`.
+- Services: `ProjectApiService`, `Router`.

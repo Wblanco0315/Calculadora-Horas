@@ -9,7 +9,7 @@ import { ButtonDirective } from 'primeng/button';
 import { Skeleton } from 'primeng/skeleton';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerFolder, tablerSearch, tablerRefresh, tablerFolderOff } from '@ng-icons/tabler-icons';
-import { OpenprojectService } from '../../../core/services/openproject.service';
+import { ProjectApiService } from '../../../core/services/openproject/project-api.service';
 import { Project } from '../../../core/interfaces/openproject.interface';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { ProjectCardComponent } from '../components/project-card/project-card.component';
@@ -33,7 +33,7 @@ import { ProjectCardComponent } from '../components/project-card/project-card.co
   templateUrl: './project.page.html',
 })
 export class ProjectPage implements OnInit {
-  private readonly openprojectService = inject(OpenprojectService);
+  private readonly projectApi = inject(ProjectApiService);
   private readonly router = inject(Router);
 
   readonly projects = signal<Project[]>([]);
@@ -60,7 +60,7 @@ export class ProjectPage implements OnInit {
   async loadProjects(): Promise<void> {
     this.isRefreshing.set(true);
     try {
-      const list = await this.openprojectService.getProjects();
+      const list = await this.projectApi.getProjects();
       this.projects.set(list);
     } finally {
       this.isLoaded.set(true);

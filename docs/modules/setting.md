@@ -16,8 +16,8 @@ src/app/modules/setting/
 │   │   └── user-section.component.ts       # Sección 'User': datos de perfil y gestión de horario
 │   ├── system-section/
 │   │   └── system-section.component.ts     # Sección 'System': apariencia, idioma, OpenProject y actualizaciones
-│   └── update-section/
-│       └── update-section.component.ts     # Tarjeta de comprobación e instalación de actualizaciones
+│   └── user-card/
+│       └── user-card.component.{ts,html}   # Tarjeta de perfil (solo la usa la sección User)
 ├── pages/
 │   ├── setting.page.html                   # Vista orquestadora con p-tabs y routing de secciones
 │   ├── setting.page.ts                     # Smart component con lectura de query params (?tab=)
@@ -32,7 +32,7 @@ src/app/modules/setting/
 ### 2.1. Sección de Usuario (`app-user-section`)
 - **Ubicación**: `src/app/modules/setting/components/user-section/user-section.component.ts`
 - **Responsabilidad**:
-  - Aloja la tarjeta de perfil [user-card.component.ts](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/shared/components/user-card/user-card.component.ts) con avatar, nombre editable, login de OpenProject y métricas rápidas.
+  - Aloja la tarjeta de perfil [user-card.component.ts](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/modules/setting/components/user-card/user-card.component.ts) con avatar, nombre editable, login de OpenProject y métricas rápidas.
   - Integra el editor de jornada laboral [schedule-editor.component.ts](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/shared/components/schedule-editor/schedule-editor.component.ts) con soporte para entrada/salida, días agrupados, tiempo de descanso/almuerzo (`[showLunch]="true"`) y control de horas mínimas diarias a registrar (`[showMinHours]="true"`).
   - Gestiona el guardado persistente del horario (`saveSchedule()`) con notificaciones de éxito reactivas.
 
@@ -42,7 +42,7 @@ src/app/modules/setting/
   - Disposición en cuadrícula responsiva (1 columna en móvil, 2 columnas en escritorio).
   - Aloja [appearance-editor.component.ts](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/shared/components/appearance-editor/appearance-editor.component.ts) para el control de modo de tema (Sistema, Claro, Oscuro), idioma de interfaz (`p-select`) y color de acento con selector de paleta y hexadecimal.
   - Aloja [openproject-connection.component.ts](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/shared/components/openproject-connection/openproject-connection.component.ts) para el endpoint del servidor, token de acceso personal con máscara, guía modal de obtención de token ([token-guide-modal.component.ts](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/shared/components/token-guide-modal/token-guide-modal.component.ts)), prueba de conectividad y guardado.
-  - Aloja [update-section.component.ts](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/modules/setting/components/update-section/update-section.component.ts) para consultar la versión instalada, verificar disponibilidad de nuevas versiones en GitHub Releases e iniciar la descarga e instalación.
+  - Aloja [update-section.component.ts](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/shared/components/update-section/update-section.component.ts) para consultar la versión instalada, verificar disponibilidad de nuevas versiones en GitHub Releases e iniciar la descarga e instalación.
 
 ---
 

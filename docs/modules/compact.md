@@ -12,25 +12,20 @@ El módulo `compact` replica fielmente la vista original de la **Calculadora de 
 ```
 src/app/modules/compact/
 ├── components/
-│   ├── stats-hero/
-│   │   └── stats-hero.component.ts           # Panel de estadísticas con SelectButton y degradado dinámico de tema
-│   └── activity-row/
-│       └── activity-row.component.ts         # Fila de actividad (ticket, tiempo, confirmación inline de borrado, sincronización)
+│   └── stats-hero/
+│       └── stats-hero.component.{ts,html}    # Panel de estadísticas con SelectButton y degradado dinámico de tema
 ├── modals/
-│   ├── activity-form-modal/
-│   │   └── activity-form-modal.component.ts  # Modal dedicado para crear/editar actividades (con p-datepicker y p-inputnumber)
-│   ├── favorites-modal/
-│   │   └── favorites-modal.component.ts      # Modal dedicado para gestión y selección rápida de tickets favoritos
-│   ├── reset-confirm-modal/
-│   │   └── reset-confirm-modal.component.ts  # Modal dedicado para confirmación de reinicio de actividades del día
-│   └── sync-confirm-modal/
-│       └── sync-confirm-modal.component.ts   # Modal dedicado para seleccionar tipo de actividad y sincronizar a OpenProject
+│   └── ticket-context-modal/
+│       └── ticket-context-modal.component.{ts,html}  # Modal de contexto extendido del ticket (solo modo compacto)
 ├── pages/
 │   ├── compact.page.html                     # Vista orquestadora limpia con saludo, popover de filtros y navegación
 │   ├── compact.page.ts                       # Smart component con filtrado reactivo y gestión de estado
 │   └── compact.page.css                      # Estilos encapsulados de la vista
 └── compact.router.ts                         # Enrutador del módulo con carga diferida
 ```
+
+La fila de actividad y los modales de actividad (`app-activity-row`, `app-activity-form-modal`, `app-favorites-modal`, `app-reset-confirm-modal`, `app-sync-confirm-modal`) pertenecen al dominio de registro de tiempo y viven en el módulo `time-entry` (`modules/time-entry/components` y `modules/time-entry/modals`); el modo compacto los importa desde allí. `app-close-confirm-modal` está en `shared/components/close-confirm-modal` porque lo usan compacto, dashboard y setup.
+
 
 ---
 
@@ -85,7 +80,7 @@ src/app/modules/compact/
     - Modo selección activo: Botón "Cancelar" y botón "Enviar (X)".
 
 ### 2.6. Lista y Fila de Actividad (`app-activity-row`)
-- **Ubicación**: `components/activity-row/activity-row.component.ts`
+- **Ubicación**: `modules/time-entry/components/activity-row/activity-row.component.ts` (+ `.html`)
 - **Responsabilidad y Comportamiento**:
   - Checkbox para selección rápida cuando el modo de selección está habilitado.
   - Barra de acento lateral reactiva: verde esmeralda (`bg-emerald-500`) para tareas sincronizadas, color primario (`bg-primary-500`) para pendientes y rojo rosa (`bg-rose-500`) al confirmar eliminación.
@@ -145,7 +140,7 @@ Cada modal se encuentra aislado en su propio componente standalone dentro de `mo
    - Modal dedicado para confirmar el cierre de la aplicación al pulsar el botón de cerrar (`X`) o mediante solicitudes de cierre del sistema.
    - Proporciona opciones limpias para Cancelar, Minimizar a la bandeja (guardar en los iconos ocultos) o Cerrar la aplicación definitivamente.
 6. **`app-ticket-context-modal` (Modal de Contexto Extendido de Ticket)**:
-   - **Ubicación**: `src/app/shared/components/ticket-context-modal/ticket-context-modal.component.ts`.
+   - **Ubicación**: `src/app/modules/compact/modals/ticket-context-modal/ticket-context-modal.component.ts` (+ `.html`).
    - **Dimensiones y Responsividad**:
      - Tamaño mínimo garantizado de `min(94vw, 540px)` de ancho y `min(75vh, 480px)` de alto, con contenedor de pestañas de `min-h-[380px]`.
      - `zIndex` calibrado a 1100 para no solapar ni ocultar el `app-header` nativo.

@@ -11,7 +11,13 @@ Versión de vista completa del modo compacto: muestra y gestiona las entradas de
 ```
 src/app/modules/time-entry/
 ├── components/
-│   └── time-entry-summary/time-entry-summary.component.ts  # Fila de indicadores del día
+│   ├── activity-row/          # Fila de actividad (compartida con el modo compacto)
+│   └── time-entry-summary/    # Fila de indicadores del día
+├── modals/                    # Modales de actividad compartidos con el modo compacto
+│   ├── activity-form-modal/
+│   ├── favorites-modal/
+│   ├── reset-confirm-modal/
+│   └── sync-confirm-modal/
 ├── pages/
 │   ├── time-entry.page.html   # Encabezado con fecha, indicadores y lista
 │   └── time-entry.page.ts     # Smart component: filtros, fecha, sincronización
@@ -30,7 +36,7 @@ src/app/modules/time-entry/
 ## Reutilización
 
 - Todo el estado vive en `ActivityService` (fecha seleccionada, actividades, selección, modales), así que la vista comparte datos con el modo compacto.
-- Reutiliza los componentes del módulo `compact`: `ActivityRowComponent` y los modales `ActivityFormModalComponent`, `FavoritesModalComponent`, `SyncConfirmModalComponent`, `ResetConfirmModalComponent`, además de `TicketDetailPage` (módulo board) dentro del drawer.
+- Este módulo es el dueño de los componentes de actividad (`ActivityRowComponent`, `ActivityFormModalComponent`, `FavoritesModalComponent`, `SyncConfirmModalComponent`, `ResetConfirmModalComponent`); el modo compacto y el detalle de ticket los importan desde aquí. Los favoritos viven en `FavoriteService` (`core/services/favorite.service.ts`). Usa también `TicketDetailPage` (módulo board) dentro del drawer.
 - El filtrado/orden se comparte con el modo compacto mediante `core/utils/activity-filter.util.ts` (`filterActivities`, `hasActiveActivityFilters`).
 
 ## Contexto del ticket y notificaciones

@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AppearanceEditorComponent } from '../../../../shared/components/appearance-editor/appearance-editor.component';
 import { OpenprojectConnectionComponent } from '../../../../shared/components/openproject-connection/openproject-connection.component';
-import { UpdateSectionComponent } from '../update-section/update-section.component';
+import { UpdateSectionComponent } from '../../../../shared/components/update-section/update-section.component';
 
 @Component({
   selector: 'app-system-section',

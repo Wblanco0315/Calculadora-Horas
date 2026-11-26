@@ -16,7 +16,7 @@ import { Skeleton } from 'primeng/skeleton';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerAlertCircle } from '@ng-icons/tabler-icons';
 import type { ClassicEditor, Editor, EditorConfig, FileLoader, UploadAdapter } from 'ckeditor5';
-import { OpenprojectService } from '../../../core/services/openproject.service';
+import { AttachmentApiService } from '../../../core/services/openproject/attachment-api.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { UploadedAttachment, WorkPackageOptionItem } from '../../../core/interfaces/openproject.interface';
 
@@ -64,7 +64,7 @@ const HTML_IMAGE_URL = /(\ssrc=["'])([^"']+)/gi;
   host: { class: 'block min-w-0' },
 })
 export class RichTextEditorComponent {
-  private readonly openprojectService = inject(OpenprojectService);
+  private readonly attachmentApi = inject(AttachmentApiService);
   private readonly languageService = inject(LanguageService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly editorHost = viewChild.required<ElementRef<HTMLElement>>('editorHost');
@@ -356,7 +356,7 @@ export class RichTextEditorComponent {
 
     const fileName = normalizeFileName(file);
     const namedFile = file.name === fileName ? file : new File([file], fileName, { type: file.type });
-    const result = await this.openprojectService.uploadWorkPackageAttachment(String(ticket), namedFile);
+    const result = await this.attachmentApi.uploadWorkPackageAttachment(String(ticket), namedFile);
     if (!result.ok || !result.attachment?.downloadUrl) {
       const message = result.error || this.languageService.t('richTextEditor.uploadFailed');
       this.uploadError.set(message);
@@ -365,7 +365,7 @@ export class RichTextEditorComponent {
 
     const objectUrl = URL.createObjectURL(namedFile);
     this.objectUrlToHref.set(objectUrl, result.attachment.downloadUrl);
-    this.openprojectService.cacheAttachmentImageUrl(result.attachment.downloadUrl, objectUrl);
+    this.attachmentApi.cacheAttachmentImageUrl(result.attachment.downloadUrl, objectUrl);
     this.attachmentUploaded.emit(result.attachment);
     return objectUrl;
   }
@@ -385,7 +385,7 @@ export class RichTextEditorComponent {
     const hrefs = new Set<string>();
     for (const pattern of [MARKDOWN_IMAGE_URL, HTML_IMAGE_URL]) {
       for (const match of markdown.matchAll(pattern)) {
-        if (this.openprojectService.isOpenProjectImageSource(match[2])) hrefs.add(match[2]);
+        if (this.attachmentApi.isOpenProjectImageSource(match[2])) hrefs.add(match[2]);
       }
     }
     if (hrefs.size === 0) return markdown;
@@ -394,7 +394,7 @@ export class RichTextEditorComponent {
     await Promise.all(
       Array.from(hrefs).map(async (href) => {
         try {
-          const objectUrl = await this.openprojectService.getAttachmentImageUrl(href);
+          const objectUrl = await this.attachmentApi.getAttachmentImageUrl(href);
           this.objectUrlToHref.set(objectUrl, href);
           resolved.set(href, objectUrl);
         } catch (err) {

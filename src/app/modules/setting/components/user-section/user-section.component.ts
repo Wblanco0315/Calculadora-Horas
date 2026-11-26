@@ -5,7 +5,7 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerCalendar, tablerClock, tablerCheck } from '@ng-icons/tabler-icons';
 import { ScheduleService } from '../../../../core/services/schedule.service';
 import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
-import { UserCardComponent } from '../../../../shared/components/user-card/user-card.component';
+import { UserCardComponent } from '../user-card/user-card.component';
 import { ScheduleEditorComponent } from '../../../../shared/components/schedule-editor/schedule-editor.component';
 
 @Component({

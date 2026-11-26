@@ -17,7 +17,9 @@ import {
   tablerArrowLeft,
   tablerFilterOff,
 } from '@ng-icons/tabler-icons';
-import { OpenprojectService } from '../../../core/services/openproject.service';
+import { WorkPackageApiService } from '../../../core/services/openproject/work-package-api.service';
+import { ProjectApiService } from '../../../core/services/openproject/project-api.service';
+import { BoardApiService } from '../../../core/services/openproject/board-api.service';
 import {
   BoardColumnOption,
   BoardOption,
@@ -63,7 +65,9 @@ import {
 export class BoardPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly openprojectService = inject(OpenprojectService);
+  private readonly workPackageApi = inject(WorkPackageApiService);
+  private readonly projectApi = inject(ProjectApiService);
+  private readonly boardApi = inject(BoardApiService);
 
   readonly projectId = signal<string>('');
   readonly projectName = signal<string>('');
@@ -146,8 +150,8 @@ export class BoardPage {
     this.columns.set([]);
 
     const [statuses, boards] = await Promise.all([
-      this.openprojectService.getStatuses(),
-      this.openprojectService.getProjectBoards(projectId, this.projectIdentifier() || undefined),
+      this.projectApi.getStatuses(),
+      this.boardApi.getProjectBoards(projectId, this.projectIdentifier() || undefined),
     ]);
     if (projectId !== this.projectId()) return;
 
@@ -167,7 +171,7 @@ export class BoardPage {
   async loadColumns(boardId: string, forceRefresh = false): Promise<void> {
     this.isRefreshing.set(true);
     try {
-      const cols = await this.openprojectService.getBoardColumns(boardId, forceRefresh);
+      const cols = await this.boardApi.getBoardColumns(boardId, forceRefresh);
       this.columns.set(cols);
     } finally {
       this.isLoaded.set(true);
@@ -254,7 +258,7 @@ export class BoardPage {
     this.columns.set(optimisticColumns);
     this.isMovingTicket.set(true);
     try {
-      const result = await this.openprojectService.moveWorkPackageToBoardColumn(
+      const result = await this.boardApi.moveWorkPackageToBoardColumn(
         String(event.ticketId),
         event.targetQueryId,
         event.sourceQueryId,
@@ -278,7 +282,7 @@ export class BoardPage {
 
   async onCardStatusChange(event: { card: BoardWorkPackageCard; statusId: string }): Promise<void> {
     const boardId = this.selectedBoardId();
-    const res = await this.openprojectService.updateWorkPackageStatus(
+    const res = await this.workPackageApi.updateWorkPackageStatus(
       String(event.card.id),
       event.statusId,
       event.card.lockVersion
