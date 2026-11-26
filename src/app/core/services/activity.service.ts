@@ -10,6 +10,7 @@ import {
   TicketInfoResult,
 } from '../interfaces/activity.interface';
 import { StorageService } from './storage.service';
+import { NotificationService } from './notification.service';
 import { OpenprojectService } from './openproject.service';
 
 const FAVORITES_STORAGE_KEY = 'pocketproject_favorite_tickets';
@@ -32,6 +33,7 @@ export function getTodayDateString(): string {
 export class ActivityService {
   private readonly storageService = inject(StorageService);
   private readonly openprojectService = inject(OpenprojectService);
+  private readonly notificationService = inject(NotificationService);
 
   readonly activities = signal<Activity[]>([]);
   readonly selectedDate = signal<string>(getTodayDateString());
@@ -288,12 +290,14 @@ export class ActivityService {
       if (isTauri()) {
         invoke('delete_favorite_ticket', { ticket: cleanTicket }).catch(() => {});
       }
+      this.notificationService.info('toast.favoriteRemoved', { ticket: cleanTicket });
     } else {
       const newFav: FavoriteTicket = { ticket: cleanTicket, title: title.trim(), projectId, projectName };
       list.push(newFav);
       if (isTauri()) {
         invoke('save_favorite_ticket', { ticket: newFav }).catch(() => {});
       }
+      this.notificationService.success('toast.favoriteAdded', { ticket: cleanTicket });
     }
     this.persistFavorites(list);
   }
@@ -547,6 +551,7 @@ export class ActivityService {
     }
 
     await this.loadActivities(this.selectedDate());
+    this.notificationService.success('toast.activityDeleted');
   }
 
   async clearDay(date: string): Promise<void> {
@@ -559,6 +564,7 @@ export class ActivityService {
     }
 
     await this.loadActivities(this.selectedDate());
+    this.notificationService.success('toast.dayCleared');
   }
 
   // ──────────────────────────────────────────────
@@ -665,7 +671,8 @@ export class ActivityService {
    */
   async syncActivity(
     id: string,
-    activityTypeId?: string
+    activityTypeId?: string,
+    options: { silent?: boolean } = {}
   ): Promise<{ ok: boolean; error?: string }> {
     const act = this.activities().find((a) => a.id === id);
     if (!act || !act.ticket) {
@@ -711,6 +718,7 @@ export class ActivityService {
         this.updateActivity(id, { syncSuccess: false });
       }, 3000);
 
+      if (!options.silent) this.notificationService.success('toast.activitySynced', { ticket: act.ticket });
       return { ok: true };
     } else {
       console.error('Sync failed:', result.error);
@@ -722,6 +730,8 @@ export class ActivityService {
       setTimeout(() => {
         this.updateActivity(id, { syncError: false });
       }, 3500);
+
+      if (!options.silent) this.notificationService.error('toast.activitySyncFailed', result.error, { ticket: act.ticket });
 
       return { ok: false, error: result.error || 'Error subiendo tiempo a OpenProject' };
     }
@@ -745,7 +755,7 @@ export class ActivityService {
     let failCount = 0;
 
     for (const act of list) {
-      const res = await this.syncActivity(act.id, activityTypeId);
+      const res = await this.syncActivity(act.id, activityTypeId, { silent: true });
       if (res.ok) {
         successCount++;
       } else {
@@ -755,6 +765,11 @@ export class ActivityService {
 
     this.isSyncing.set(false);
     this.isSelectionMode.set(false);
+    if (failCount === 0) {
+      this.notificationService.success('toast.syncAllSuccess', { count: successCount });
+    } else {
+      this.notificationService.warn('toast.syncAllPartial', { success: successCount, failed: failCount });
+    }
     return { successCount, failCount };
   }
 
@@ -777,8 +792,10 @@ export class ActivityService {
         statusName: statusObj?.name || act.statusName,
         statusColor: statusObj?.color || act.statusColor,
       });
+      this.notificationService.success('toast.statusUpdated', { ticket: act.ticket });
       return { ok: true };
     }
+    this.notificationService.error('toast.statusUpdateFailed', res.error);
     return res;
   }
 
@@ -797,8 +814,10 @@ export class ActivityService {
       await this.updateActivity(activityId, {
         versionId: newVersionId || undefined,
       });
+      this.notificationService.success('toast.versionUpdated', { ticket: act.ticket });
       return { ok: true };
     }
+    this.notificationService.error('toast.versionUpdateFailed', res.error);
     return res;
   }
 
@@ -822,8 +841,10 @@ export class ActivityService {
       await this.updateActivity(activityId, {
         boardColumnId: targetQueryId,
       });
+      this.notificationService.success('toast.columnUpdated', { ticket: act.ticket });
       return { ok: true };
     }
+    this.notificationService.error('toast.columnUpdateFailed', res.error);
     return res;
   }
 

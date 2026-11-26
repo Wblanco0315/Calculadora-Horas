@@ -25,6 +25,7 @@ import {
 import { ActivityService, getTodayDateString } from '../../../../core/services/activity.service';
 import { StorageService } from '../../../../core/services/storage.service';
 import { LanguageService } from '../../../../core/services/language.service';
+import { NotificationService } from '../../../../core/services/notification.service';
 import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 
 @Component({
@@ -395,6 +396,7 @@ export class ActivityFormModalComponent {
   readonly showTicketContextButton = input<boolean>(true);
   readonly storageService = inject(StorageService);
   readonly languageService = inject(LanguageService);
+  private readonly notificationService = inject(NotificationService);
   private readonly cdr = inject(ChangeDetectorRef);
 
   private ticketSearchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -693,6 +695,7 @@ export class ActivityFormModalComponent {
         timerState: 'idle',
         timerLastStarted: undefined,
       });
+      this.notificationService.success('toast.activityUpdated');
     } else {
       await this.activityService.addActivity({
         name: description,
@@ -712,6 +715,7 @@ export class ActivityFormModalComponent {
         timerState: useStopwatch ? 'running' : 'idle',
         timerLastStarted: useStopwatch ? Date.now() : undefined,
       });
+      this.notificationService.success('toast.activityCreated');
     }
 
     this.showStopwatchConfirm.set(false);

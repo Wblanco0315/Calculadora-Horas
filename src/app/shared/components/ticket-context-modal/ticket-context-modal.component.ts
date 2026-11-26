@@ -27,6 +27,7 @@ import {
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { ActivityService } from '../../../core/services/activity.service';
 import { OpenprojectService } from '../../../core/services/openproject.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import {
   BoardColumnOption,
   BoardLocation,
@@ -192,7 +193,6 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
       [style]="{ width: '94vw', maxWidth: '640px', minWidth: 'min(94vw, 540px)', minHeight: 'min(75vh, 480px)', maxHeight: 'calc(100dvh - 3.5rem)' }"
       styleClass="p-dialog-rounded"
     >
-      <!-- Clean Minimal Header: Icon + Ticket Number & Subject -->
       <ng-template #header>
         <div class="flex items-center gap-2 min-w-0 pr-2">
           <ng-icon name="tablerFileText" size="1.25rem" class="text-primary-600 dark:text-primary-400 shrink-0" />
@@ -844,8 +844,10 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
   `,
 })
 export class TicketContextModalComponent {
+
   readonly activityService = inject(ActivityService);
   private readonly openprojectService = inject(OpenprojectService);
+  private readonly notificationService = inject(NotificationService);
   private readonly sanitizer = inject(DomSanitizer);
 
   readonly activeTab = signal<string>('details');
@@ -1251,7 +1253,9 @@ export class TicketContextModalComponent {
 
         this.statusUpdateSuccess.set(true);
         setTimeout(() => this.statusUpdateSuccess.set(false), 2500);
+        this.notificationService.success('toast.statusUpdated', { ticket: rawTicket });
       } else {
+        this.notificationService.error('toast.statusUpdateFailed', res.error);
         this.statusUpdateError.set(res.error || 'Error al actualizar estado');
         setTimeout(() => this.statusUpdateError.set(null), 3500);
       }
@@ -1333,7 +1337,9 @@ export class TicketContextModalComponent {
 
         this.moveSuccessMessage.set('¡Ticket movido de columna con éxito!');
         setTimeout(() => this.moveSuccessMessage.set(null), 3500);
+        this.notificationService.success('toast.columnUpdated', { ticket: rawTicket });
       } else {
+        this.notificationService.error('toast.columnUpdateFailed', res.error);
         this.moveErrorMessage.set(res.error || 'Error al mover el ticket de columna');
       }
     } catch (e: any) {

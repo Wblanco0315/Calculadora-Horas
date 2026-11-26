@@ -33,3 +33,6 @@ src/app/modules/time-entry/
 - Reutiliza los componentes del módulo `compact`: `ActivityRowComponent` y los modales `ActivityFormModalComponent`, `FavoritesModalComponent`, `SyncConfirmModalComponent`, `ResetConfirmModalComponent` y `TicketContextModalComponent`.
 - El filtrado/orden se comparte con el modo compacto mediante `core/utils/activity-filter.util.ts` (`filterActivities`, `hasActiveActivityFilters`).
 
+## Notificaciones
+
+- Las acciones muestran toasts (`NotificationService`, `core/services/notification.service.ts`, sobre `MessageService` global y `<p-toast position="bottom-right">` en el dashboard): crear/editar/eliminar actividad, reiniciar el día, sincronizar (individual o resumen de sincronización masiva con éxitos/errores), favoritos, y cambios de estado, versión o columna. Los textos están en `toast.*` de los idiomas. El modo compacto no monta `<p-toast>`, así que ahí no aparecen.

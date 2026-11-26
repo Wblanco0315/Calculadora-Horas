@@ -9,6 +9,7 @@ import { ButtonDirective } from 'primeng/button';
 import { Breadcrumb } from 'primeng/breadcrumb';
 import { Menu } from 'primeng/menu';
 import { Skeleton } from 'primeng/skeleton';
+import { Toast } from 'primeng/toast';
 import { IconField } from 'primeng/iconfield';
 import { InputIcon } from 'primeng/inputicon';
 import { InputText } from 'primeng/inputtext';
@@ -75,6 +76,7 @@ export interface NavGroup {
     Breadcrumb,
     Menu,
     Skeleton,
+    Toast,
     IconField,
     InputIcon,
     InputText,
