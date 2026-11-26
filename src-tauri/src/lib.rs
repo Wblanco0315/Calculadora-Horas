@@ -1333,15 +1333,16 @@ async fn fetch_ticket_context(
     })
 }
 
-#[tauri::command]
-async fn fetch_attachment_content(
-    url: String,
-    token: String,
-    download_url: String,
-) -> Result<String, String> {
-    let clean_url = sanitize_url(&url);
-    let full_url = resolve_openproject_href(&clean_url, &download_url);
-    let auth_value = build_auth_header(&token);
+/// Requests an attachment's content, following redirects and only forwarding credentials to
+/// the OpenProject host. Returns the successful response and its final URL.
+async fn request_attachment(
+    url: &str,
+    token: &str,
+    download_url: &str,
+) -> Result<(reqwest::Response, String), String> {
+    let clean_url = sanitize_url(url);
+    let full_url = resolve_openproject_href(&clean_url, download_url);
+    let auth_value = build_auth_header(token);
     let client = reqwest::Client::builder()
         .user_agent(BROWSER_USER_AGENT)
         .timeout(Duration::from_secs(25))
@@ -1386,6 +1387,17 @@ async fn fetch_attachment_content(
         return Err(format!("Error HTTP {}", current_res.status()));
     }
 
+    Ok((current_res, current_url))
+}
+
+#[tauri::command]
+async fn fetch_attachment_content(
+    url: String,
+    token: String,
+    download_url: String,
+) -> Result<String, String> {
+    let (current_res, current_url) = request_attachment(&url, &token, &download_url).await?;
+
     let mut content_type = current_res
         .headers()
         .get("content-type")
@@ -1411,6 +1423,65 @@ async fn fetch_attachment_content(
     let bytes = current_res.bytes().await.map_err(|e| e.to_string())?;
     let encoded = BASE64.encode(&bytes);
     Ok(format!("data:{};base64,{}", content_type, encoded))
+}
+
+/// Keeps only characters that are valid in a file name on every desktop OS.
+fn sanitize_file_name(name: &str) -> String {
+    let cleaned: String = name
+        .chars()
+        .map(|c| match c {
+            '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*' => '_',
+            c if c.is_control() => '_',
+            c => c,
+        })
+        .collect();
+    let trimmed = cleaned.trim().trim_end_matches('.').to_string();
+    if trimmed.is_empty() {
+        "attachment".to_string()
+    } else {
+        trimmed
+    }
+}
+
+/// Returns `dir/name`, or `dir/stem (n).ext` when that file already exists.
+fn unique_file_path(dir: &std::path::Path, name: &str) -> PathBuf {
+    let candidate = dir.join(name);
+    if !candidate.exists() {
+        return candidate;
+    }
+    let path = std::path::Path::new(name);
+    let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or(name);
+    let extension = path.extension().and_then(|s| s.to_str());
+    (1..)
+        .map(|n| match extension {
+            Some(ext) => dir.join(format!("{} ({}).{}", stem, n, ext)),
+            None => dir.join(format!("{} ({})", stem, n)),
+        })
+        .find(|p| !p.exists())
+        .unwrap_or(candidate)
+}
+
+/// Downloads a work package attachment into the user's Downloads folder and returns the saved path.
+#[tauri::command]
+async fn download_work_package_attachment(
+    app: AppHandle,
+    url: String,
+    token: String,
+    download_url: String,
+    file_name: String,
+) -> Result<String, String> {
+    let download_dir = app
+        .path()
+        .download_dir()
+        .map_err(|e| format!("No se encontró la carpeta de descargas: {}", e))?;
+    std::fs::create_dir_all(&download_dir).map_err(|e| e.to_string())?;
+
+    let (response, _) = request_attachment(&url, &token, &download_url).await?;
+    let bytes = response.bytes().await.map_err(|e| e.to_string())?;
+
+    let target = unique_file_path(&download_dir, &sanitize_file_name(&file_name));
+    std::fs::write(&target, &bytes).map_err(|e| format!("No se pudo guardar el archivo: {}", e))?;
+    Ok(target.to_string_lossy().to_string())
 }
 
 #[tauri::command]
@@ -3542,6 +3613,7 @@ pub fn run() {
             fetch_ticket_info,
             fetch_ticket_context,
             fetch_attachment_content,
+            download_work_package_attachment,
             fetch_openproject_projects,
             fetch_time_entry_activities,
             create_time_entry,

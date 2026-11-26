@@ -556,7 +556,9 @@ export const en = {
     timeEntryOwnershipHint: 'You can only edit your own time entries.',
     invalidTimeEntry: 'Enter a valid date and number of hours.',
 
-    viewAttachment: 'Open',
+    downloadAttachment: 'Download',
+    showInFolder: 'Show in folder',
+    downloadFailed: 'Download failed',
     unassigned: 'Unassigned',
     noVersion: 'No version',
     remoteChangesTitle: 'Ticket changes detected',

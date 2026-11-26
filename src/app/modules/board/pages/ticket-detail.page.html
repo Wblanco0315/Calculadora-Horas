@@ -531,9 +531,42 @@
                       />
                       <span class="truncate text-xs font-medium text-slate-800 dark:text-zinc-200">{{ attachment.fileName || attachment.file_name }}</span>
                     </div>
-                    <button pButton type="button" size="small" variant="outlined" severity="secondary" (click)="openAttachment(attachment)">
-                      {{ 'ticketDetail.viewAttachment' | translate }}
-                    </button>
+                    <div class="flex shrink-0 items-center gap-1">
+                      @if (attachmentDownloadErrors().has(attachment.id)) {
+                        <span class="text-[11px] text-rose-600 dark:text-rose-400">{{ 'ticketDetail.downloadFailed' | translate }}</span>
+                      }
+                      @if (downloadedAttachmentPaths().has(attachment.id)) {
+                        <button
+                          pButton
+                          type="button"
+                          size="small"
+                          variant="text"
+                          severity="secondary"
+                          iconOnly
+                          rounded
+                          (click)="revealDownloadedAttachment(attachment)"
+                          [title]="'ticketDetail.showInFolder' | translate"
+                          [attr.aria-label]="'ticketDetail.showInFolder' | translate"
+                        >
+                          <ng-icon pButtonIcon name="tablerFolderOpen" size="1rem" />
+                        </button>
+                      }
+                      <button
+                        pButton
+                        type="button"
+                        size="small"
+                        variant="text"
+                        severity="secondary"
+                        iconOnly
+                        rounded
+                        [loading]="downloadingAttachmentIds().has(attachment.id)"
+                        (click)="downloadAttachment(attachment)"
+                        [title]="'ticketDetail.downloadAttachment' | translate"
+                        [attr.aria-label]="'ticketDetail.downloadAttachment' | translate"
+                      >
+                        <ng-icon pButtonIcon name="tablerDownload" size="1rem" />
+                      </button>
+                    </div>
                   </article>
                 } @empty {
                   <p class="py-8 text-center text-xs text-slate-400 dark:text-zinc-500">{{ 'ticketContext.noAttachments' | translate }}</p>

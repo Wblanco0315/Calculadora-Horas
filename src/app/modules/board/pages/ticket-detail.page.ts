@@ -26,8 +26,10 @@ import {
   tablerAlertCircle,
   tablerArrowLeft,
   tablerClockPlus,
+  tablerDownload,
+  tablerFolderOpen,
 } from '@ng-icons/tabler-icons';
-import { openUrl } from '@tauri-apps/plugin-opener';
+import { openUrl, revealItemInDir } from '@tauri-apps/plugin-opener';
 import { OpenprojectService } from '../../../core/services/openproject.service';
 import { ActivityService } from '../../../core/services/activity.service';
 import { WorkPackageChangeService } from '../../../core/services/work-package-change.service';
@@ -95,6 +97,8 @@ function readStoredOption<T extends string>(key: string, allowed: readonly T[], 
   ],
   viewProviders: [
     provideIcons({
+      tablerDownload,
+      tablerFolderOpen,
       tablerExternalLink,
       tablerEdit,
       tablerCheck,
@@ -210,6 +214,9 @@ export class TicketDetailPage {
   readonly descriptionDraft = signal<string>('');
   readonly newComment = signal<string>('');
   readonly isComposingComment = signal<boolean>(false);
+  readonly downloadingAttachmentIds = signal<ReadonlySet<TicketAttachment['id']>>(new Set());
+  readonly downloadedAttachmentPaths = signal<ReadonlyMap<TicketAttachment['id'], string>>(new Map());
+  readonly attachmentDownloadErrors = signal<ReadonlySet<TicketAttachment['id']>>(new Set());
 
   // Editable attribute signals
   readonly selectedStatusId = signal<string | null>(null);
@@ -685,14 +692,41 @@ export class TicketDetailPage {
     }
   }
 
-  async openAttachment(att: TicketAttachment): Promise<void> {
+  async downloadAttachment(att: TicketAttachment): Promise<void> {
     const url = att.downloadUrl || att.download_url;
-    if (!url) return;
+    if (!url || this.downloadingAttachmentIds().has(att.id)) return;
+
+    this.downloadingAttachmentIds.update((ids) => new Set(ids).add(att.id));
+    this.attachmentDownloadErrors.update((ids) => {
+      const next = new Set(ids);
+      next.delete(att.id);
+      return next;
+    });
     try {
-      const dataUrl = await this.openprojectService.fetchAttachmentContent(url);
-      window.open(dataUrl, '_blank');
-    } catch {
-      // Ignore error
+      const fileName = att.fileName || att.file_name || `attachment-${att.id}`;
+      const savedPath = await this.openprojectService.downloadAttachment(url, fileName);
+      if (savedPath) {
+        this.downloadedAttachmentPaths.update((paths) => new Map(paths).set(att.id, savedPath));
+      }
+    } catch (err) {
+      console.warn('Attachment download failed:', err);
+      this.attachmentDownloadErrors.update((ids) => new Set(ids).add(att.id));
+    } finally {
+      this.downloadingAttachmentIds.update((ids) => {
+        const next = new Set(ids);
+        next.delete(att.id);
+        return next;
+      });
+    }
+  }
+
+  async revealDownloadedAttachment(att: TicketAttachment): Promise<void> {
+    const path = this.downloadedAttachmentPaths().get(att.id);
+    if (!path) return;
+    try {
+      await revealItemInDir(path);
+    } catch (err) {
+      console.warn('Could not reveal downloaded attachment:', err);
     }
   }
 

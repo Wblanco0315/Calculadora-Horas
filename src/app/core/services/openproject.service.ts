@@ -613,6 +613,36 @@ export class OpenprojectService {
   /**
    * Fetches content of an attachment using authenticated HTTP headers and returns a data URL
    */
+  /**
+   * Downloads an attachment. On desktop it is saved to the Downloads folder and the saved path is
+   * returned; on the web the browser download is triggered and `null` is returned.
+   */
+  async downloadAttachment(downloadUrl: string, fileName: string): Promise<string | null> {
+    const token = this.getToken();
+    const url = this.sanitizeUrl();
+
+    if (this.isTauriApp()) {
+      return invoke<string>('download_work_package_attachment', {
+        url,
+        token,
+        downloadUrl,
+        fileName,
+      });
+    }
+
+    const res = await fetch(this.resolveHref(downloadUrl), {
+      headers: { Authorization: this.buildAuthHeaders(token)['Authorization'] },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const objectUrl = URL.createObjectURL(await res.blob());
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = fileName;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
+    return null;
+  }
+
   async fetchAttachmentContent(downloadUrl: string): Promise<string> {
     const token = this.getToken();
     const url = this.sanitizeUrl();
