@@ -4,10 +4,10 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primeng/tabs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerUser, tablerSettings } from '@ng-icons/tabler-icons';
-import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { ScheduleService } from '../../../core/services/schedule.service';
-import { UserSectionComponent } from '../components/user-section/user-section.component';
-import { SystemSectionComponent } from '../components/system-section/system-section.component';
+import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
+import { ScheduleService } from '../../../../core/services/schedule.service';
+import { UserSectionComponent } from '../../components/user-section/user-section.component';
+import { SystemSectionComponent } from '../../components/system-section/system-section.component';
 
 @Component({
   selector: 'app-setting-page',

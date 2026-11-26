@@ -5,7 +5,7 @@ Versión de vista completa del modo compacto: muestra y gestiona las entradas de
 ## Ubicación y ruta
 
 - **Ruta del módulo**: `src/app/modules/time-entry/`
-- **Ruta de navegación**: `/dashboard/time-entries` (ruta hija lazy en `dashboard.router.ts`)
+- **Ruta de navegación**: `/dashboard/time-entries` (ruta hija lazy en `dashboard.routes.ts`)
 - **Barra lateral**: grupo **PocketProject → Registro de tiempo**; breadcrumb `Registro de tiempo`.
 
 ```
@@ -19,9 +19,8 @@ src/app/modules/time-entry/
 │   ├── reset-confirm-modal/
 │   └── sync-confirm-modal/
 ├── pages/
-│   ├── time-entry.page.html   # Encabezado con fecha, indicadores y lista
-│   └── time-entry.page.ts     # Smart component: filtros, fecha, sincronización
-└── time-entry.router.ts
+│   └── time-entry/time-entry.page.{ts,html}  # Smart component: filtros, fecha, sincronización
+└── time-entry.routes.ts
 ```
 
 ## Diseño (aprovecha el ancho de la vista completa)

@@ -30,14 +30,14 @@ import {
   tablerFolderOpen,
 } from '@ng-icons/tabler-icons';
 import { openUrl, revealItemInDir } from '@tauri-apps/plugin-opener';
-import { BreadcrumbService } from '../../../core/services/breadcrumb.service';
-import { OpenprojectService } from '../../../core/services/openproject/openproject.service';
-import { WorkPackageApiService } from '../../../core/services/openproject/work-package-api.service';
-import { WorkPackageFormApiService } from '../../../core/services/openproject/work-package-form-api.service';
-import { AttachmentApiService } from '../../../core/services/openproject/attachment-api.service';
-import { BoardApiService } from '../../../core/services/openproject/board-api.service';
-import { ActivityService } from '../../../core/services/activity.service';
-import { WorkPackageChangeService } from '../../../core/services/work-package-change.service';
+import { BreadcrumbService } from '../../../../core/services/breadcrumb.service';
+import { OpenprojectService } from '../../../../core/services/openproject/openproject.service';
+import { WorkPackageApiService } from '../../../../core/services/openproject/work-package-api.service';
+import { WorkPackageFormApiService } from '../../../../core/services/openproject/work-package-form-api.service';
+import { AttachmentApiService } from '../../../../core/services/openproject/attachment-api.service';
+import { BoardApiService } from '../../../../core/services/openproject/board-api.service';
+import { ActivityService } from '../../../../core/services/activity.service';
+import { WorkPackageChangeService } from '../../../../core/services/work-package-change.service';
 import {
   BoardColumnOption,
   TicketAttachment,
@@ -45,12 +45,12 @@ import {
   TicketContextResult,
   UpdateWorkPackagePayload,
   WorkPackageFormSchema,
-} from '../../../core/interfaces/openproject.interface';
-import { Activity } from '../../../core/interfaces/activity.interface';
-import { formatIsoDuration, formatTimeMinutes } from '../../../shared/format/time';
-import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { ActivityFormModalComponent } from '../../time-entry/modals/activity-form-modal/activity-form-modal.component';
-import { RichTextEditorComponent } from '../../../shared/components/rich-text-editor/rich-text-editor.component';
+} from '../../../../core/interfaces/openproject.interface';
+import { Activity } from '../../../../core/interfaces/activity.interface';
+import { formatIsoDuration, formatTimeMinutes } from '../../../../shared/format/time';
+import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
+import { ActivityFormModalComponent } from '../../../time-entry/modals/activity-form-modal/activity-form-modal.component';
+import { RichTextEditorComponent } from '../../../../shared/components/rich-text-editor/rich-text-editor.component';
 
 const ACTIVITY_FILTERS = ['all', 'changes', 'comments'] as const;
 const ACTIVITY_ORDERS = ['oldestFirst', 'newestFirst'] as const;
@@ -117,52 +117,7 @@ function readStoredOption<T extends string>(key: string, allowed: readonly T[], 
     }),
   ],
   templateUrl: './ticket-detail.page.html',
-  styles: [
-    `
-      :host ::ng-deep .ticket-status-select .p-select-label,
-      :host ::ng-deep .ticket-status-select .p-select-dropdown {
-        color: var(--p-select-color) !important;
-      }
-
-      /* Label/value rows adapt to the main column width (not the viewport). */
-      .ticket-detail-main {
-        container-type: inline-size;
-      }
-      .ticket-field-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
-        gap: 0.875rem 2rem;
-      }
-      .ticket-field {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
-        gap: 0.375rem;
-        min-width: 0;
-      }
-      .ticket-field > * {
-        min-width: 0;
-      }
-      @container (min-width: 26rem) {
-        .ticket-field {
-          grid-template-columns: minmax(7rem, 0.8fr) minmax(0, 1.3fr);
-          align-items: center;
-          gap: 0.75rem;
-        }
-        .ticket-field--wide {
-          align-items: start;
-        }
-      }
-      @container (min-width: 44rem) {
-        .ticket-field-grid {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-        .ticket-field--wide {
-          grid-column: 1 / -1;
-          grid-template-columns: minmax(7rem, 0.39fr) minmax(0, 1.61fr);
-        }
-      }
-    `,
-  ],
+  styleUrl: './ticket-detail.page.css',
   host: {
     class: 'flex w-full min-w-0 flex-1 min-h-0 flex-col',
   },

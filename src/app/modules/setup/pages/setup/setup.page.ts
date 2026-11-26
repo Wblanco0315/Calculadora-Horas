@@ -16,19 +16,19 @@ import {
   tablerDownload,
   tablerRobot,
 } from '@ng-icons/tabler-icons';
-import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { SetupService } from '../services/setup.service';
-import { StorageService } from '../../../core/services/storage.service';
-import { UpdateService } from '../../../core/services/update.service';
-import { WindowService } from '../../../core/services/window.service';
-import { AppHeaderComponent } from '../../../shared/components/app-header/app-header.component';
-import { ScheduleStepComponent } from '../components/schedule-step/schedule-step.component';
-import { LunchStepComponent } from '../components/lunch-step/lunch-step.component';
-import { AppearanceStepComponent } from '../components/appearance-step/appearance-step.component';
-import { OpenprojectStepComponent } from '../components/openproject-step/openproject-step.component';
-import { UpdateSectionComponent } from '../../../shared/components/update-section/update-section.component';
-import { McpSectionComponent } from '../components/mcp-section/mcp-section.component';
-import { CloseConfirmModalComponent } from '../../../shared/components/close-confirm-modal/close-confirm-modal.component';
+import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
+import { SetupService } from '../../services/setup.service';
+import { StorageService } from '../../../../core/services/storage.service';
+import { UpdateService } from '../../../../core/services/update.service';
+import { WindowService } from '../../../../core/services/window.service';
+import { AppHeaderComponent } from '../../../../shared/components/app-header/app-header.component';
+import { ScheduleStepComponent } from '../../components/schedule-step/schedule-step.component';
+import { LunchStepComponent } from '../../components/lunch-step/lunch-step.component';
+import { AppearanceStepComponent } from '../../components/appearance-step/appearance-step.component';
+import { OpenprojectStepComponent } from '../../components/openproject-step/openproject-step.component';
+import { UpdateSectionComponent } from '../../../../shared/components/update-section/update-section.component';
+import { McpSectionComponent } from '../../components/mcp-section/mcp-section.component';
+import { CloseConfirmModalComponent } from '../../../../shared/components/close-confirm-modal/close-confirm-modal.component';
 
 @Component({
   selector: 'app-setup-page',

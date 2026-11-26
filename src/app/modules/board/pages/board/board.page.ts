@@ -17,20 +17,20 @@ import {
   tablerArrowLeft,
   tablerFilterOff,
 } from '@ng-icons/tabler-icons';
-import { WorkPackageApiService } from '../../../core/services/openproject/work-package-api.service';
-import { ProjectApiService } from '../../../core/services/openproject/project-api.service';
-import { BoardApiService } from '../../../core/services/openproject/board-api.service';
+import { WorkPackageApiService } from '../../../../core/services/openproject/work-package-api.service';
+import { ProjectApiService } from '../../../../core/services/openproject/project-api.service';
+import { BoardApiService } from '../../../../core/services/openproject/board-api.service';
 import {
   BoardColumnOption,
   BoardOption,
   BoardWorkPackageCard,
   StatusOption,
-} from '../../../core/interfaces/openproject.interface';
-import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+} from '../../../../core/interfaces/openproject.interface';
+import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 import {
   BoardColumnComponent,
   BoardCardDropEvent,
-} from '../components/board-column/board-column.component';
+} from '../../components/board-column/board-column.component';
 
 @Component({
   selector: 'app-board-page',

@@ -14,13 +14,13 @@ import { Textarea } from 'primeng/textarea';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerArrowLeft, tablerExternalLink, tablerRefresh, tablerReportAnalytics, tablerSearch } from '@ng-icons/tabler-icons';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import { TimeCostReportFilter, TimeEntryActivityType, PlatformTimeEntry, Project, WorkPackageCostSummary } from '../../../core/interfaces/openproject.interface';
-import { OpenprojectService } from '../../../core/services/openproject/openproject.service';
-import { WorkPackageApiService } from '../../../core/services/openproject/work-package-api.service';
-import { ProjectApiService } from '../../../core/services/openproject/project-api.service';
-import { TimeEntryApiService } from '../../../core/services/openproject/time-entry-api.service';
-import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { formatIsoDuration, formatTimeMinutes } from '../../../shared/format/time';
+import { TimeCostReportFilter, TimeEntryActivityType, PlatformTimeEntry, Project, WorkPackageCostSummary } from '../../../../core/interfaces/openproject.interface';
+import { OpenprojectService } from '../../../../core/services/openproject/openproject.service';
+import { WorkPackageApiService } from '../../../../core/services/openproject/work-package-api.service';
+import { ProjectApiService } from '../../../../core/services/openproject/project-api.service';
+import { TimeEntryApiService } from '../../../../core/services/openproject/time-entry-api.service';
+import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
+import { formatIsoDuration, formatTimeMinutes } from '../../../../shared/format/time';
 
 type GroupBy = 'none' | 'spentOn' | 'user' | 'activity' | 'project' | 'workPackage';
 
@@ -59,90 +59,7 @@ interface TimeCostGroupRow {
     provideIcons({ tablerArrowLeft, tablerExternalLink, tablerRefresh, tablerReportAnalytics, tablerSearch }),
   ],
   templateUrl: './time-cost-report.page.html',
-  styles: `
-    .report-filter-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
-      align-items: end;
-      gap: 0.875rem 1rem;
-    }
-
-    .report-field {
-      display: flex;
-      min-width: 0;
-      flex-direction: column;
-      gap: 0.375rem;
-    }
-
-    .report-label {
-      display: block;
-      line-height: 1rem;
-    }
-
-    .report-field--action {
-      flex-direction: row;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-      min-height: 2.5rem;
-    }
-
-    .report-edit-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr);
-      align-items: end;
-      gap: 0.75rem;
-    }
-
-    @media (min-width: 48rem) {
-      .report-edit-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-      }
-
-      .report-edit-grid > :nth-child(4) {
-        grid-column: 1 / 3;
-      }
-    }
-
-    @media (min-width: 80rem) {
-      .report-edit-grid {
-        grid-template-columns: minmax(9rem, 0.8fr) minmax(7rem, 0.55fr) minmax(9rem, 0.8fr) minmax(14rem, 1.8fr) auto;
-      }
-
-      .report-edit-grid > :nth-child(4) {
-        grid-column: auto;
-      }
-    }
-
-    th,
-    td {
-      white-space: nowrap;
-      font-size: 0.75rem;
-      line-height: 1rem;
-    }
-
-    .report-th {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.5rem;
-    }
-
-    .report-cell-text {
-      display: block;
-      max-width: 22rem;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .report-metric {
-      display: flex;
-      align-items: baseline;
-      gap: 0.5rem;
-      font-size: 0.75rem;
-      line-height: 1rem;
-    }
-  `,
+  styleUrl: './time-cost-report.page.css',
   host: {
     class: 'flex w-full min-h-0 min-w-0 flex-1 flex-col',
   },

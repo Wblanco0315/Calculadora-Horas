@@ -36,20 +36,20 @@ import {
   tablerLoader2,
   tablerClockHour4,
 } from '@ng-icons/tabler-icons';
-import { StorageService } from '../../../core/services/storage.service';
-import { ThemeService } from '../../../core/services/theme.service';
-import { LanguageService } from '../../../core/services/language.service';
-import { WindowService } from '../../../core/services/window.service';
-import { UpdateService } from '../../../core/services/update.service';
-import { BreadcrumbService } from '../../../core/services/breadcrumb.service';
-import { WorkPackageApiService } from '../../../core/services/openproject/work-package-api.service';
-import { ProjectApiService } from '../../../core/services/openproject/project-api.service';
-import { BoardApiService } from '../../../core/services/openproject/board-api.service';
-import { BoardOption, Project, WorkPackageSearchItem } from '../../../core/interfaces/openproject.interface';
-import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { AppHeaderComponent } from '../../../shared/components/app-header/app-header.component';
-import { AppLogoComponent } from '../../../shared/components/app-logo/app-logo.component';
-import { CloseConfirmModalComponent } from '../../../shared/components/close-confirm-modal/close-confirm-modal.component';
+import { StorageService } from '../../../../core/services/storage.service';
+import { ThemeService } from '../../../../core/services/theme.service';
+import { LanguageService } from '../../../../core/services/language.service';
+import { WindowService } from '../../../../core/services/window.service';
+import { UpdateService } from '../../../../core/services/update.service';
+import { BreadcrumbService } from '../../../../core/services/breadcrumb.service';
+import { WorkPackageApiService } from '../../../../core/services/openproject/work-package-api.service';
+import { ProjectApiService } from '../../../../core/services/openproject/project-api.service';
+import { BoardApiService } from '../../../../core/services/openproject/board-api.service';
+import { BoardOption, Project, WorkPackageSearchItem } from '../../../../core/interfaces/openproject.interface';
+import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
+import { AppHeaderComponent } from '../../../../shared/components/app-header/app-header.component';
+import { AppLogoComponent } from '../../../../shared/components/app-logo/app-logo.component';
+import { CloseConfirmModalComponent } from '../../../../shared/components/close-confirm-modal/close-confirm-modal.component';
 
 export interface NavItem {
   icon: string;

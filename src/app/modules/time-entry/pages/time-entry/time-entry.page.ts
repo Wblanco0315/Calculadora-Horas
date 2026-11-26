@@ -20,25 +20,25 @@ import {
   tablerSelect,
   tablerStar,
 } from '@ng-icons/tabler-icons';
-import { Activity } from '../../../core/interfaces/activity.interface';
-import { ActivityService } from '../../../core/services/activity.service';
-import { LanguageService } from '../../../core/services/language.service';
-import { StorageService } from '../../../core/services/storage.service';
+import { Activity } from '../../../../core/interfaces/activity.interface';
+import { ActivityService } from '../../../../core/services/activity.service';
+import { LanguageService } from '../../../../core/services/language.service';
+import { StorageService } from '../../../../core/services/storage.service';
 import {
   ActivitySort,
   ActivityStatusFilter,
   filterActivities,
   hasActiveActivityFilters,
-} from '../../../core/utils/activity-filter.util';
-import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+} from '../../../../core/utils/activity-filter.util';
+import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 import { Drawer } from 'primeng/drawer';
-import { TicketDetailPage } from '../../board/pages/ticket-detail.page';
-import { TimeEntrySummaryComponent } from '../components/time-entry-summary/time-entry-summary.component';
-import { ActivityRowComponent } from '../components/activity-row/activity-row.component';
-import { ActivityFormModalComponent } from '../modals/activity-form-modal/activity-form-modal.component';
-import { FavoritesModalComponent } from '../modals/favorites-modal/favorites-modal.component';
-import { SyncConfirmModalComponent } from '../modals/sync-confirm-modal/sync-confirm-modal.component';
-import { ResetConfirmModalComponent } from '../modals/reset-confirm-modal/reset-confirm-modal.component';
+import { TicketDetailPage } from '../../../board/pages/ticket-detail/ticket-detail.page';
+import { TimeEntrySummaryComponent } from '../../components/time-entry-summary/time-entry-summary.component';
+import { ActivityRowComponent } from '../../components/activity-row/activity-row.component';
+import { ActivityFormModalComponent } from '../../modals/activity-form-modal/activity-form-modal.component';
+import { FavoritesModalComponent } from '../../modals/favorites-modal/favorites-modal.component';
+import { SyncConfirmModalComponent } from '../../modals/sync-confirm-modal/sync-confirm-modal.component';
+import { ResetConfirmModalComponent } from '../../modals/reset-confirm-modal/reset-confirm-modal.component';
 
 /** Full-view counterpart of the compact time calculator: daily local time entries with the same actions. */
 @Component({

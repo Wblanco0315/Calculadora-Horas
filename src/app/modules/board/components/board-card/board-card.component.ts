@@ -13,31 +13,7 @@ import { BoardWorkPackageCard, StatusOption } from '../../../../core/interfaces/
     class: 'block',
   },
   templateUrl: './board-card.component.html',
-  styles: [
-    `
-      :host ::ng-deep .op-card-status-select {
-        height: 1.25rem !important;
-        min-height: 1.25rem !important;
-        align-items: center !important;
-        box-shadow: none !important;
-      }
-      :host ::ng-deep .op-card-status-select .p-select-label {
-        padding: 0 0.25rem !important;
-        line-height: 1.25rem !important;
-        color: var(--p-select-color) !important;
-        display: flex !important;
-        align-items: center !important;
-      }
-      :host ::ng-deep .op-card-status-select .p-select-dropdown {
-        width: 1.1rem !important;
-        color: var(--p-select-color) !important;
-      }
-      :host ::ng-deep .op-card-status-select .p-select-dropdown svg {
-        width: 0.6rem !important;
-        height: 0.6rem !important;
-      }
-    `,
-  ],
+  styleUrl: './board-card.component.css',
 })
 export class BoardCardComponent {
   readonly card = input.required<BoardWorkPackageCard>();

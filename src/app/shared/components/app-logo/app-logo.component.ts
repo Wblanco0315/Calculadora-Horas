@@ -8,20 +8,7 @@ export type LogoSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'custom';
   selector: 'app-logo',
   standalone: true,
   imports: [CommonModule],
-  styles: [
-    `
-      :host {
-        display: inline-flex;
-        align-items: center;
-        vertical-align: middle;
-      }
-      :host svg:not([data-custom-size]) {
-        width: var(--app-logo-w) !important;
-        height: var(--app-logo-h) !important;
-        flex-shrink: 0;
-      }
-    `,
-  ],
+  styleUrl: './app-logo.component.css',
   templateUrl: './app-logo.component.html',
 })
 export class AppLogoComponent {

@@ -18,10 +18,8 @@ src/app/modules/compact/
 │   └── ticket-context-modal/
 │       └── ticket-context-modal.component.{ts,html}  # Modal de contexto extendido del ticket (solo modo compacto)
 ├── pages/
-│   ├── compact.page.html                     # Vista orquestadora limpia con saludo, popover de filtros y navegación
-│   ├── compact.page.ts                       # Smart component con filtrado reactivo y gestión de estado
-│   └── compact.page.css                      # Estilos encapsulados de la vista
-└── compact.router.ts                         # Enrutador del módulo con carga diferida
+│   └── compact/compact.page.{ts,html,css}  # Smart component con filtrado reactivo y gestión de estado
+└── compact.routes.ts                         # Enrutador del módulo con carga diferida
 ```
 
 La fila de actividad y los modales de actividad (`app-activity-row`, `app-activity-form-modal`, `app-favorites-modal`, `app-reset-confirm-modal`, `app-sync-confirm-modal`) pertenecen al dominio de registro de tiempo y viven en el módulo `time-entry` (`modules/time-entry/components` y `modules/time-entry/modals`); el modo compacto los importa desde allí. `app-close-confirm-modal` está en `shared/components/close-confirm-modal` porque lo usan compacto, dashboard y setup.

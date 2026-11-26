@@ -7,7 +7,7 @@ El módulo `setting` centraliza la gestión de configuración de **PocketProject
 ## 1. Ubicación y Estructura
 
 - **Ruta del Módulo**: `src/app/modules/setting/`
-- **Ruta de Navegación**: `/dashboard/settings` (con alias `/dashboard/setting` en `dashboard.router.ts`)
+- **Ruta de Navegación**: `/dashboard/settings` (con alias `/dashboard/setting` en `dashboard.routes.ts`)
 
 ```
 src/app/modules/setting/
@@ -19,10 +19,8 @@ src/app/modules/setting/
 │   └── user-card/
 │       └── user-card.component.{ts,html}   # Tarjeta de perfil (solo la usa la sección User)
 ├── pages/
-│   ├── setting.page.html                   # Vista orquestadora con p-tabs y routing de secciones
-│   ├── setting.page.ts                     # Smart component con lectura de query params (?tab=)
-│   └── setting.page.css                    # Estilos encapsulados de la página
-└── setting.router.ts                       # Enrutador del módulo con carga diferida
+│   └── setting/setting.page.{ts,html,css}  # Smart component con lectura de query params (?tab=)
+└── setting.routes.ts                       # Enrutador del módulo con carga diferida
 ```
 
 ---

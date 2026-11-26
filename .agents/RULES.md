@@ -109,12 +109,12 @@ src/app/
 │   │   └── storage, theme, language, schedule, update, window, work-package-change
 │   └── utils/                    # Funciones puras y constantes (*.util.ts)
 ├── modules/<module>/             # Un módulo por dominio o vista enrutada (singular)
-│   ├── components/               # Componentes del módulo (o que el módulo posee y otros importan)
-│   ├── modals/                   # Diálogos del módulo
-│   ├── pages/                    # Páginas enrutadas (smart components)
+│   ├── components/<name>/        # <name>.component.{ts,html[,css]}: componentes del módulo (o que el módulo posee y otros importan)
+│   ├── modals/<name>/            # <name>.component.{ts,html[,css]}: diálogos del módulo
+│   ├── pages/<name>/             # <name>.page.{ts,html[,css]}: páginas enrutadas (smart components)
 │   ├── services/                 # Servicios exclusivos del módulo
 │   ├── interfaces/               # Tipos exclusivos del módulo
-│   └── <module>.router.ts        # Rutas con carga diferida
+│   └── <module>.routes.ts        # Rutas con carga diferida (export const <module>Routes: Routes)
 └── shared/                       # Reutilizable sin estado de negocio propio
     ├── components/               # app-header, app-logo, close-confirm-modal, rich-text-editor, schedule-editor, ...
     ├── pipes/                    # translate.pipe.ts
@@ -133,7 +133,9 @@ Módulos actuales: `board` (tableros, listado de tableros y detalle de ticket), 
 | Componente de negocio usado por varios módulos | En el módulo dueño de ese dominio; los demás lo importan desde allí (no se duplica ni se sube a `shared/`) |
 | Componente sin estado de negocio usado por varios módulos | `shared/components/` |
 | Servicio usado por un solo módulo | `modules/<module>/services/` (p. ej. `setup/services/mcp.service.ts`) |
-| Plantilla de más de ~80 líneas | Archivo hermano `.component.html` (y `.css` para estilos); no usar `template` inline |
+| Cualquier componente o página | Su propia carpeta con el mismo nombre; prohibido dejar archivos de componente sueltos en `components/`, `modals/` o `pages/` |
+| Capas de un componente | Separadas: `.ts` (lógica), `.html` (plantilla) y `.css` solo si tiene estilos propios. Excepción: un componente muy pequeño (plantilla de ~20 líneas o menos, sin estilos propios y con poca lógica) puede quedarse en un solo `.ts` con `template` inline. Las páginas siempre van separadas |
+| Rutas de un módulo | `<module>.routes.ts` en la raíz del módulo (nunca `.router.ts`) |
 
 - **Dueños actuales de componentes compartidos**: `modules/time-entry/components/activity-row` y `modules/time-entry/modals/*` (los usan `compact`, `time-entry` y el detalle de ticket de `board`); `modules/board/pages/ticket-detail.page` (también embebido en el drawer de `time-entry`); `shared/components/close-confirm-modal` (compact, dashboard y setup).
 - **Prohibido duplicar componentes** entre módulos: si dos módulos necesitan el mismo componente, se mueve al dueño del dominio o a `shared/`.
@@ -149,7 +151,7 @@ Módulos actuales: `board` (tableros, listado de tableros y detalle de ticket), 
 - En escritorio cada método llama a un comando Tauri (`invoke`); en web usa `fetch` contra `/api/v3`. Ambos caminos deben devolver la misma forma de datos.
 
 ### 4.4. Arquitectura del Dashboard como Contenedor Principal (Shell / Layout)
-- **Rol Exclusivo de Contenedor**: El componente `DashboardPage` (`src/app/modules/dashboard/pages/dashboard.page.ts`) actúa **única y exclusivamente como contenedor principal y layout estructural** de la aplicación.
+- **Rol Exclusivo de Contenedor**: El componente `DashboardPage` (`src/app/modules/dashboard/pages/dashboard/dashboard.page.ts`) actúa **única y exclusivamente como contenedor principal y layout estructural** de la aplicación.
 - **Elementos que Habitan en el Dashboard**:
   1. **Barra Lateral (`p-sidebar`)**: Navegación agrupada (secciones PocketProject y OpenProject), buscador de la barra lateral, proyectos y perfil de usuario con avatar en el footer.
   2. **Barra Superior (`<header>`)**: Toggle del sidebar (`pSidebarTrigger`), breadcrumb (`Proyectos > proyecto > Tableros > tablero > #ticket`), refresco, tema claro/oscuro y acceso a configuración.
@@ -158,7 +160,7 @@ Módulos actuales: `board` (tableros, listado de tableros y detalle de ticket), 
 - **Separación Obligatoria del Contenido en Componentes Separados**:
   - **Queda estrictamente prohibido incrustar contenido de negocio, tarjetas, calendarios o paneles directamente en `dashboard.page.html`**.
   - **Cada contenido es un componente separado e independiente** en su propio módulo (`overview`, `project`, `board`, `time-entry`, `report`, `setting`).
-  - **Enrutamiento por Vistas Hijas**: `dashboard.router.ts` define las rutas secundarias mediante `children`, cargando cada contenido con `loadChildren` o `loadComponent`.
+  - **Enrutamiento por Vistas Hijas**: `dashboard.routes.ts` define las rutas secundarias mediante `children`, cargando cada contenido con `loadChildren` o `loadComponent`.
   - **La lógica de dominio no vive en el shell**: búsquedas o resoluciones de datos (p. ej. qué tablero contiene un ticket) van al servicio de API correspondiente (`BoardApiService.findBoardContainingTicket`), no a `DashboardPage`.
   - **Autonomía y Modularidad**: Cada componente de contenido administra sus propios Signals, inyección de dependencias (`inject()`), estados de carga (`p-skeleton`), acciones y subcomponentes.
 

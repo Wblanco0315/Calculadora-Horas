@@ -26,44 +26,7 @@ import { ScheduleEditorComponent } from '../../../../shared/components/schedule-
       tablerCheck,
     }),
   ],
-  template: `
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-      <!-- 1. User Profile & Account Data -->
-      <app-user-card />
-
-      <!-- 2. Work Schedule Management -->
-      <div class="p-5 sm:p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 space-y-5">
-        <!-- Section Header -->
-        <div class="flex items-center gap-2">
-          <ng-icon name="tablerCalendar" size="1.25rem" class="text-primary-600 dark:text-primary-400 shrink-0" />
-          <h3 class="text-sm sm:text-base font-bold text-slate-800 dark:text-zinc-100">
-            {{ 'settings.scheduleSection' | translate }}
-          </h3>
-        </div>
-
-
-        <!-- Reusable Schedule Editor with Lunch Adjustment -->
-        <app-schedule-editor [showTitle]="false" [showLunch]="true" />
-
-        <!-- Save Schedule Action Bar -->
-        <div class="pt-4 flex flex-col sm:flex-row sm:items-center justify-end">
-
-
-          <button
-            pButton
-            type="button"
-            (click)="saveSchedule()"
-            [disabled]="scheduleService.isSaving() || scheduleService.scheduleGroups().length === 0"
-            [loading]="scheduleService.isSaving()"
-            class="flex items-center gap-2 self-end sm:self-auto cursor-pointer"
-          >
-            <ng-icon name="tablerCheck" size="1.1rem" />
-            <span>{{ 'settings.saveSchedule' | translate }}</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  `,
+  templateUrl: './user-section.component.html',
 })
 export class UserSectionComponent {
   readonly scheduleService = inject(ScheduleService);

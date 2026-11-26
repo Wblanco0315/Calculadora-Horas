@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { SetupPage } from './pages/setup.page';
+import { SetupPage } from './pages/setup/setup.page';
 
 export const setupRoutes: Routes = [
   {

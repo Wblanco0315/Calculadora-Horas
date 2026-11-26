@@ -7,7 +7,7 @@ El módulo `overview` representa la vista de contenido principal de **PocketProj
 ## 1. Ubicación y Estructura
 
 - **Ruta del Módulo**: `src/app/modules/overview/`
-- **Ruta de Navegación**: `/dashboard/overview` (cargada como ruta hija en `dashboard.router.ts`)
+- **Ruta de Navegación**: `/dashboard/overview` (cargada como ruta hija en `dashboard.routes.ts`)
 
 ```
 src/app/modules/overview/
@@ -22,10 +22,8 @@ src/app/modules/overview/
 │   └── schedule-modal/
 │       └── schedule-modal.component.ts       # Modal Dialog (<p-dialog>) para editar horarios y descanso
 ├── pages/
-│   ├── overview.page.html                    # Esqueletos de carga (<p-skeleton>) y orquestación de subcomponentes
-│   ├── overview.page.ts                      # Smart component de página vinculado a StorageService.isLoading
-│   └── overview.page.css                     # Estilos de la página
-└── overview.router.ts                        # Enrutador del módulo con carga diferida
+│   └── overview/overview.page.{ts,html,css}  # Smart component de página vinculado a StorageService.isLoading
+└── overview.routes.ts                        # Enrutador del módulo con carga diferida
 ```
 
 ---

@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
-import { BoardListPage } from './pages/board-list.page';
-import { BoardPage } from './pages/board.page';
-import { TicketDetailPage } from './pages/ticket-detail.page';
+import { BoardListPage } from './pages/board-list/board-list.page';
+import { BoardPage } from './pages/board/board.page';
+import { TicketDetailPage } from './pages/ticket-detail/ticket-detail.page';
 
 export const boardRoutes: Routes = [
   {

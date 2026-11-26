@@ -4,9 +4,9 @@
 Provides a full-page time and cost report for OpenProject work packages. It supports filtering by work package (including descendants), project, user ID, time-entry activity, and spent-on date range, plus client-side grouping by date, user, activity, project, or work package. The report can be opened pre-filtered from a ticket's spent-time value.
 
 ## File Structure
-- `src/app/modules/report/report.router.ts`: Lazy-loaded dashboard route for reports.
-- `src/app/modules/report/pages/time-cost-report.page.ts`: Filter state, API query orchestration, grouping, aggregate display, report link, and own-entry editing.
-- `src/app/modules/report/pages/time-cost-report.page.html`: Full-page query builder and sortable results table.
+- `src/app/modules/report/report.routes.ts`: Lazy-loaded dashboard route for reports.
+- `src/app/modules/report/pages/time-cost-report/time-cost-report.page.ts`: Filter state, API query orchestration, grouping, aggregate display, report link, and own-entry editing.
+- `src/app/modules/report/pages/time-cost-report/time-cost-report.page.html`: Full-page query builder and sortable results table.
 - `src/app/core/services/openproject/time-entry-api.service.ts` (`TimeEntryApiService`): Filters and paginates time-entry API queries and resolves descendant work packages.
 - `src/app/core/interfaces/openproject.interface.ts`: `TimeCostReportFilter` and time-entry contracts.
 - `src-tauri/src/lib.rs`: Tauri implementation of the same filtered query for the desktop app.

@@ -10,12 +10,14 @@ Angular 22 standalone app under `src/app/`, split into `core/`, `modules/` and `
 | A component used by one module | `modules/<module>/components/` (or `modals/` for dialogs) |
 | A business component used by several modules | the module that owns its domain; the others import it from there |
 | A component without business state used by several modules | `shared/components/` |
-| Templates longer than ~80 lines | a sibling `.component.html` (and `.css` for styles), not an inline `template` |
+| Any component or page | its own folder named after it |
+| Component layers | separate `.ts` (logic), `.html` (template) and `.css` only when it has its own styles. Exception: a very small component (template of ~20 lines or less, no own styles, little logic) may stay in a single `.ts` with an inline `template`. Pages are always split |
+| Module routes | `<module>.routes.ts` at the module root |
 
 Current owners of components shared between modules:
 
 - `modules/time-entry/components/activity-row` and `modules/time-entry/modals/{activity-form,favorites,reset-confirm,sync-confirm}-modal`: activity UI, used by `compact`, `time-entry` and the `board` ticket detail.
-- `modules/board/pages/ticket-detail.page`: also embedded in the time log drawer.
+- `modules/board/pages/ticket-detail/ticket-detail.page`: also embedded in the time log drawer.
 - `shared/components/close-confirm-modal`: window close confirmation (compact, dashboard, setup).
 
 Components used by a single module live in it: `compact/modals/ticket-context-modal`, `setup/components/mcp-section`, `setting/components/user-card`.

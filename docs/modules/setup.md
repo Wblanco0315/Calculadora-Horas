@@ -7,7 +7,7 @@ El módulo `setup` gestiona el flujo del asistente (wizard) de bienvenida y conf
 ## 1. Ubicación y Estructura
 
 - **Ruta del Módulo**: `src/app/modules/setup/`
-- **Ruta de Navegación**: `/setup` (definida en `setup.router.ts`)
+- **Ruta de Navegación**: `/setup` (definida en `setup.routes.ts`)
 
 ```
 src/app/modules/setup/
@@ -23,10 +23,8 @@ src/app/modules/setup/
 │   ├── setup.service.ts      # Estado centralizado del wizard (Signals)
 │   └── mcp.service.ts        # MCP: ruta de la base local, estadísticas IA, instalación en clientes y reglas IA
 ├── pages/
-│   ├── setup.page.html       # Estructura del Stepper y navegación compartida
-│   ├── setup.page.ts         # Smart component controlador del flujo
-│   └── setup.page.css        # Estilos específicos de la página
-└── setup.router.ts           # Configuración de rutas lazy-loaded
+│   └── setup/setup.page.{ts,html,css}  # Smart component controlador del flujo
+└── setup.routes.ts           # Configuración de rutas lazy-loaded
 ```
 
 ---
@@ -66,7 +64,7 @@ El asistente utiliza un componente `<p-stepper>` de PrimeNG y un switcher de con
 
 ## 3. Navegación y Footer Centralizado
 
-La navegación del asistente está centralizada en el componente contenedor [`setup.page.html`](file:///C:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/modules/setup/pages/setup.page.html):
+La navegación del asistente está centralizada en el componente contenedor [`setup.page.html`](file:///C:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/modules/setup/pages/setup/setup.page.html):
 - **Botón Atrás**: Se renderiza automáticamente a partir del paso 2 (`activeStep > 1`) y navega al paso anterior (`prevStep()`).
 - **Botón Siguiente**: Avanza al siguiente paso (`nextStep()`) en los pasos 1 a 3. Se desactiva reactivamente mediante `isNextDisabled` si el paso actual no cumple sus requisitos de validación (por ejemplo, si no hay grupos de horario configurados en el paso 2).
 - **Botón Guardar y Empezar**: En el paso 4, el botón se transforma en el disparador de finalización (`completeSetup()`) con indicador de carga (`loading`).

@@ -6,10 +6,10 @@ import { SortIcon, SortableColumn, Table } from 'primeng/table';
 import { Skeleton } from 'primeng/skeleton';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerLayoutKanban, tablerRefresh } from '@ng-icons/tabler-icons';
-import { BoardApiService } from '../../../core/services/openproject/board-api.service';
-import { LanguageService } from '../../../core/services/language.service';
-import { BoardOption } from '../../../core/interfaces/openproject.interface';
-import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { BoardApiService } from '../../../../core/services/openproject/board-api.service';
+import { LanguageService } from '../../../../core/services/language.service';
+import { BoardOption } from '../../../../core/interfaces/openproject.interface';
+import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 
 interface BoardRow extends BoardOption {
   typeLabel: string;
@@ -29,21 +29,7 @@ const ACTION_ATTRIBUTES = ['status', 'assignee', 'version', 'subproject', 'subta
   host: {
     class: 'flex flex-col flex-1 min-h-0 min-w-0 w-full',
   },
-  styles: `
-    th,
-    td {
-      white-space: nowrap;
-      font-size: 0.75rem;
-      line-height: 1rem;
-    }
-
-    .board-list-th {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.5rem;
-    }
-  `,
+  styleUrl: './board-list.page.css',
 })
 export class BoardListPage {
   private readonly route = inject(ActivatedRoute);

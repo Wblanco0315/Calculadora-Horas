@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { DashboardPage } from './pages/dashboard.page';
+import { DashboardPage } from './pages/dashboard/dashboard.page';
 
 export const dashboardRoutes: Routes = [
   {
@@ -14,37 +14,37 @@ export const dashboardRoutes: Routes = [
       {
         path: 'overview',
         loadChildren: () =>
-          import('../overview/overview.router').then((m) => m.overviewRoutes),
+          import('../overview/overview.routes').then((m) => m.overviewRoutes),
       },
       {
         path: 'time-entries',
         loadChildren: () =>
-          import('../time-entry/time-entry.router').then((m) => m.timeEntryRoutes),
+          import('../time-entry/time-entry.routes').then((m) => m.timeEntryRoutes),
       },
       {
         path: 'projects',
         loadChildren: () =>
-          import('../project/project.router').then((m) => m.projectRoutes),
+          import('../project/project.routes').then((m) => m.projectRoutes),
       },
       {
         path: 'boards',
         loadChildren: () =>
-          import('../board/board.router').then((m) => m.boardRoutes),
+          import('../board/board.routes').then((m) => m.boardRoutes),
       },
       {
         path: 'tickets',
         loadChildren: () =>
-          import('../board/board.router').then((m) => m.ticketRoutes),
+          import('../board/board.routes').then((m) => m.ticketRoutes),
       },
       {
         path: 'reports',
         loadChildren: () =>
-          import('../report/report.router').then((m) => m.reportRoutes),
+          import('../report/report.routes').then((m) => m.reportRoutes),
       },
       {
         path: 'settings',
         loadChildren: () =>
-          import('../setting/setting.router').then((m) => m.settingRoutes),
+          import('../setting/setting.routes').then((m) => m.settingRoutes),
       },
       {
         path: 'setting',

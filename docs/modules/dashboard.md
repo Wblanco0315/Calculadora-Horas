@@ -7,15 +7,13 @@ El módulo `dashboard` actúa **exclusivamente como el contenedor estructural y 
 ## 1. Ubicación y Estructura
 
 - **Ruta del Módulo**: `src/app/modules/dashboard/`
-- **Ruta Base de Navegación**: `/dashboard` (definida en `dashboard.router.ts`)
+- **Ruta Base de Navegación**: `/dashboard` (definida en `dashboard.routes.ts`)
 
 ```
 src/app/modules/dashboard/
 ├── pages/
-│   ├── dashboard.page.html   # Shell estructural: Sidebar + Menú superior + <router-outlet />
-│   ├── dashboard.page.ts     # Componente layout con Signals de estado y navegación
-│   └── dashboard.page.css    # Estilos del contenedor principal
-└── dashboard.router.ts       # Enrutamiento con rutas hijas (children: overview, etc.)
+│   └── dashboard/dashboard.page.{ts,html,css}  # Componente layout con Signals de estado y navegación
+└── dashboard.routes.ts       # Enrutamiento con rutas hijas (children: overview, etc.)
 ```
 
 ---
@@ -44,7 +42,7 @@ src/app/modules/dashboard/
 
 ### 2.3. Contenedor de Vistas Hijas (`<router-outlet />`)
 - El HTML de `DashboardPage` **no contiene lógica ni maquetación de negocio directa**.
-- Todo contenido corresponde a componentes de módulo independientes cargados como rutas secundarias (`children` en `dashboard.router.ts`), soportando `overview` y `settings`.
+- Todo contenido corresponde a componentes de módulo independientes cargados como rutas secundarias (`children` en `dashboard.routes.ts`), soportando `overview` y `settings`.
 
 ---
 

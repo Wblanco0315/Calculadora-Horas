@@ -19,15 +19,7 @@ import { AppLogoComponent } from '../app-logo/app-logo.component';
   selector: 'app-header',
   standalone: true,
   imports: [CommonModule, NgIcon, TranslatePipe, AppLogoComponent],
-  styles: [
-    `
-      :host {
-        display: block;
-        position: relative;
-        z-index: 1000;
-      }
-    `,
-  ],
+  styleUrl: './app-header.component.css',
   viewProviders: [
     provideIcons({
       tablerSun,

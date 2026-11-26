@@ -9,10 +9,10 @@ import { ButtonDirective } from 'primeng/button';
 import { Skeleton } from 'primeng/skeleton';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerFolder, tablerSearch, tablerRefresh, tablerFolderOff } from '@ng-icons/tabler-icons';
-import { ProjectApiService } from '../../../core/services/openproject/project-api.service';
-import { Project } from '../../../core/interfaces/openproject.interface';
-import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { ProjectCardComponent } from '../components/project-card/project-card.component';
+import { ProjectApiService } from '../../../../core/services/openproject/project-api.service';
+import { Project } from '../../../../core/interfaces/openproject.interface';
+import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
+import { ProjectCardComponent } from '../../components/project-card/project-card.component';
 
 @Component({
   selector: 'app-project-page',
