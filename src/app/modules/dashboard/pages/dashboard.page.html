@@ -32,6 +32,65 @@
               <p-sidebar-group-content>
                 <p-sidebar-menu>
                   @for (item of group.items; track item.label) {
+                  @if (item.id === 'projects') {
+                  <!-- OpenProject projects tree: Projects > project > boards (PrimeNG collapsible menu items) -->
+                  <p-sidebar-menu-item collapsible [open]="projectsMenuOpen()" (openChange)="onProjectsMenuOpenChange($event)">
+                    <button pSidebarMenuButton [isActive]="!!item.isActive" [class.font-semibold]="item.isActive"
+                      class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800"
+                      [attr.aria-expanded]="projectsMenuOpen()">
+                      <ng-icon [name]="item.icon" size="1.1rem" class="shrink-0"
+                        [class.text-primary-600]="item.isActive" [class.dark:text-primary-400]="item.isActive" />
+                      <span class="flex-1 text-left text-xs sm:text-sm">{{ item.label }}</span>
+                      <ng-icon name="tablerChevronRight" size="0.85rem"
+                        class="shrink-0 text-slate-400 transition-transform duration-200"
+                        [class.rotate-90]="projectsMenuOpen()" />
+                    </button>
+                    <p-sidebar-menu-sub>
+                      @if (isLoadingProjects() && !sidebarProjects()) {
+                        @for (i of [1, 2, 3]; track i) {
+                        <p-sidebar-menu-sub-item>
+                          <p-skeleton width="80%" height="1.1rem" styleClass="my-1.5 ml-2" />
+                        </p-sidebar-menu-sub-item>
+                        }
+                      }
+                      @for (project of sidebarProjects() ?? []; track project.id) {
+                      <p-sidebar-menu-item collapsible [open]="isProjectOpen(project.id)"
+                        (openChange)="onProjectOpenChange(project, $event)">
+                        <button pSidebarMenuButton [isActive]="isProjectActive(project.id)"
+                          class="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800"
+                          [title]="project.name" [attr.aria-expanded]="isProjectOpen(project.id)">
+                          <ng-icon name="tablerChevronRight" size="0.75rem"
+                            class="shrink-0 text-slate-400 transition-transform duration-200"
+                            [class.rotate-90]="isProjectOpen(project.id)" />
+                          <span class="min-w-0 flex-1 truncate text-left text-xs">{{ project.name }}</span>
+                        </button>
+                        <p-sidebar-menu-sub>
+                          @if (loadingBoardProjectIds().has(project.id)) {
+                          <p-sidebar-menu-sub-item>
+                            <p-skeleton width="70%" height="1rem" styleClass="my-1.5 ml-2" />
+                          </p-sidebar-menu-sub-item>
+                          }
+                          @for (board of projectBoards().get(project.id) ?? []; track board.id; let index = $index) {
+                          <p-sidebar-menu-sub-item>
+                            <button pSidebarMenuSubButton size="sm" [isActive]="isBoardActive(project.id, board.id, index)"
+                              class="cursor-pointer" [title]="board.name" (click)="openBoard(project, board)">
+                              <ng-icon name="tablerLayoutKanban" size="0.85rem" class="shrink-0" />
+                              <span class="truncate">{{ board.name }}</span>
+                            </button>
+                          </p-sidebar-menu-sub-item>
+                          } @empty {
+                            @if (projectBoards().has(project.id)) {
+                            <p-sidebar-menu-sub-item>
+                              <span class="block px-2 py-1 text-[11px] text-slate-400 dark:text-zinc-500">{{ 'board.noBoards' | translate }}</span>
+                            </p-sidebar-menu-sub-item>
+                            }
+                          }
+                        </p-sidebar-menu-sub>
+                      </p-sidebar-menu-item>
+                      }
+                    </p-sidebar-menu-sub>
+                  </p-sidebar-menu-item>
+                  } @else {
                   <p-sidebar-menu-item>
                     <button pSidebarMenuButton [isActive]="!!item.isActive" [class.bg-primary-50]="item.isActive"
                       [class.text-primary-700]="item.isActive" [class.dark:bg-primary-950/60]="item.isActive"
@@ -47,31 +106,35 @@
                     }
                   </p-sidebar-menu-item>
                   }
+                  }
                 </p-sidebar-menu>
               </p-sidebar-group-content>
             </p-sidebar-group>
             }
           </p-sidebar-content>
 
-          <!-- Sidebar Footer with User Profile (Direct link to Settings > User tab) -->
           <p-sidebar-footer class="border-t border-slate-100 dark:border-zinc-800">
             <p-sidebar-menu>
               <p-sidebar-menu-item>
-                <button pSidebarMenuButton class="p-1! cursor-pointer" (click)="openUserSettings()"
-                  [title]="'settings.tabUser' | translate">
+                <button pSidebarMenuButton class="p-1! cursor-pointer" (click)="accountMenu.toggle($event)"
+                  aria-haspopup="menu">
                   <p-avatar [label]="userInitials()" shape="circle"
                     class="size-7 shrink-0 text-xs bg-primary-100 text-primary-700 dark:bg-primary-950 dark:text-primary-300 font-bold" />
-                  <div class="flex flex-col text-left min-w-0">
-                    <span class="text-xs font-semibold text-slate-800 dark:text-zinc-200 truncate">
-                      {{ userName() }}
-                    </span>
-                    <span class="text-[10px] text-slate-400 capitalize">
-                      {{ config().primary_color }} · {{ config().theme_mode }}
-                    </span>
-                  </div>
+                  <span class="min-w-0 flex-1 truncate text-left text-xs font-semibold text-slate-800 dark:text-zinc-200">
+                    {{ userName() }}
+                  </span>
+                  <ng-icon name="tablerSelector" size="0.9rem" class="shrink-0 text-slate-400" />
                 </button>
               </p-sidebar-menu-item>
             </p-sidebar-menu>
+            <p-menu #accountMenu [model]="accountMenuItems()" [popup]="true" appendTo="body">
+              <ng-template #item let-item>
+                <a class="p-menu-item-link">
+                  <ng-icon [name]="item.icon" size="1rem" class="p-menu-item-icon" />
+                  <span class="p-menu-item-label">{{ item.label }}</span>
+                </a>
+              </ng-template>
+            </p-menu>
           </p-sidebar-footer>
           <button pSidebarRail></button>
         </p-sidebar-panel>
@@ -151,17 +214,14 @@
             <ng-icon name="tablerAppWindow" size="1.15rem" />
           </button>
 
-          <!-- Settings Button -->
-          <button pButton (click)="navigateTo('/dashboard/settings')" variant="outlined" severity="secondary"
-            class="flex items-center">
-            <ng-icon name="tablerSettings" size="1rem" class="mr-1.5" />
-            <span>{{ 'dashboard.settings' | translate }}</span>
-          </button>
         </div>
       </header>
 
       <!-- Main Content Container for Child Views -->
-      <main class="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-8 flex flex-col">
+      <main
+        [class.ticket-detail-shell]="isTicketDetail()"
+        class="flex w-full min-w-0 flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-8 flex flex-col"
+      >
         <router-outlet />
       </main>
     </p-sidebar-main>

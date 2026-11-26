@@ -29,17 +29,18 @@ src/app/modules/dashboard/
 ### 2.1. Barra Lateral de Navegación (`p-sidebar`)
 - Implementa `p-sidebar-layout` y `p-sidebar` de PrimeNG con soporte responsivo (`offcanvas` para pantallas móviles, colapso de icono para escritorio).
 - Encabezado con el isologo oficial (`app-logo`), nombre de la aplicación y enlace directo al resumen general.
-- Navegación limpia y directa sin elementos innecesarios:
-  - **Resumen** (`/dashboard/overview`): Acceso a la vista general de jornada diaria, métricas y calendario semanal.
-  - **Configuración** (`/dashboard/settings`): Acceso al módulo de ajustes por pestañas (User y System).
-- Pie de barra lateral con perfil de usuario: iniciales computadas (`userInitials`), nombre y modo visual actual; al hacer clic redirige directamente a `/dashboard/settings?tab=user`.
+- Navegación agrupada por secciones (`navGroups`):
+  - **PocketProject** (funcionalidades propias): **Resumen** (`/dashboard/overview`) y **Modo compacto** (`WindowService.setCompactMode()`).
+  - **OpenProject** (datos de la plataforma): **Proyectos** y **Reportes** (`/dashboard/reports`).
+- **Proyectos** es un árbol de `p-sidebar-menu-item collapsible` anidados: Proyectos → proyecto → tableros. Al abrir Proyectos se cargan los proyectos de OpenProject (`sidebarProjects`, una sola vez, ordenados por nombre). Al abrir un proyecto se cargan sus tableros bajo demanda (`projectBoards`, vía `getProjectBoards`, cacheado en el servicio) y cada tablero navega a `/dashboard/boards/:projectId/:boardId`. Al entrar a un tablero por URL, un `effect` expande Proyectos y el proyecto activo (`activeBoardRoute`) y resalta el tablero. En modo icono, abrir Proyectos expande primero la barra lateral.
+- Pie de barra lateral: botón de cuenta (`pSidebarMenuButton` con `p-avatar`, nombre e icono `tablerSelector`) que abre un `p-menu` emergente (`[popup]="true"`, `appendTo="body"`). El modelo `accountMenuItems` usa el nombre del usuario como encabezado de grupo nativo de PrimeNG y las opciones **Usuario** (`/dashboard/settings?tab=user`) y **Sistema** (`?tab=system`). La plantilla `#item` solo sustituye el icono por `ng-icon`, conservando las clases `p-menu-item-link`, `p-menu-item-icon` y `p-menu-item-label`.
 
 ### 2.2. Menú Superior / Topbar (`<header>`)
 - Botón disparador para expandir o colapsar el sidebar (`pSidebarTrigger target="preview"`).
 - Etiqueta dinámica de la vista activa (`activeNavLabel`).
 - Botón de refresco reactivo (`tablerRefresh`) que dispara `storageService.reloadConfig()`.
 - Conmutador rápido de tema claro/oscuro (`tablerSun` / `tablerMoon`) sincronizado con `ThemeService`.
-- Acceso directo al módulo de configuración (`/dashboard/settings`).
+- Los ajustes ya no tienen botón en el menú superior: se acceden desde el colapsable del pie de la barra lateral.
 
 ### 2.3. Contenedor de Vistas Hijas (`<router-outlet />`)
 - El HTML de `DashboardPage` **no contiene lógica ni maquetación de negocio directa**.

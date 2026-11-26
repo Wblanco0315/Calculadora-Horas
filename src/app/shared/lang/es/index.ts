@@ -220,7 +220,7 @@ export const es = {
     projects: 'Proyectos',
     boards: 'Tableros',
     settings: 'Ajustes',
-    navGeneral: 'Navegación',
+    navPocketProject: 'PocketProject',
     navOpenProject: 'OpenProject',
     navSettings: 'Configuración',
     home: 'Resumen General',
