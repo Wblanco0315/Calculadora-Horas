@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AppearanceEditorComponent } from '../../../../shared/components/appearance-editor/appearance-editor.component';
 import { OpenprojectConnectionComponent } from '../../../../shared/components/openproject-connection/openproject-connection.component';
+import { McpStatusComponent } from '../../../setup/components/mcp-status/mcp-status.component';
 import { UpdateSectionComponent } from '../../../../shared/components/update-section/update-section.component';
 
 @Component({
@@ -12,6 +13,7 @@ import { UpdateSectionComponent } from '../../../../shared/components/update-sec
     AppearanceEditorComponent,
     OpenprojectConnectionComponent,
     UpdateSectionComponent,
+    McpStatusComponent,
   ],
   template: `
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -28,6 +30,11 @@ import { UpdateSectionComponent } from '../../../../shared/components/update-sec
       <!-- 3. Automatic Updates -->
       <div class="p-5 sm:p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 space-y-4 lg:col-span-2">
         <app-update-section />
+      </div>
+
+      <!-- 4. MCP compatibility -->
+      <div class="p-5 sm:p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 lg:col-span-2">
+        <app-mcp-status />
       </div>
     </div>
   `,

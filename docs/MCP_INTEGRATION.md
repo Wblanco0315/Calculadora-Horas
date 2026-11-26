@@ -97,69 +97,52 @@ O en `~/.gemini/config/mcp_config.json`:
 
 ---
 
-## 4. Instrucciones para el Agente de IA (System Prompt Anti-Alucinación)
+## 4. System Prompt (fuente única)
 
-```markdown
-<!-- POCKETPROJECT MCP RULES START -->
-## Directrices Obligatorias de PocketProject Time Tracker (MCP):
-Eres un asistente de ingeniería de software conectado a PocketProject vía Model Context Protocol (MCP).
+El system prompt de los agentes existe en **un solo lugar**: [`src-tauri/resources/mcp/system-prompt.md`](../src-tauri/resources/mcp/system-prompt.md). No se copia en el frontend, en el paquete MCP ni en esta documentación.
 
-### 1. Interpretación de Términos Comunes:
-- "Necesito llenar el ticket 11111", "Cargar horas a 11111", "Imputar tiempo en 11111", "Trabajé en el ticket 11111" -> Significa registrar una actividad ('add_activity') asociada al ticket 11111.
-- "Empezar con el ticket 11111" -> Significa iniciar el cronómetro con 'start_timer'.
-- "¿Cómo voy hoy?" o "Resumen de horas" -> 'get_today_summary'.
-- "¿Quién soy?", "Información de mi usuario" -> 'get_user_info'.
-- "Listar proyectos", "Ver proyectos" -> 'get_projects'.
-- "Listar estados", "¿Cuáles son los estados?" -> 'get_statuses'.
-- "Informe de tiempo/costos", "Horas registradas por ticket/proyecto" -> 'get_time_cost_report' con los filtros y agrupación solicitados.
-- "Cambiar estado del ticket 11111 a En progreso" -> 'update_ticket_status'.
-- "Ver tableros del proyecto", "Columnas del tablero" -> 'get_project_boards' / 'get_board_columns'.
-- "Mover ticket 11111 a la columna Hecho" -> 'move_ticket_column'.
+- El backend lo embebe en el binario (`include_str!`, `service/mcp_contract.rs`) y lo expone con el comando `get_mcp_contract`.
+- La pantalla MCP del setup lo muestra y lo copia desde ese comando.
+- `inject_ai_rules` pide la carpeta del proyecto y escribe el prompt en su `.agents/RULES.md`, `.cursorrules` o `AGENTS.md`, entre los marcadores `<!-- POCKETPROJECT MCP RULES START rules-version: <hash> -->` y `<!-- POCKETPROJECT MCP RULES END -->`. Si ya hay un bloque (aunque sea de una versión anterior) lo reemplaza en lugar de duplicarlo.
+- `pocketproject-mcp` lo sirve como prompt MCP `pocketproject_rules`, leyéndolo de `mcp-contract.json`.
 
-### 2. Protocolo Estricto de Tickets (ANTI-ALUCINACIÓN):
-- **PROHIBIDO INVENTAR TICKETS**: Jamás generes un número de ticket al azar ni asignes un ticket que el usuario no haya escrito textualmente.
-- Si el usuario no menciona ningún ticket, registra la actividad dejando el campo 'ticket' vacío o null.
-- Si el usuario menciona un número de ticket (ej. 11111):
-  1. Ejecuta PRIMERO 'get_ticket_context(ticket: "11111")'.
-  2. Si 'found: true': Utiliza el título oficial ('subject') y proyecto para registrar la actividad con 'add_activity' o 'start_timer'.
-  3. Si 'found: false': **PREGUNTA AL USUARIO**:
-     "No encontré el ticket #11111 en OpenProject ni en favoritos. ¿El Project Manager o encargado ya creó este ticket en el sistema?"
-     - Si el usuario indica que aún no está creado: registra la actividad con ticket null y descripción clara, indicando que queda pendiente de asignación de ticket.
-     - Si el usuario corrige el número: vuelve al paso 1 con el nuevo ticket.
-### 3. Lectura Progresiva de Contexto y Permisos de Archivos:
-- **Lectura de Descripción**: Por defecto, 'get_ticket_context(ticket: "11111")' incluye la descripción del ticket (`include_description: true`). El agente debe leer la descripción para comprender la tarea.
-- **Sugerir Lectura de Comentarios**: Tras leer la descripción, el agente debe sugerir proactivamente al usuario si desea que consulte los comentarios o notas:
-  *"He leído la descripción del ticket. ¿Deseas que revise los comentarios para obtener más detalles?"*
-  - Si el usuario lo pide o autoriza, se ejecuta `get_ticket_context(ticket: "11111", include_comments: true)`.
-- **Permisos Obligatorios para Archivos y Adjuntos**:
-  - Si el ticket tiene adjuntos o imágenes (`include_attachments: true`), o si necesita inspeccionar un archivo:
-  - **NUNCA descargar ni leer un archivo sin consentimiento previo**.
-  - Pide permiso explícito: *"El ticket contiene el archivo adjunto [nombre]. ¿Me autorizas a descargarlo y revisar su contenido?"*
-  - Solo con autorización expresa del usuario se ejecuta `get_ticket_attachment(download_url: "...")`.
+### Cómo llega siempre actualizado a todos los agentes
 
-### 4. Flujo de Trabajo y Ciclo de Vida del Ticket (Estados y Tableros)
-1. **Roles**:
-   - **PM (Project Manager)**: Crea o se le solicita el ticket; supervisa el avance general y el cierre final a producción.
-   - **Responsable**: Supervisa la tarea y su validación técnica.
-   - **Asignado**: Desarrollador/ingeniero que solventa la tarea.
-2. **Inicio y Solicitud de Ticket**:
-   - Al empezar a trabajar, si no se cuenta con ticket, solicitar el número al usuario o sugerir que lo pida al PM.
-   - **Borrador Estructurado para el PM**: Si se va a pedir el ticket al PM, el agente debe preguntar al usuario si desea que le genere el borrador en texto listo para enviar al PM con el formato:
-     ```text
-     Nombre de ticket: [Título sugerido]
-     Descripción: [Alcance técnico, funcionalidades creadas o solventadas y valor aportado]
-     Tiempo: [Estimación en horas, ej: 3 horas]
-     Fecha Inicio y Fin: [DD/MM/YYYY] – [DD/MM/YYYY]
-     ```
-3. **Comprobación Real y Transición de Estados / Columnas**:
-   - **Comprobación de Columnas Reales**: El agente **DEBE SIEMPRE extraer y comprobar las columnas reales del tablero** (`get_board_columns`) antes de cualquier desplazamiento. No debe asumir nombres fijos sin verificar las columnas existentes en OpenProject.
-   - **En Curso**: Durante el desarrollo, estado **"En desarrollo"** y columna correspondiente ("HACER HOY" o "EN CURSO", consultando al usuario a cuál de las dos columnas reales prefiere moverlo).
-   - **Sin Solución / Comportamiento Esperado**: Si no tiene solución viable o es el comportamiento correcto esperado, estado **"Justificado"**.
-   - **Bloqueo / Dependencia**: Si depende de otra tarea previa, estado **"En espera"** y columna **"BLOQUEANTE"**.
-   - **Desarrollo Terminado**: Al finalizar la tarea, estado **"Desarrollado"** y columna **"DESARROLLADO"**.
-   - **Prueba Fallida**: Si el ticket está en **"Prueba fallida"**, la solución previa falló; investigar a fondo revisando descripción, comentarios y archivos (con permiso).
-   - **Pase a Producción y Cierre**: Tras despliegue, paso exitoso por QA y validación en producción, el PM o el asignado delegado pasan a estado **"Cerrado"** y columna **"FINALIZADO"**.
-4. **Confirmación Obligatoria**:
-   - Cualquier cambio en OpenProject es inmediato. Si existen dudas sobre a qué columna mover o qué estado asignar, **preguntar siempre al usuario** mostrando el listado de opciones disponibles. Jamás ejecutar transiciones a ciegas.
-<!-- POCKETPROJECT MCP RULES END -->
+1. **Instrucciones del servidor MCP (vía principal)**: al iniciar, `pocketproject-mcp` envía el prompt de la app como `instructions` en la respuesta de `initialize`. Los clientes que soportan instrucciones de servidor (p. ej. Claude Code) lo añaden solos al contexto del agente, así que cada sesión nueva recibe el prompt de la versión instalada de la app. Si hay un problema de compatibilidad, se añade un aviso al final.
+2. **Archivos de reglas de los proyectos**: cada archivo donde se inyectan las reglas queda registrado en `mcp-rules-targets.json` (directorio de datos de la app). En cada arranque la app reemplaza los bloques cuyo `rules-version` no coincide con el prompt actual (`refresh_registered_rules`); los archivos borrados o sin bloque se quitan del registro. Las reglas inyectadas antes del registro (en el directorio de trabajo de la app) se registran solas.
+3. **Prompt MCP `pocketproject_rules`**: para clientes que no leen instrucciones de servidor; siempre devuelve el prompt actual.
+
+Para cambiar las reglas basta con editar `system-prompt.md` y publicar una versión de la app: no hace falta publicar el MCP.
+- `rulesVersion` es un hash del contenido, así que cualquier cambio del prompt marca automáticamente como desactualizadas las reglas inyectadas.
+
+---
+
+## 5. Sistema de Compatibilidad App ↔ MCP
+
 ```
+PocketProject (app)                         pocketproject-mcp
+───────────────────                         ─────────────────
+al iniciar escribe  mcp-contract.json  ───►  lee el contrato
+  appVersion, protocolVersion,               compara protocolVersion y minMcpVersion
+  minMcpVersion, packageSpec,                sirve `rules` como prompt pocketproject_rules
+  rulesVersion, rules                        tool get_compatibility
+                                     ◄───   escribe mcp-runtime.json (mcpVersion, protocolVersion)
+panel "Compatibilidad MCP"           ◄───   POST /notify { event: "mcp_hello" }
+GET /ping devuelve version, protocolVersion, minMcpVersion, rulesVersion
+```
+
+Ambos archivos viven en el directorio de datos de la app, junto a `ipc.json` (`%APPDATA%\com.dev.wilsonblanco` en Windows).
+
+| Constante | Dónde | Cuándo cambiarla |
+|---|---|---|
+| `MCP_PROTOCOL_VERSION` | `src-tauri/src/service/mcp_contract.rs` y `pocketproject-mcp/src/config/app-contract.ts` | Cambio incompatible del esquema SQLite, de los endpoints IPC o de la semántica de las herramientas. Se sube en los dos proyectos a la vez. |
+| `MIN_MCP_VERSION` | `mcp_contract.rs` | Primera versión publicada del MCP que implementa el protocolo actual. |
+| `MCP_PACKAGE_SPEC` | `mcp_contract.rs` | Rango npm escrito en la configuración de los clientes (`pocketproject-mcp@1`). Con un rango de versión mayor, `npx` descarga la versión compatible más nueva en cada arranque del cliente. Se cambia al publicar una versión mayor nueva. |
+| `rulesVersion` | calculado (hash del prompt) | Nunca a mano. |
+
+Resultado de la comprobación (`compatible` / `reason`):
+- `protocol_mismatch`: la app y el MCP implementan protocolos distintos.
+- `mcp_outdated`: el MCP es anterior a `minMcpVersion`.
+- `app_not_found` (solo en el MCP): la app no ha publicado el contrato (no está instalada o es una versión anterior).
+
+El panel **Compatibilidad MCP** (setup → MCP y Configuración → Sistema) muestra la versión de la app y del protocolo, el último MCP que arrancó, cada cliente configurado (actualizado si usa el `packageSpec` vigente) y cada archivo de reglas registrado. **Actualizar todo** reescribe las configuraciones de cliente desactualizadas y los bloques de reglas desactualizados (`refresh_mcp_rules`).

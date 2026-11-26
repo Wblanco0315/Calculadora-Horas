@@ -244,36 +244,7 @@ Para garantizar la mantenibilidad y claridad del proyecto:
 
 ## 8. Directrices Obligatorias de PocketProject Time Tracker (MCP)
 
-Todo agente o asistente que opere con el servidor MCP de PocketProject debe cumplir estrictamente:
-- **Interpretación de Modismos**:
-  - "Necesito llenar el ticket 11111", "cargar horas a 11111", "imputar tiempo en 11111" -> registrar actividad (`add_activity`).
-  - "Empezar con el ticket 11111" -> iniciar cronómetro (`start_timer`).
-  - "Resumen de hoy" o "¿Cómo voy hoy?" -> `get_today_summary`.
-  - "¿Quién soy?", "Datos de mi usuario" -> `get_user_info`.
-  - "Listar proyectos", "Ver proyectos" -> `get_projects`.
-  - "Listar estados", "¿Cuáles son los estados de OpenProject?" -> `get_statuses`.
-  - "Cambiar estado del ticket 11111 a [estado]" -> `update_ticket_status`.
-  - "Ver tableros del proyecto", "Columnas del tablero" -> `get_project_boards` / `get_board_columns`.
-  - "Mover ticket 11111 a la columna [columna]" -> `move_ticket_column`.
-- **Prohibido Inventar Tickets**: Jamás inventar o asumir un número de ticket que el usuario no haya escrito textualmente. Si no hay ticket, el campo debe ser omitido o `null`.
-- **Protocolo de Validación en Cascada**:
-  1. Ejecutar primero `get_ticket_context(ticket: "11111")` (resolución local ➔ OpenProject API en vivo).
-  2. Si `found: true`: usar título oficial (`subject`) y proyecto.
-  3. Si `found: false`: preguntar al usuario si el PM o encargado ya creó el ticket en el sistema. Si aún no está creado, registrarlo localmente con `ticket: null` indicando que queda pendiente de ticket.
-- **Lectura Progresiva de Contexto y Banderas del Ticket**:
-  - `get_ticket_context` incluye por defecto la descripción del ticket (`include_description: true`). El agente debe leer la descripción para comprender el requerimiento.
-  - **Sugerir lectura de comentarios**: Tras leer la descripción, el agente debe sugerir de forma proactiva al usuario si desea que consulte los comentarios o notas: *"He leído la descripción del ticket. ¿Deseas que revise los comentarios para obtener más detalles?"*. Solo si el usuario lo pide o autoriza, se ejecuta con `include_comments: true`.
-  - **Permisos Obligatorios para Archivos y Adjuntos**: NUNCA descargar ni leer un archivo adjunto o imagen sin pedir confirmación explícita al usuario: *"El ticket contiene el archivo adjunto [nombre]. ¿Me autorizas a descargarlo y revisar su contenido?"*. Solo con autorización se ejecuta `get_ticket_attachment`.
-- **Gestión de Estados, Tableros y Ciclo de Vida del Ticket**:
-  - **Roles**: El PM crea o se le solicita el ticket; el responsable supervisa la tarea y el asignado es quien solventa y desarrolla.
-  - **Inicio y Borrador para el PM**: Al empezar una tarea, si no hay ticket, pedir el número al usuario o indicar que lo solicite al PM. Si se le va a pedir al PM, el agente debe ofrecer generarle el borrador en texto con el formato estructurado (`Nombre de ticket`, `Descripción`, `Tiempo`, `Fecha Inicio y Fin`).
-  - **Comprobación de Columnas Reales**: El agente DEBE SIEMPRE verificar las columnas reales extraídas de OpenProject (`get_board_columns`) antes de intentar mover un ticket, sin asumir nombres fijos sin contrastar.
-  - **En Curso**: Durante el desarrollo, asignar estado **"En desarrollo"** y mover a columna real correspondiente ("HACER HOY" o "EN CURSO", consultando al usuario cuál prefiere).
-  - **Sin Solución / Comportamiento Esperado**: Si no tiene solución técnica o es el comportamiento esperado, estado **"Justificado"**.
-  - **Bloqueo por Dependencia**: Si depende de otra tarea externa para continuar, estado **"En espera"** y mover a columna **"BLOQUEANTE"**.
-  - **Desarrollo Culminado**: Al terminar, pasar a estado **"Desarrollado"** y a columna **"DESARROLLADO"**.
-  - **Prueba Fallida**: Si el ticket está en **"Prueba fallida"**, la solución previa no funcionó. Investigar leyendo la descripción, sugiriendo revisar comentarios y pidiendo permiso para revisar archivos.
-  - **Pase a Producción y Cierre**: Tras desplegarse, superar QA y estar en producción sin inconvenientes, el PM o el asignado delegado pasan a estado **"Cerrado"** y columna **"FINALIZADO"**.
-  - **Confirmación Obligatoria**: Cualquier cambio en OpenProject es inmediato. Ante cualquier duda o transición, **PREGUNTAR SIEMPRE AL USUARIO** a qué columna o estado mover, mostrando las opciones disponibles. Jamás ejecutar transiciones a ciegas.
-  - **Confirmación Obligatoria para Asignado (Assignee)**: Antes de asignar o modificar el campo **Asignado** (`assignee`) de cualquier ticket vía MCP, el agente **DEBE SIEMPRE preguntar al usuario** a quién asignar (mostrando las opciones disponibles si las conoce). Jamás asignar un ticket sin confirmación explícita del usuario.
-  - **Diferenciación Local vs. Plataforma**: Al consultar o reportar tiempos de un ticket, distinguir explícitamente entre los registros locales de PocketProject (pendientes o sincronizados en SQLite) y los tiempos reales registrados directamente en la plataforma OpenProject.
+Todo agente que opere con el servidor MCP de PocketProject debe cumplir el system prompt oficial, que vive en **un solo lugar**: [`src-tauri/resources/mcp/system-prompt.md`](../src-tauri/resources/mcp/system-prompt.md). Incluye la interpretación de modismos, la prohibición de inventar tickets, la validación en cascada con `get_ticket_context`, la lectura progresiva de comentarios y adjuntos (con permiso), el ciclo de estados y columnas, y la confirmación obligatoria antes de cambiar estados, columnas o asignados.
+
+- **Prohibido duplicar el prompt** en el frontend, en el paquete `pocketproject-mcp`, en documentación o en reglas: se referencia ese archivo. La app lo publica en `mcp-contract.json` y el MCP lo sirve como prompt `pocketproject_rules`.
+- **Compatibilidad**: los cambios incompatibles del esquema SQLite, del IPC o de las herramientas suben `MCP_PROTOCOL_VERSION` en la app y en el MCP a la vez (ver `docs/MCP_INTEGRATION.md`, sección 5).

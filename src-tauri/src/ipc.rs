@@ -7,6 +7,8 @@ use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager};
 
+use crate::service::mcp_contract;
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub(crate) struct IpcInfo {
     pub port: u16,
@@ -125,7 +127,15 @@ Content-Length: 0\r\n\
 
     // Ping check to verify server is alive
     if method == "GET" && (path == "/ping" || path == "/") {
-        let body = r#"{"status":"ok","app":"pocketproject","version":"1.0.0"}"#;
+        let body = serde_json::json!({
+            "status": "ok",
+            "app": "pocketproject",
+            "version": app.package_info().version.to_string(),
+            "protocolVersion": mcp_contract::MCP_PROTOCOL_VERSION,
+            "minMcpVersion": mcp_contract::MIN_MCP_VERSION,
+            "rulesVersion": mcp_contract::rules_version(),
+        })
+        .to_string();
         let response = format!(
             "HTTP/1.1 200 OK\r\n\
 Content-Type: application/json\r\n\

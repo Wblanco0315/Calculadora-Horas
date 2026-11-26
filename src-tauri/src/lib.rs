@@ -21,6 +21,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
             Some(vec!["--minimized"]),
@@ -69,6 +70,9 @@ pub fn run() {
             favorite_ticket::delete_favorite_ticket,
             mcp::install_mcp_to_client,
             mcp::inject_ai_rules,
+            mcp::get_mcp_contract,
+            mcp::get_mcp_status,
+            mcp::refresh_mcp_rules,
             app_command::exit_app
         ])
         .run(tauri::generate_context!())

@@ -1,103 +1,100 @@
-//! PocketProject MCP server installation into AI clients and AI rules injection.
+//! PocketProject MCP server installation into AI clients, AI rules injection and status.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-use crate::model::mcp::McpInstallResult;
+use tauri::AppHandle;
+
+use crate::model::mcp::{McpClientStatus, McpInstallResult, McpRulesStatus, McpStatus};
+use crate::service::mcp_contract::{self, MCP_PACKAGE_SPEC};
+
+/// AI clients PocketProject can configure.
+pub(crate) const SUPPORTED_CLIENTS: [&str; 6] = [
+    "antigravity",
+    "antigravity_workspace",
+    "cursor",
+    "claude_code",
+    "claude_desktop",
+    "opencode",
+];
+
+const RULES_START: &str = "<!-- POCKETPROJECT MCP RULES START";
+const RULES_END: &str = "<!-- POCKETPROJECT MCP RULES END -->";
+const PACKAGE_NAME: &str = "pocketproject-mcp";
+
+fn home_path() -> PathBuf {
+    PathBuf::from(
+        std::env::var("USERPROFILE")
+            .or_else(|_| std::env::var("HOME"))
+            .unwrap_or_else(|_| ".".to_string()),
+    )
+}
+
+/// Config file of an AI client.
+fn client_config_path(client: &str) -> Result<PathBuf, String> {
+    let home = home_path();
+    let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    Ok(match client {
+        "antigravity" => home.join(".gemini").join("config").join("mcp_config.json"),
+        "antigravity_workspace" => cwd.join(".gemini").join("mcp_config.json"),
+        "cursor" => cwd.join(".cursor").join("mcp.json"),
+        "claude_code" => home.join(".claude.json"),
+        "claude_desktop" => {
+            let app_data = std::env::var("APPDATA").map(PathBuf::from).unwrap_or(home);
+            app_data.join("Claude").join("claude_desktop_config.json")
+        }
+        "opencode" => home.join(".config").join("opencode").join("opencode.json"),
+        _ => return Err(format!("Cliente no soportado: {}", client)),
+    })
+}
+
+fn read_json(path: &PathBuf) -> serde_json::Value {
+    std::fs::read_to_string(path)
+        .ok()
+        .and_then(|content| serde_json::from_str(&content).ok())
+        .filter(serde_json::Value::is_object)
+        .unwrap_or_else(|| serde_json::json!({}))
+}
 
 pub(crate) fn install_mcp_to_client(client: String) -> Result<McpInstallResult, String> {
-    let home = std::env::var("USERPROFILE")
-        .or_else(|_| std::env::var("HOME"))
-        .unwrap_or_else(|_| ".".to_string());
-    let home_path = PathBuf::from(&home);
-
-    let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-
-    let is_opencode = client.as_str() == "opencode";
-    let (target_file, command, args) = match client.as_str() {
-        "antigravity" => {
-            let config_dir = home_path.join(".gemini").join("config");
-            let file = config_dir.join("mcp_config.json");
-            (file, "npx".to_string(), vec!["-y".to_string(), "pocketproject-mcp@latest".to_string()])
-        }
-        "antigravity_workspace" => {
-            let config_dir = cwd.join(".gemini");
-            let file = config_dir.join("mcp_config.json");
-            (file, "npx".to_string(), vec!["-y".to_string(), "pocketproject-mcp@latest".to_string()])
-        }
-        "cursor" => {
-            let config_dir = cwd.join(".cursor");
-            let file = config_dir.join("mcp.json");
-            (file, "npx".to_string(), vec!["-y".to_string(), "pocketproject-mcp@latest".to_string()])
-        }
-        "claude_code" => {
-            let file = home_path.join(".claude.json");
-            (file, "npx".to_string(), vec!["-y".to_string(), "pocketproject-mcp@latest".to_string()])
-        }
-        "claude_desktop" => {
-            let app_data = std::env::var("APPDATA").unwrap_or_else(|_| home.clone());
-            let config_dir = PathBuf::from(app_data).join("Claude");
-            let file = config_dir.join("claude_desktop_config.json");
-            (file, "npx".to_string(), vec!["-y".to_string(), "pocketproject-mcp@latest".to_string()])
-        }
-        "opencode" => {
-            let config_dir = home_path.join(".config").join("opencode");
-            let file = config_dir.join("opencode.json");
-            (file, "npx".to_string(), vec!["-y".to_string(), "pocketproject-mcp@latest".to_string()])
-        }
-        _ => return Err(format!("Cliente no soportado: {}", client)),
-    };
+    let target_file = client_config_path(&client)?;
+    let is_opencode = client == "opencode";
 
     if let Some(parent) = target_file.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
 
-    let mut root_val: serde_json::Value = if target_file.exists() {
-        let content = std::fs::read_to_string(&target_file).unwrap_or_else(|_| "{}".to_string());
-        serde_json::from_str(&content).unwrap_or_else(|_| serde_json::json!({}))
+    let mut root_val = read_json(&target_file);
+    let (section, pocketproject_config) = if is_opencode {
+        (
+            "mcp",
+            serde_json::json!({
+                "type": "local",
+                "command": ["npx", "-y", MCP_PACKAGE_SPEC],
+                "enabled": true
+            }),
+        )
     } else {
-        serde_json::json!({})
+        (
+            "mcpServers",
+            serde_json::json!({
+                "command": "npx",
+                "args": ["-y", MCP_PACKAGE_SPEC]
+            }),
+        )
     };
 
-    if !root_val.is_object() {
-        root_val = serde_json::json!({});
+    let servers = root_val
+        .as_object_mut()
+        .unwrap()
+        .entry(section)
+        .or_insert_with(|| serde_json::json!({}));
+    if !servers.is_object() {
+        *servers = serde_json::json!({});
     }
-
-    if is_opencode {
-        let mcp = root_val
-            .as_object_mut()
-            .unwrap()
-            .entry("mcp")
-            .or_insert_with(|| serde_json::json!({}));
-
-        if !mcp.is_object() {
-            *mcp = serde_json::json!({});
-        }
-
-        let pocketproject_config = serde_json::json!({
-            "type": "local",
-            "command": vec!["npx".to_string(), "-y".to_string(), "pocketproject-mcp@latest".to_string()],
-            "enabled": true
-        });
-
-        mcp.as_object_mut().unwrap().insert("pocketproject".to_string(), pocketproject_config);
-    } else {
-        let servers = root_val
-            .as_object_mut()
-            .unwrap()
-            .entry("mcpServers")
-            .or_insert_with(|| serde_json::json!({}));
-
-        if !servers.is_object() {
-            *servers = serde_json::json!({});
-        }
-
-        let pocketproject_config = serde_json::json!({
-            "command": command,
-            "args": args
-        });
-
-        servers.as_object_mut().unwrap().insert("pocketproject".to_string(), pocketproject_config);
-    }
+    servers
+        .as_object_mut()
+        .unwrap()
+        .insert("pocketproject".to_string(), pocketproject_config);
 
     let formatted = serde_json::to_string_pretty(&root_val).map_err(|e| e.to_string())?;
     std::fs::write(&target_file, formatted).map_err(|e| e.to_string())?;
@@ -109,101 +106,123 @@ pub(crate) fn install_mcp_to_client(client: String) -> Result<McpInstallResult, 
     })
 }
 
-pub(crate) fn inject_ai_rules() -> Result<McpInstallResult, String> {
-    let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-    let agents_rules = cwd.join(".agents").join("RULES.md");
-    let cursor_rules = cwd.join(".cursorrules");
+/// npm spec configured for PocketProject in a client config, if any.
+fn configured_package_spec(client: &str, config: &serde_json::Value) -> Option<Option<String>> {
+    let entry = if client == "opencode" {
+        config.get("mcp")?.get("pocketproject")?
+    } else {
+        config.get("mcpServers")?.get("pocketproject")?
+    };
+    let parts = if client == "opencode" { entry.get("command") } else { entry.get("args") };
+    let spec = parts
+        .and_then(serde_json::Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(serde_json::Value::as_str)
+        .find(|part| part.starts_with(PACKAGE_NAME))
+        .map(str::to_string);
+    Some(spec)
+}
 
-    let rule_content = r#"
+fn client_status(client: &str) -> Option<McpClientStatus> {
+    let path = client_config_path(client).ok()?;
+    let configured = configured_package_spec(client, &read_json(&path));
+    let package_spec = configured.clone().flatten();
+    Some(McpClientStatus {
+        client: client.to_string(),
+        path: path.to_string_lossy().to_string(),
+        configured: configured.is_some(),
+        up_to_date: package_spec.as_deref() == Some(MCP_PACKAGE_SPEC),
+        package_spec,
+    })
+}
 
-<!-- POCKETPROJECT MCP RULES START -->
-## Directrices Obligatorias de PocketProject Time Tracker (MCP):
-Eres un asistente de software conectado a PocketProject vía Model Context Protocol (MCP).
-Tu objetivo es registrar y gestionar de forma proactiva, exacta y profesional el tiempo dedicado a las tareas.
-
-### 1. Interpretación de Términos Comunes:
-- "Necesito llenar el ticket 11111", "Cargar horas a 11111", "Imputar tiempo en 11111", "Trabajé en el ticket 11111" -> Significa registrar una actividad ('add_activity') asociada al ticket 11111 tras verificar su contexto.
-- "Empezar con el ticket 11111" -> Significa iniciar el cronómetro con 'start_timer'.
-- "Resumen de hoy" o "¿Cómo voy hoy?" -> 'get_today_summary'.
-- "¿Qué registré en el ticket 11111?" -> 'get_ticket_context(ticket: "11111", include_time_entries: true)' o 'search_activities'.
-- "¿Quién soy?", "Información de mi usuario" -> 'get_user_info'.
-- "Listar proyectos", "Ver proyectos" -> 'get_projects'.
-- "Listar estados", "¿Cuáles son los estados de OpenProject?" -> 'get_statuses'.
-- "Cambiar estado del ticket 11111 a [estado]" -> 'update_ticket_status'.
-- "Ver tableros del proyecto", "Columnas del tablero" -> 'get_project_boards' / 'get_board_columns'.
-- "Mover ticket 11111 a la columna [columna]" -> 'move_ticket_column'.
-
-### 2. Protocolo Estricto de Tickets (ANTI-ALUCINACIÓN):
-- **PROHIBIDO INVENTAR TICKETS**: Jamás generes un número de ticket al azar ni asignes un ticket que el usuario no haya escrito textualmente.
-- Si no hay ticket, el campo debe ser omitido o null.
-- Si el usuario menciona un ticket (ej. 11111):
-  1. Ejecuta PRIMERO 'get_ticket_context(ticket: "11111")' (resolución en cascada: Favoritos/Historial local -> OpenProject API en vivo).
-  2. Si 'found: true': Utiliza el título oficial ('subject') y proyecto recuperados para registrar la actividad ('add_activity') o cronómetro ('start_timer').
-  3. Si 'found: false': PREGUNTA AL USUARIO:
-     "No encontré el ticket #11111 en OpenProject ni en favoritos. ¿El Project Manager o encargado ya creó este ticket en el sistema?"
-     - Si el usuario indica que aún no está creado: registra la actividad con ticket null y descripción profesional, indicando que queda pendiente de ticket.
-     - Si el usuario corrige el número: vuelve al paso 1 con el nuevo ticket.
-
-### 3. Herramientas MCP Disponibles:
-1. get_today_summary: Balance del día (horas trabajadas, meta, minutos restantes).
-2. get_ticket_context: Resolución del ticket (título, proyecto, estado, prioridad, asignado, descripción). Banderas: 'include_description' (def: true), 'include_comments' (def: false), 'include_attachments' (def: false), 'include_time_entries' (def: false).
-3. get_ticket_attachment: Descarga y retorna contenido de un archivo/adjunto o imagen. (OBLIGATORIO pedir permiso al usuario).
-4. search_activities: Búsqueda profunda en historial por ticket, descripción o rango de fechas.
-5. search_tickets: Búsqueda unificada en favoritos, historial y OpenProject en vivo.
-6. get_activities: Lista actividades registradas en una fecha.
-7. add_activity: Registra una actividad (autocompleta desde OpenProject o favoritos).
-8. edit_activity: Actualiza descripción, minutos o ticket de una actividad existente.
-9. start_timer: Inicia cronómetro para una tarea activa (pausa el anterior).
-10. stop_timer: Detiene cronómetro activo y consolida minutos.
-11. get_favorite_tickets: Lista tickets favoritos con título y proyecto.
-12. add_favorite_ticket: Guarda un ticket frecuente en favoritos.
-13. get_openproject_context: Información del usuario y configuración OpenProject.
-14. get_user_info: Perfil completo del usuario OpenProject autenticado.
-15. get_projects: Lista y búsqueda de proyectos de OpenProject.
-16. get_statuses: Lista oficial de estados de OpenProject.
-17. update_ticket_status: Actualiza el estado de un ticket en OpenProject.
-18. get_project_boards / get_board_columns: Consulta tableros Kanban y columnas de un proyecto.
-19. move_ticket_column: Mueve un ticket de columna en un tablero y sincroniza su estado.
-
-### 4. Lectura Progresiva de Contexto y Permisos de Archivos:
-- **Lectura Normal de Descripción**: Al consultar un ticket con 'get_ticket_context(ticket: "11111")', se incluye automáticamente la descripción ('include_description: true'). Lee y comprende la descripción para contextualizar la tarea.
-- **Sugerir Lectura de Comentarios**: Tras leer la descripción, sugiere proactivamente al usuario si desea que consultes también los comentarios o notas del ticket:
-  *"He leído la descripción del ticket. ¿Deseas que revise los comentarios para obtener más detalles?"*
-  - Si el usuario lo autoriza o lo pide, ejecuta 'get_ticket_context(ticket: "11111", include_comments: true)'.
-- **Permisos Obligatorios para Archivos y Adjuntos**:
-  - Si el ticket tiene archivos adjuntos o imágenes ('include_attachments: true'), o si necesitas inspeccionar un archivo adjunto con 'get_ticket_attachment':
-  - **NUNCA descargues ni abras un archivo sin el consentimiento explícito del usuario**.
-  - Pide permiso explícito: *"El ticket contiene el archivo adjunto [nombre]. ¿Me autorizas a descargarlo y revisar su contenido?"*
-  - Solo tras la confirmación afirmativa del usuario, ejecuta 'get_ticket_attachment(download_url: "...")'.
-
-### 5. Flujo de Trabajo y Ciclo de Vida del Ticket (Estados y Tableros):
-- **Roles**: El PM crea o se le solicita el ticket. El Responsable supervisa y el Asignado implementa y solventa la tarea.
-- **Inicio y Borrador para el PM**: Al iniciar, si el usuario no tiene número de ticket, pedirle el número o indicarle que lo solicite al PM. Si se le va a pedir al PM, el agente debe ofrecer generarle el borrador en texto con el formato estructurado (Nombre de ticket, Descripción, Tiempo, Fecha Inicio y Fin).
-- **Comprobación de Columnas Reales**: El agente DEBE SIEMPRE extraer y verificar las columnas reales del tablero ('get_board_columns') antes de intentar mover un ticket, sin asumir nombres fijos sin contrastar.
-- **Protección contra cambios concurrentes**: Antes de modificar un estado o mover una tarjeta, consulta 'get_ticket_context' y envía el 'lockVersion' actual como 'lock_version'. Si el stream o lockVersion indica cambios remotos, no reintentes ni descartes el contexto automáticamente; vuelve a consultar y pide confirmación al usuario.
-- **En Desarrollo**: Al trabajar en la tarea, colocar en estado "En desarrollo" y mover a columna real correspondiente ("HACER HOY" o "EN CURSO", consultando al usuario cuál prefiere).
-- **Justificado**: Si el problema no tiene solución técnica viable o es el comportamiento esperado del sistema, estado "Justificado".
-- **Bloqueo / Dependencia**: Si depende de otra tarea para avanzar, estado "En espera" y columna "BLOQUEANTE".
-- **Terminado**: Al finalizar el desarrollo, estado "Desarrollado" y columna "DESARROLLADO".
-- **Prueba Fallida**: Si el ticket está en "Prueba fallida", la solución anterior falló. Investigar leyendo descripción, comentarios y archivos (con permiso).
-- **Cierre / Producción**: Tras superar QA y desplegar a producción sin problemas, el PM o el asignado delegado pasan a estado "Cerrado" y columna "FINALIZADO".
-- **Confirmación Obligatoria**: Ante cualquier duda o transición, PREGUNTAR SIEMPRE al usuario mostrando las opciones disponibles. NUNCA cambiar estados ni mover columnas sin autorización expresa.
-<!-- POCKETPROJECT MCP RULES END -->
-"#;
-
-    let target_file = if agents_rules.exists() {
+/// File the AI rules are injected into inside `dir`: `.agents/RULES.md`, else `.cursorrules`, else `AGENTS.md`.
+fn rules_target_file(dir: &Path) -> PathBuf {
+    let agents_rules = dir.join(".agents").join("RULES.md");
+    let cursor_rules = dir.join(".cursorrules");
+    if agents_rules.exists() {
         agents_rules
     } else if cursor_rules.exists() {
         cursor_rules
     } else {
-        cwd.join("AGENTS.md")
-    };
+        dir.join("AGENTS.md")
+    }
+}
 
-    let existing = std::fs::read_to_string(&target_file).unwrap_or_default();
-    if !existing.contains("POCKETPROJECT MCP RULES") {
-        let mut new_content = existing;
-        new_content.push_str(rule_content);
-        std::fs::write(&target_file, new_content).map_err(|e| e.to_string())?;
+/// Byte range of the PocketProject rules block (start marker to end of the end marker).
+fn rules_block_range(content: &str) -> Option<(usize, usize)> {
+    let start = content.find(RULES_START)?;
+    let end = content[start..].find(RULES_END)? + start + RULES_END.len();
+    Some((start, end))
+}
+
+fn rules_block() -> String {
+    format!(
+        "{} rules-version: {} -->\n## Directrices Obligatorias de PocketProject Time Tracker (MCP)\n\n{}\n{}",
+        RULES_START,
+        mcp_contract::rules_version(),
+        mcp_contract::system_prompt(),
+        RULES_END
+    )
+}
+
+fn is_block_current(block: &str) -> bool {
+    block.contains(&format!("rules-version: {} -->", mcp_contract::rules_version()))
+}
+
+/// Writes the current rules block into `file`, replacing an older one instead of appending a
+/// duplicate. Returns whether the file changed.
+fn write_rules_block(file: &Path) -> Result<bool, String> {
+    let existing = std::fs::read_to_string(file).unwrap_or_default();
+    let new_content = match rules_block_range(&existing) {
+        Some((start, end)) => format!("{}{}{}", &existing[..start], rules_block(), &existing[end..]),
+        None => format!("{}\n\n{}\n", existing.trim_end(), rules_block()).trim_start().to_string(),
+    };
+    if new_content == existing {
+        return Ok(false);
+    }
+    if let Some(parent) = file.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    std::fs::write(file, new_content).map_err(|e| e.to_string())?;
+    Ok(true)
+}
+
+fn read_rules_targets(app: &AppHandle) -> Vec<PathBuf> {
+    std::fs::read_to_string(mcp_contract::app_data_file(app, mcp_contract::RULES_TARGETS_FILE))
+        .ok()
+        .and_then(|raw| serde_json::from_str::<Vec<String>>(&raw).ok())
+        .unwrap_or_default()
+        .into_iter()
+        .map(PathBuf::from)
+        .collect()
+}
+
+fn save_rules_targets(app: &AppHandle, targets: &[PathBuf]) {
+    let list: Vec<String> = targets.iter().map(|p| p.to_string_lossy().to_string()).collect();
+    if let Ok(json) = serde_json::to_string_pretty(&list) {
+        let _ = std::fs::write(mcp_contract::app_data_file(app, mcp_contract::RULES_TARGETS_FILE), json);
+    }
+}
+
+/// Injects the rules into `project_dir` (or the app's working directory, the legacy behaviour)
+/// and registers the file so later prompt changes are applied to it automatically.
+pub(crate) fn inject_ai_rules(app: &AppHandle, project_dir: Option<String>) -> Result<McpInstallResult, String> {
+    let dir = match project_dir.filter(|dir| !dir.trim().is_empty()) {
+        Some(dir) => PathBuf::from(dir),
+        None => std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
+    };
+    if !dir.is_dir() {
+        return Err(format!("La carpeta no existe: {}", dir.to_string_lossy()));
+    }
+    let target_file = rules_target_file(&dir);
+    write_rules_block(&target_file)?;
+
+    let mut targets = read_rules_targets(app);
+    if !targets.contains(&target_file) {
+        targets.push(target_file.clone());
+        save_rules_targets(app, &targets);
     }
 
     Ok(McpInstallResult {
@@ -211,4 +230,83 @@ Tu objetivo es registrar y gestionar de forma proactiva, exacta y profesional el
         path: target_file.to_string_lossy().to_string(),
         message: format!("Reglas inyectadas en {}", target_file.to_string_lossy()),
     })
+}
+
+/// Rewrites every registered rules block that is outdated. Files that no longer exist or no longer
+/// contain a block (the user removed it) are dropped from the registry. Returns how many changed.
+pub(crate) fn refresh_registered_rules(app: &AppHandle) -> usize {
+    let mut targets = read_rules_targets(app);
+    // Legacy: rules injected before the registry existed, in the app's working directory.
+    if let Ok(cwd) = std::env::current_dir() {
+        let legacy = rules_target_file(&cwd);
+        let has_block = std::fs::read_to_string(&legacy).is_ok_and(|c| rules_block_range(&c).is_some());
+        if has_block && !targets.contains(&legacy) {
+            targets.push(legacy);
+        }
+    }
+
+    let mut updated = 0;
+    targets.retain(|file| {
+        let Ok(content) = std::fs::read_to_string(file) else { return false };
+        let Some((start, end)) = rules_block_range(&content) else { return false };
+        if !is_block_current(&content[start..end]) && write_rules_block(file).unwrap_or(false) {
+            updated += 1;
+        }
+        true
+    });
+    save_rules_targets(app, &targets);
+    updated
+}
+
+fn rules_status(app: &AppHandle) -> Vec<McpRulesStatus> {
+    read_rules_targets(app)
+        .into_iter()
+        .map(|path| {
+            let content = std::fs::read_to_string(&path).unwrap_or_default();
+            let block = rules_block_range(&content).map(|(start, end)| &content[start..end]);
+            McpRulesStatus {
+                path: path.to_string_lossy().to_string(),
+                present: block.is_some(),
+                up_to_date: block.is_some_and(is_block_current),
+            }
+        })
+        .collect()
+}
+
+pub(crate) fn status(app: &AppHandle) -> McpStatus {
+    McpStatus {
+        contract: mcp_contract::contract(app),
+        connection: mcp_contract::connection_status(app),
+        clients: SUPPORTED_CLIENTS.iter().filter_map(|client| client_status(client)).collect(),
+        rules: rules_status(app),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn replaces_an_outdated_rules_block_instead_of_duplicating_it() {
+        let dir = std::env::temp_dir().join(format!("pp-rules-test-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("AGENTS.md");
+        std::fs::write(
+            &file,
+            "# Project\n\n<!-- POCKETPROJECT MCP RULES START -->\nold rules\n<!-- POCKETPROJECT MCP RULES END -->\n\nfooter\n",
+        )
+        .unwrap();
+
+        assert!(write_rules_block(&file).unwrap());
+        let content = std::fs::read_to_string(&file).unwrap();
+        assert_eq!(content.matches(RULES_START).count(), 1);
+        assert!(!content.contains("old rules"));
+        assert!(content.starts_with("# Project") && content.ends_with("footer\n"));
+        let (start, end) = rules_block_range(&content).unwrap();
+        assert!(is_block_current(&content[start..end]));
+
+        // Already current: nothing to write.
+        assert!(!write_rules_block(&file).unwrap());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

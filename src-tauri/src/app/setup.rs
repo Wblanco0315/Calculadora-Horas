@@ -4,6 +4,7 @@ use tauri::{App, Manager};
 
 use crate::app::tray;
 use crate::ipc;
+use crate::service::mcp_contract;
 
 pub(crate) fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
     let handle = app.handle();
@@ -12,6 +13,17 @@ pub(crate) fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
     if let Err(e) = ipc::start_ipc_server(handle.clone()) {
         eprintln!("[PocketProject IPC] Failed to start local server: {}", e);
     }
+
+    // Publish the MCP compatibility contract (protocol version + system prompt) for pocketproject-mcp
+    if let Err(e) = mcp_contract::write_contract_file(handle) {
+        eprintln!("[PocketProject MCP] Failed to write contract file: {}", e);
+    }
+
+    // Keep every project's injected AI rules in sync with the prompt of this app version
+    let rules_handle = handle.clone();
+    std::thread::spawn(move || {
+        crate::service::mcp::refresh_registered_rules(&rules_handle);
+    });
 
     // Enable launching at operating system startup. Only release builds register it:
     // `enable()` stores the current executable path, so a dev run (`tauri dev`) would point

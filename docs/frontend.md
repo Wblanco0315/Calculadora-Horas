@@ -45,6 +45,6 @@ Dependency direction inside `openproject/`: every domain service depends on `Ope
 
 Inject only the services a component needs (`workPackageApi`, `boardApi`, …) instead of a single catch-all client.
 
-Module-specific services stay in their module: `modules/setup/services/mcp.service.ts` (MCP install, AI rules, local database info) and `modules/setup/services/setup.service.ts`.
+Module-specific services stay in their module: `modules/setup/services/mcp.service.ts` (MCP install, AI rules, local database info, compatibility contract and status; the system prompt is never copied in the frontend) and `modules/setup/services/setup.service.ts`.
 
 The Rust side is described in [`backend.md`](backend.md).

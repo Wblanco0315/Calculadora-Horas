@@ -32,7 +32,7 @@ src-tauri/src/
 │   ├── config.rs           App configuration, database path
 │   ├── connection.rs       Connection test, current user id
 │   ├── favorite_ticket.rs  Favorite tickets
-│   ├── mcp.rs              MCP client install, AI rules injection
+│   ├── mcp.rs              MCP client install, AI rules injection, MCP contract/status
 │   ├── project.rs          Projects, versions, statuses
 │   ├── report.rs           Time-cost report entries
 │   ├── ticket.rs           Ticket info and full ticket context
@@ -43,7 +43,8 @@ src-tauri/src/
 │   ├── board.rs            Board discovery and column/query loading
 │   ├── board_move.rs       Column move + query order delta (build_query_order_delta)
 │   ├── connection.rs
-│   ├── mcp.rs              MCP config injection into AI clients, AI rules text
+│   ├── mcp.rs              MCP config injection into AI clients, versioned AI rules block per project (registered and refreshed on startup), client/rules status
+│   ├── mcp_contract.rs     App <-> pocketproject-mcp contract: protocol version, min MCP version, package spec, single system prompt (resources/mcp/system-prompt.md)
 │   ├── project.rs
 │   ├── report.rs           Paged time-cost report loading
 │   ├── ticket.rs           fetch_ticket_info
@@ -128,3 +129,7 @@ rewriting their logic: `service::ticket_context::fetch_ticket_context`,
 and `service::time_entry::fetch_time_entry_activities`. The allowed-status lookup from the work
 package form is duplicated in `service::ticket` and `service::ticket_context`, so it is a good
 first candidate for a shared helper.
+
+## Resources
+
+- `src-tauri/resources/mcp/system-prompt.md`: the only copy of the AI system prompt. Embedded with `include_str!` in `service/mcp_contract.rs`, published in `mcp-contract.json` on startup and exposed through `get_mcp_contract`. See `docs/MCP_INTEGRATION.md` (sections 4 and 5) for the compatibility contract.

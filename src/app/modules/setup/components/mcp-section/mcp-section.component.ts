@@ -18,6 +18,7 @@ import {
   tablerClock,
 } from '@ng-icons/tabler-icons';
 import { McpService } from '../../services/mcp.service';
+import { McpStatusComponent } from '../mcp-status/mcp-status.component';
 import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 
 export type McpClientType = 'quick_setup' | 'antigravity' | 'agy_cli' | 'cursor' | 'claude_desktop' | 'claude_code';
@@ -25,7 +26,7 @@ export type McpClientType = 'quick_setup' | 'antigravity' | 'agy_cli' | 'cursor'
 @Component({
   selector: 'app-mcp-section',
   standalone: true,
-  imports: [CommonModule, ButtonDirective, Tabs, TabList, Tab, NgIcon, TranslatePipe],
+  imports: [CommonModule, ButtonDirective, Tabs, TabList, Tab, NgIcon, TranslatePipe, McpStatusComponent],
   viewProviders: [
     provideIcons({
       tablerRobot,
@@ -62,77 +63,9 @@ export class McpSectionComponent implements OnInit {
   readonly copiedSnippet = signal<boolean>(false);
   readonly copiedPrompt = signal<boolean>(false);
 
-  readonly aiSystemPrompt = `# Instrucciones de Integración: PocketProject Time Tracker (MCP)
-
-Eres un asistente de ingeniería de software conectado a PocketProject vía Model Context Protocol (MCP).
-Tu objetivo es registrar y gestionar de forma proactiva, exacta y profesional el tiempo dedicado a las tareas.
-
-### 1. Interpretación de Términos Comunes:
-- "Necesito llenar el ticket 11111", "Cargar horas a 11111", "Imputar tiempo en 11111", "Trabajé en el ticket 11111" -> Significa registrar una actividad ('add_activity') asociada al ticket 11111 tras verificar su contexto.
-- "Empezar con el ticket 11111" -> Iniciar el cronómetro con 'start_timer'.
-- "¿Cómo voy hoy?" o "Resumen de horas" -> 'get_today_summary'.
-- "¿Qué registré en el ticket 11111?" -> 'get_ticket_context(ticket: "11111", include_time_entries: true)' o 'search_activities'.
-- "¿Quién soy?", "Información de mi usuario" -> 'get_user_info'.
-- "Listar proyectos", "Ver proyectos" -> 'get_projects'.
-- "Listar estados", "¿Cuáles son los estados?" -> 'get_statuses'.
-- "Cambiar estado del ticket 11111 a [estado]" -> 'update_ticket_status'.
-- "Ver tableros del proyecto", "Columnas del tablero" -> 'get_project_boards' / 'get_board_columns'.
-- "Mover ticket 11111 a la columna [columna]" -> 'move_ticket_column'.
-
-### 2. Protocolo Estricto de Tickets (ANTI-ALUCINACIÓN):
-- PROHIBIDO INVENTAR NÚMEROS DE TICKET: Jamás asumas o inventes un ticket que el usuario no haya escrito textualmente.
-- Si no hay ticket, el campo debe ser omitido o null.
-- Si el usuario menciona un ticket (ej. 11111):
-  1. Ejecuta PRIMERO 'get_ticket_context(ticket: "11111")' (resolución en cascada: Favoritos/Historial local -> OpenProject API en vivo).
-  2. Si 'found: true': Utiliza el título oficial ('subject') y proyecto recuperados para registrar la actividad ('add_activity') o cronómetro ('start_timer').
-  3. Si 'found: false': PREGUNTA AL USUARIO:
-     "No encontré el ticket #11111 en OpenProject ni en favoritos. ¿El Project Manager o encargado ya creó este ticket en el sistema?"
-     - Si indica que aún no está creado: registra la actividad con ticket null y descripción profesional, marcando que queda pendiente de ticket.
-     - Si corrige el número: repite la consulta con el nuevo número.
-
-### 3. Herramientas MCP Disponibles:
-1. get_today_summary: Balance del día (horas trabajadas, meta, minutos restantes).
-2. get_ticket_context: Resolución del ticket (título, proyecto, estado, prioridad, asignado, descripción). Banderas: 'include_description' (def: true), 'include_comments' (def: false), 'include_attachments' (def: false), 'include_time_entries' (def: false).
-3. get_ticket_attachment: Descarga y retorna contenido de un archivo/adjunto o imagen. (OBLIGATORIO pedir permiso al usuario).
-4. search_activities: Búsqueda profunda en historial por ticket, descripción o rango de fechas.
-5. search_tickets: Búsqueda unificada en favoritos, historial y OpenProject en vivo.
-6. get_activities: Lista actividades registradas en una fecha.
-7. add_activity: Registra una actividad (autocompleta desde OpenProject o favoritos).
-8. edit_activity: Actualiza descripción, minutos o ticket de una actividad existente.
-9. start_timer: Inicia cronómetro para una tarea activa (pausa el anterior).
-10. stop_timer: Detiene cronómetro activo y consolida minutos.
-11. get_favorite_tickets: Lista tickets favoritos con título y proyecto.
-12. add_favorite_ticket: Guarda un ticket frecuente en favoritos.
-13. get_openproject_context: Información del usuario y configuración OpenProject.
-14. get_user_info: Perfil completo del usuario OpenProject autenticado.
-15. get_projects: Lista y búsqueda de proyectos de OpenProject.
-16. get_statuses: Lista oficial de estados de OpenProject.
-17. update_ticket_status: Actualiza el estado de un ticket en OpenProject.
-18. get_project_boards / get_board_columns: Consulta tableros Kanban y columnas de un proyecto.
-19. move_ticket_column: Mueve un ticket de columna en un tablero y sincroniza su estado.
-
-### 4. Lectura Progresiva de Contexto y Permisos de Archivos:
-- **Lectura Normal de Descripción**: Al consultar un ticket con 'get_ticket_context(ticket: "11111")', el servidor retorna por defecto la descripción del ticket ('include_description: true'). Lee y comprende la descripción para contextualizar la tarea.
-- **Sugerir Lectura de Comentarios**: Tras leer la descripción, sugiere proactivamente al usuario si desea que consultes también los comentarios o notas del ticket:
-  *"He leído la descripción del ticket. ¿Deseas que revise los comentarios para obtener más detalles?"*
-  - Si el usuario lo autoriza o lo pide, ejecuta 'get_ticket_context(ticket: "11111", include_comments: true)'.
-- **Permisos Obligatorios para Archivos y Adjuntos**:
-  - Si el ticket tiene archivos adjuntos o imágenes ('include_attachments: true'), o si necesitas inspeccionar un archivo adjunto con 'get_ticket_attachment':
-  - **NUNCA descargues ni abras un archivo sin el consentimiento explícito del usuario**.
-  - Pide permiso explícito: *"El ticket contiene el archivo adjunto [nombre]. ¿Me autorizas a descargarlo y revisar su contenido?"*
-  - Solo tras la confirmación afirmativa del usuario, ejecuta 'get_ticket_attachment(download_url: "...")'.
-
-### 5. Flujo de Trabajo y Ciclo de Vida del Ticket (Estados y Tableros):
-- **Roles**: El PM crea o se le solicita el ticket. El Responsable supervisa y el Asignado implementa y solventa la tarea.
-- **Inicio y Borrador para el PM**: Al iniciar, si el usuario no tiene número de ticket, pedirle el número o indicarle que lo solicite al PM. Si se le va a pedir al PM, el agente debe ofrecer generarle el borrador en texto con el formato estructurado (Nombre de ticket, Descripción, Tiempo, Fecha Inicio y Fin).
-- **Comprobación de Columnas Reales**: El agente DEBE SIEMPRE extraer y verificar las columnas reales del tablero ('get_board_columns') antes de intentar mover un ticket, sin asumir nombres fijos sin contrastar.
-- **En Desarrollo**: Al trabajar en la tarea, colocar en estado "En desarrollo" y mover a columna real correspondiente ("HACER HOY" o "EN CURSO", consultando al usuario cuál prefiere).
-- **Justificado**: Si el problema no tiene solución técnica viable o es el comportamiento esperado del sistema, estado "Justificado".
-- **Bloqueo / Dependencia**: Si depende de otra tarea para avanzar, estado "En espera" y columna "BLOQUEANTE".
-- **Terminado**: Al finalizar el desarrollo, estado "Desarrollado" y columna "DESARROLLADO".
-- **Prueba Fallida**: Si el ticket está en "Prueba fallida", la solución anterior falló. Investigar leyendo descripción, comentarios y archivos (con permiso).
-- **Cierre / Producción**: Tras superar QA y desplegar a producción sin problemas, el PM o el asignado delegado pasan a estado "Cerrado" y columna "FINALIZADO".
-- **Confirmación Obligatoria**: Ante cualquier duda o transición, PREGUNTAR SIEMPRE al usuario mostrando las opciones disponibles. NUNCA cambiar estados ni mover columnas sin autorización expresa.`;
+  /** Single AI system prompt and npm spec, both from the app's MCP contract. */
+  readonly rules = signal<string>('');
+  readonly packageSpec = signal<string>('pocketproject-mcp@1');
 
   async ngOnInit(): Promise<void> {
     const path = await this.mcpService.getDatabasePath();
@@ -140,6 +73,12 @@ Tu objetivo es registrar y gestionar de forma proactiva, exacta y profesional el
 
     const count = await this.mcpService.getAiStats();
     this.aiActivitiesCount.set(count);
+
+    const contract = await this.mcpService.getContract();
+    if (contract) {
+      this.rules.set(contract.rules);
+      this.packageSpec.set(contract.packageSpec);
+    }
   }
 
   selectClient(client: unknown): void {
@@ -182,7 +121,7 @@ Tu objetivo es registrar y gestionar de forma proactiva, exacta y profesional el
 
     switch (client) {
       case 'quick_setup':
-        return `npx -y pocketproject-mcp setup`;
+        return `npx -y ${this.packageSpec()} setup`;
 
       case 'antigravity':
         return JSON.stringify(
@@ -190,7 +129,7 @@ Tu objetivo es registrar y gestionar de forma proactiva, exacta y profesional el
             mcpServers: {
               pocketproject: {
                 command: 'npx',
-                args: ['-y', 'pocketproject-mcp'],
+                args: ['-y', this.packageSpec()],
               },
             },
           },
@@ -199,7 +138,7 @@ Tu objetivo es registrar y gestionar de forma proactiva, exacta y profesional el
         );
 
       case 'agy_cli':
-        return `agy mcp add pocketproject -- npx -y pocketproject-mcp`;
+        return `agy mcp add pocketproject -- npx -y ${this.packageSpec()}`;
 
       case 'cursor':
         return JSON.stringify(
@@ -207,7 +146,7 @@ Tu objetivo es registrar y gestionar de forma proactiva, exacta y profesional el
             mcpServers: {
               pocketproject: {
                 command: 'npx',
-                args: ['-y', 'pocketproject-mcp'],
+                args: ['-y', this.packageSpec()],
               },
             },
           },
@@ -221,7 +160,7 @@ Tu objetivo es registrar y gestionar de forma proactiva, exacta y profesional el
             mcpServers: {
               pocketproject: {
                 command: 'npx',
-                args: ['-y', 'pocketproject-mcp'],
+                args: ['-y', this.packageSpec()],
               },
             },
           },
@@ -230,7 +169,7 @@ Tu objetivo es registrar y gestionar de forma proactiva, exacta y profesional el
         );
 
       case 'claude_code':
-        return `claude mcp add -s user pocketproject -- npx -y pocketproject-mcp`;
+        return `claude mcp add -s user pocketproject -- npx -y ${this.packageSpec()}`;
     }
   }
 
@@ -254,11 +193,14 @@ Tu objetivo es registrar y gestionar de forma proactiva, exacta y profesional el
   }
 
   async autoInjectRules(): Promise<void> {
+    const projectDir = await this.mcpService.pickProjectFolder();
+    if (!projectDir) return;
+
     this.isInjectingRules.set(true);
     this.injectFeedback.set(null);
 
     try {
-      const res = await this.mcpService.injectAiRules();
+      const res = await this.mcpService.injectAiRules(projectDir);
       if (res.success) {
         this.injectFeedback.set(res.message);
       } else {
@@ -289,7 +231,7 @@ Tu objetivo es registrar y gestionar de forma proactiva, exacta y profesional el
 
   async copyPrompt(): Promise<void> {
     try {
-      await navigator.clipboard.writeText(this.aiSystemPrompt);
+      await navigator.clipboard.writeText(this.rules());
       this.copiedPrompt.set(true);
       setTimeout(() => this.copiedPrompt.set(false), 2000);
     } catch {}

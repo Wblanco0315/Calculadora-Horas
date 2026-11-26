@@ -15,7 +15,7 @@ src/app/modules/setting/
 │   ├── user-section/
 │   │   └── user-section.component.ts       # Sección 'User': datos de perfil y gestión de horario
 │   ├── system-section/
-│   │   └── system-section.component.ts     # Sección 'System': apariencia, idioma, OpenProject y actualizaciones
+│   │   └── system-section.component.ts     # Sección 'System': apariencia, idioma, OpenProject, actualizaciones y compatibilidad MCP (`app-mcp-status` del módulo setup)
 │   └── user-card/
 │       └── user-card.component.{ts,html}   # Tarjeta de perfil (solo la usa la sección User)
 ├── pages/

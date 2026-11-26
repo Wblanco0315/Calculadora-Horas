@@ -16,12 +16,14 @@ src/app/modules/setup/
 │   ├── schedule-step/        # Paso 2: Configuración de Jornada y Horario
 │   ├── lunch-step/           # Paso 3: Tiempo de Almuerzo / Descanso
 │   ├── openproject-step/     # Paso 4: Conexión con la API de OpenProject
-│   └── mcp-section/          # Integración MCP (usa `McpService`)
+│   ├── mcp-section/          # Integración MCP (usa `McpService`); el prompt viene de `get_mcp_contract`
+│   └── mcp-status/           # Panel de compatibilidad MCP (también en Configuración → Sistema)
 ├── interfaces/
+│   ├── mcp.interface.ts      # Contrato y estado de compatibilidad MCP
 │   └── setup.interface.ts    # Modelos y contratos de UI del wizard
 ├── services/
 │   ├── setup.service.ts      # Estado centralizado del wizard (Signals)
-│   └── mcp.service.ts        # MCP: ruta de la base local, estadísticas IA, instalación en clientes y reglas IA
+│   └── mcp.service.ts        # MCP: base local, estadísticas IA, instalación en clientes, reglas IA, contrato y estado de compatibilidad
 ├── pages/
 │   └── setup/setup.page.{ts,html,css}  # Smart component controlador del flujo
 └── setup.routes.ts           # Configuración de rutas lazy-loaded
