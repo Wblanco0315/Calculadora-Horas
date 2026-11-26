@@ -495,7 +495,6 @@ export const es = {
   project: {
     title: 'Proyectos',
     searchPlaceholder: 'Buscar proyecto o identificador...',
-    viewBoards: 'Ver tableros',
     empty: 'No se encontraron proyectos en OpenProject.',
   },
   board: {

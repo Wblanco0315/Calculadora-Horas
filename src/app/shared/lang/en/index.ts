@@ -495,7 +495,6 @@ export const en = {
   project: {
     title: 'Projects',
     searchPlaceholder: 'Search project or identifier...',
-    viewBoards: 'View boards',
     empty: 'No projects found in OpenProject.',
   },
   board: {
