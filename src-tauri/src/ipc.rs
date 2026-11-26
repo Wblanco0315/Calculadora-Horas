@@ -8,13 +8,13 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct IpcInfo {
+pub(crate) struct IpcInfo {
     pub port: u16,
     pub token: String,
     pub pid: u32,
 }
 
-pub fn get_ipc_file_path(app: &AppHandle) -> PathBuf {
+pub(crate) fn get_ipc_file_path(app: &AppHandle) -> PathBuf {
     let app_dir = app
         .path()
         .app_data_dir()
@@ -25,14 +25,14 @@ pub fn get_ipc_file_path(app: &AppHandle) -> PathBuf {
     app_dir.join("ipc.json")
 }
 
-pub fn cleanup_ipc_file(app: &AppHandle) {
+pub(crate) fn cleanup_ipc_file(app: &AppHandle) {
     let path = get_ipc_file_path(app);
     if path.exists() {
         let _ = fs::remove_file(path);
     }
 }
 
-pub fn start_ipc_server(app: AppHandle) -> Result<IpcInfo, String> {
+pub(crate) fn start_ipc_server(app: AppHandle) -> Result<IpcInfo, String> {
     let listener = TcpListener::bind("127.0.0.1:0")
         .map_err(|e| format!("Failed to bind local IPC listener: {}", e))?;
     let port = listener.local_addr().map_err(|e| e.to_string())?.port();
