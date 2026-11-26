@@ -33,6 +33,7 @@ import {
   tablerSearch,
   tablerTicket,
   tablerLoader2,
+  tablerClockHour4,
 } from '@ng-icons/tabler-icons';
 import { StorageService } from '../../../core/services/storage.service';
 import { ThemeService } from '../../../core/services/theme.service';
@@ -103,6 +104,7 @@ export interface NavGroup {
       tablerSearch,
       tablerTicket,
       tablerLoader2,
+      tablerClockHour4,
     }),
   ],
   templateUrl: './dashboard.page.html',
@@ -223,6 +225,8 @@ export class DashboardPage implements OnInit, OnDestroy {
     const match = /^\/dashboard\/boards\/([^/]+)(?:\/([^/]+))?/.exec(path);
     return match ? { projectId: decodeURIComponent(match[1]), boardId: match[2] ? decodeURIComponent(match[2]) : null } : null;
   });
+
+  readonly isTimeEntries = computed(() => this.currentUrl().startsWith('/dashboard/time-entries'));
 
   readonly isReports = computed(() => this.currentUrl().startsWith('/dashboard/reports'));
 
@@ -347,6 +351,8 @@ export class DashboardPage implements OnInit, OnDestroy {
           label: this.languageService.t('settings.tabSystem'),
         });
       }
+    } else if (this.isTimeEntries()) {
+      items.push({ label: this.languageService.t('timeEntry.title') });
     } else if (this.isReports()) {
       items.push({
         label: this.languageService.t('report.title'),
@@ -387,6 +393,13 @@ export class DashboardPage implements OnInit, OnDestroy {
             label: this.languageService.t('dashboard.overview'),
             isActive: this.isOverview(),
             action: () => this.navigateTo('/dashboard/overview'),
+          },
+          {
+            id: 'timeEntries',
+            icon: 'tablerClockHour4',
+            label: this.languageService.t('timeEntry.title'),
+            isActive: this.isTimeEntries(),
+            action: () => this.navigateTo('/dashboard/time-entries'),
           },
           {
             id: 'compact',

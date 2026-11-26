@@ -28,6 +28,12 @@ import {
 } from '@ng-icons/tabler-icons';
 import { Activity } from '../../../core/interfaces/activity.interface';
 import { ActivityService } from '../../../core/services/activity.service';
+import {
+  ActivitySort,
+  ActivityStatusFilter,
+  filterActivities,
+  hasActiveActivityFilters,
+} from '../../../core/utils/activity-filter.util';
 import { WindowService } from '../../../core/services/window.service';
 import { StorageService } from '../../../core/services/storage.service';
 import { LanguageService } from '../../../core/services/language.service';
@@ -100,8 +106,8 @@ export class CompactPage implements OnInit {
   // Filter signals
   readonly searchQuery = signal<string>('');
   readonly filterProject = signal<string>('');
-  readonly sortBy = signal<'none' | 'time-desc' | 'time-asc'>('none');
-  readonly filterStatus = signal<'all' | 'synced' | 'unsynced'>('all');
+  readonly sortBy = signal<ActivitySort>('none');
+  readonly filterStatus = signal<ActivityStatusFilter>('all');
   readonly isSyncingAll = computed<boolean>(() => this.activityService.isSyncing());
 
   readonly currentUserName = computed<string>(() => {
@@ -138,9 +144,14 @@ export class CompactPage implements OnInit {
     this.activityService.setDate(`${year}-${month}-${day}`);
   }
 
-  readonly hasActiveFilters = computed<boolean>(() => {
-    return !!this.filterProject() || this.sortBy() !== 'none' || this.filterStatus() !== 'all' || !!this.searchQuery().trim();
-  });
+  private readonly filterCriteria = computed(() => ({
+    query: this.searchQuery(),
+    projectId: this.filterProject(),
+    status: this.filterStatus(),
+    sort: this.sortBy(),
+  }));
+
+  readonly hasActiveFilters = computed<boolean>(() => hasActiveActivityFilters(this.filterCriteria()));
 
   readonly projectFilterOptions = computed(() => {
     return [
@@ -165,44 +176,9 @@ export class CompactPage implements OnInit {
     ];
   });
 
-  readonly filteredActivities = computed<Activity[]>(() => {
-    let list = this.activityService.dailyActivities();
-
-    // 1. Search Query filter (by ticket, name or ticketTitle)
-    const q = this.searchQuery().trim().toLowerCase();
-    if (q) {
-      list = list.filter((a) => {
-        const matchesName = a.name.toLowerCase().includes(q);
-        const matchesTicket = a.ticket ? a.ticket.toLowerCase().includes(q) : false;
-        const matchesTitle = a.ticketTitle ? a.ticketTitle.toLowerCase().includes(q) : false;
-        return matchesName || matchesTicket || matchesTitle;
-      });
-    }
-
-    // 2. Project filter
-    const proj = this.filterProject();
-    if (proj) {
-      list = list.filter((a) => a.projectId === proj);
-    }
-
-    // 3. Status filter
-    const status = this.filterStatus();
-    if (status === 'synced') {
-      list = list.filter((a) => a.synced);
-    } else if (status === 'unsynced') {
-      list = list.filter((a) => !a.synced);
-    }
-
-    // 4. Sort
-    const sort = this.sortBy();
-    if (sort === 'time-desc') {
-      list = [...list].sort((a, b) => (b.minutes || 0) - (a.minutes || 0));
-    } else if (sort === 'time-asc') {
-      list = [...list].sort((a, b) => (a.minutes || 0) - (b.minutes || 0));
-    }
-
-    return list;
-  });
+  readonly filteredActivities = computed<Activity[]>(() =>
+    filterActivities(this.activityService.dailyActivities(), this.filterCriteria())
+  );
 
   ngOnInit(): void {
     this.activityService.loadActivities(this.activityService.selectedDate()).catch(() => {});

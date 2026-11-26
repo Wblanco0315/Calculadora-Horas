@@ -501,6 +501,14 @@ export const es = {
     searchPlaceholder: 'Buscar proyecto o identificador...',
     empty: 'No se encontraron proyectos en OpenProject.',
   },
+  timeEntry: {
+    title: 'Registro de tiempo',
+    dailyGoal: 'Meta del día',
+    dayOff: 'Día no laboral',
+    pendingSync: 'Pendiente por sincronizar',
+    entriesCount: '{count} registros',
+    syncAll: 'Sincronizar todo',
+  },
   board: {
     searchPlaceholder: 'Buscar ticket o #ID...',
     filterAssignee: 'Filtrar por asignado',

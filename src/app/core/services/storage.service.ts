@@ -104,6 +104,24 @@ export class StorageService {
   });
 
   /**
+   * Expected work target in minutes for any date (0 on days off), using the same rules as `maxDailyMinutes`.
+   */
+  targetMinutesFor(date: Date): number {
+    const sched = this.config().schedule || DEFAULT_WORK_SCHEDULE;
+    const jsDay = date.getDay();
+    const day = sched.days.find((d) => d.day === (jsDay === 0 ? 7 : jsDay));
+    if (day && !day.enabled) return 0;
+
+    const customMin = this.config().min_daily_minutes;
+    if (typeof customMin === 'number' && customMin > 0) return customMin;
+    if (day) return calculateWorkMinutes(day.entry_time, day.exit_time, day.lunch_minutes);
+
+    const current = this.config();
+    if (!current.entry_time || !current.exit_time) return 480;
+    return calculateWorkMinutes(current.entry_time, current.exit_time, current.lunch_minutes);
+  }
+
+  /**
    * Weekly total target in minutes across all active days
    */
   readonly weeklyTotalMinutes = computed<number>(() => {

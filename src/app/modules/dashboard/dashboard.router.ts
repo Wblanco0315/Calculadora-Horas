@@ -17,6 +17,11 @@ export const dashboardRoutes: Routes = [
           import('../overview/overview.router').then((m) => m.overviewRoutes),
       },
       {
+        path: 'time-entries',
+        loadChildren: () =>
+          import('../time-entry/time-entry.router').then((m) => m.timeEntryRoutes),
+      },
+      {
         path: 'projects',
         loadChildren: () =>
           import('../project/project.router').then((m) => m.projectRoutes),

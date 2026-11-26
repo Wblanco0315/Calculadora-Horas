@@ -197,3 +197,7 @@ La barra de navegación inferior (`<nav>`) de 3 posiciones permite la conmutaci�
 - **Modales Limpios sin Descripciones Redundantes**: Cada modal presenta un encabezado limpio y directo con solo su icono y título, omitiendo párrafos descriptivos y subtítulos innecesarios conforme a las directrices del proyecto.
 - **Soporte Completo de i18n / Bilingüe**: Todos los textos, etiquetas, placeholders, mensajes de estado y tooltips del modo compacto consumen las cadenas del diccionario a través de `TranslatePipe` (`| translate`) y `LanguageService`.
 - **Verificación**: Compilado y verificado sin errores mediante `bun run build` y `cargo check`.
+
+
+## Filtrado compartido
+- El filtrado y orden de la lista (`filteredActivities`, `hasActiveFilters`) usan `core/utils/activity-filter.util.ts`, compartido con la vista completa `/dashboard/time-entries` (módulo `time-entry`).
