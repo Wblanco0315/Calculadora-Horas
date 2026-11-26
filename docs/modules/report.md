@@ -21,6 +21,9 @@ Provides a full-page time and cost report for OpenProject work packages. It supp
 - Entries can be edited only when their OpenProject user ID matches the authenticated user; the OpenProject API enforces the final permission.
 - OpenProject's standard time-entry API omits per-entry calculated monetary labor costs. The page shows package-level labor/material/overall totals when returned under the current permissions and links to the official descendant-inclusive cost report for its exact per-entry calculations.
 
+## OpenProject Date Filter
+- The spent-on range is sent as one `spent_on` filter with the date operator `<>d` (between) and values `[from, to]`; either bound may be empty. OpenProject rejects `>=` / `<=` on date filters with `400 InvalidQuery`, which used to make every date-filtered query return no entries. The same rule applies in the Rust service (`spent_on_filter`), `TimeEntryApiService` and the MCP `get_time_cost_report`.
+
 ## Reactive State & Services
 - Signals: report filter values, activity/project options, result entries, group rows, aggregate cost summary, loading/error state, and time-entry edit form state.
 - Services: `TimeEntryApiService`, `ProjectApiService`, `WorkPackageApiService`, `OpenprojectService`, `ActivatedRoute`, `Router`, and the corresponding Tauri commands for desktop API access.

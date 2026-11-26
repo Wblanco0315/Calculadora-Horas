@@ -45,11 +45,8 @@ pub(crate) async fn load_time_cost_report_entries(
             "activity_id": { "operator": "=", "values": [activity_id] }
         }));
     }
-    if let Some(spent_on_from) = filter.spent_on_from.as_deref().filter(|value| !value.trim().is_empty()) {
-        filters.push(serde_json::json!({ "spent_on": { "operator": ">=", "values": [spent_on_from] } }));
-    }
-    if let Some(spent_on_to) = filter.spent_on_to.as_deref().filter(|value| !value.trim().is_empty()) {
-        filters.push(serde_json::json!({ "spent_on": { "operator": "<=", "values": [spent_on_to] } }));
+    if let Some(spent_on) = spent_on_filter(filter.spent_on_from.as_deref(), filter.spent_on_to.as_deref()) {
+        filters.push(spent_on);
     }
 
     let endpoint = format!("{}/api/v3/time_entries", clean_url);
@@ -101,4 +98,33 @@ pub(crate) async fn load_work_package_time_entries(
         },
     )
     .await
+}
+
+/// OpenProject date filters only accept date operators (`>=`/`<=` are rejected with 400
+/// InvalidQuery): `<>d` is "between" and takes `[from, to]`, where either bound may be empty.
+fn spent_on_filter(from: Option<&str>, to: Option<&str>) -> Option<serde_json::Value> {
+    let from = from.map(str::trim).unwrap_or("");
+    let to = to.map(str::trim).unwrap_or("");
+    if from.is_empty() && to.is_empty() {
+        return None;
+    }
+    Some(serde_json::json!({ "spent_on": { "operator": "<>d", "values": [from, to] } }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::spent_on_filter;
+
+    #[test]
+    fn builds_a_between_date_filter() {
+        assert_eq!(spent_on_filter(None, Some(" ")), None);
+        assert_eq!(
+            spent_on_filter(Some("2026-08-26"), None).unwrap().to_string(),
+            r#"{"spent_on":{"operator":"<>d","values":["2026-08-26",""]}}"#
+        );
+        assert_eq!(
+            spent_on_filter(Some("2026-08-26"), Some("2026-11-26")).unwrap()["spent_on"]["values"][1],
+            "2026-11-26"
+        );
+    }
 }

@@ -400,8 +400,10 @@ export class TimeEntryApiService {
       if (queryFilter.projectId) filters.push({ project_id: { operator: '=', values: [queryFilter.projectId] } });
       if (queryFilter.userId) filters.push({ user_id: { operator: '=', values: [queryFilter.userId] } });
       if (queryFilter.activityId) filters.push({ activity_id: { operator: '=', values: [queryFilter.activityId] } });
-      if (queryFilter.spentOnFrom) filters.push({ spent_on: { operator: '>=', values: [queryFilter.spentOnFrom] } });
-      if (queryFilter.spentOnTo) filters.push({ spent_on: { operator: '<=', values: [queryFilter.spentOnTo] } });
+      // OpenProject date filters reject >= / <=; "<>d" (between) takes [from, to] with optional empty bounds.
+      if (queryFilter.spentOnFrom || queryFilter.spentOnTo) {
+        filters.push({ spent_on: { operator: '<>d', values: [queryFilter.spentOnFrom || '', queryFilter.spentOnTo || ''] } });
+      }
 
       const filterJson = JSON.stringify(filters);
       const entries: Array<Record<string, any>> = [];
