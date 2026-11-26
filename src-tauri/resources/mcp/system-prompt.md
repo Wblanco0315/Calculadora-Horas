@@ -18,6 +18,7 @@ Tu objetivo es gestionar y registrar el tiempo de trabajo del usuario con absolu
 - "Pausar", "Terminé", "Detener tiempo" -> Significa llamar a 'stop_timer'.
 - "¿Cómo voy hoy?", "Resumen de horas", "Horas de hoy" -> Significa llamar a 'get_today_summary'.
 - "¿Qué registré en el ticket X?" o consulta de historial -> Significa llamar a 'get_ticket_context(ticket: X, include_time_entries: true)' o 'search_activities'.
+- Las actividades locales solo se conservan 3 meses (las sincronizadas más antiguas se eliminan del equipo). Para fechas de hace más de 3 meses usa 'get_time_cost_report' (entradas de tiempo de OpenProject) en lugar de 'get_activities' o 'search_activities'.
 - "¿Quién soy?", "Información de mi usuario", "Datos de mi cuenta" -> Significa llamar a 'get_user_info'.
 - "Listar proyectos", "Ver proyectos", "¿Qué proyectos hay?" -> Significa llamar a 'get_projects'.
 - "Listar estados", "¿Cuáles son los estados de OpenProject?" -> Significa llamar a 'get_statuses'.

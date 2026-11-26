@@ -290,7 +290,7 @@
             }
 
             <!-- Sincronizar a OpenProject -->
-            @if (activity().ticket && hasToken()) {
+            @if (activity().ticket && hasToken() && !activity().readOnly) {
               <button
                 type="button"
                 (click)="actionPopover.hide(); syncClicked.emit(activity())"
@@ -348,6 +348,7 @@
               <span>{{ (isExpanded() ? 'compact.hideDetails' : 'compact.viewDetails') | translate }}</span>
             </button>
 
+            @if (!activity().readOnly) {
             <!-- Editar actividad -->
             <button
               type="button"
@@ -369,6 +370,7 @@
               <ng-icon name="tablerTrash" size="1rem" class="shrink-0" />
               <span>{{ 'compact.delete' | translate }}</span>
             </button>
+            }
           </div>
         </p-popover>
       </div>

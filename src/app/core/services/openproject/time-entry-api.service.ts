@@ -346,6 +346,8 @@ export class TimeEntryApiService {
     return elements.map((entry) => {
       const userHref = String(entry['_links']?.['user']?.['href'] || '');
       const activityHref = String(entry['_links']?.['activity']?.['href'] || '');
+      const projectHref = String(entry['_links']?.['project']?.['href'] || '');
+      const workPackageHref = String(entry['_links']?.['entity']?.['href'] || entry['_links']?.['workPackage']?.['href'] || '');
       return {
         id: String(entry['id']),
         hours: String(entry['hours'] || 'PT0H'),
@@ -356,7 +358,9 @@ export class TimeEntryApiService {
         userName: String(entry['_links']?.['user']?.['title'] || 'Usuario'),
         activityName: String(entry['_links']?.['activity']?.['title'] || ''),
         activityId: activityHref.split('/').filter(Boolean).pop() || null,
+        projectId: projectHref.split('/').filter(Boolean).pop() || null,
         projectName: entry['_links']?.['project']?.['title'] || null,
+        workPackageId: workPackageHref.split('/').filter(Boolean).pop() || null,
         workPackageName: entry['_links']?.['entity']?.['title'] || entry['_links']?.['workPackage']?.['title'] || null,
         registeredByName: entry['_links']?.['author']?.['title'] || entry['_links']?.['user']?.['title'] || null,
         costs: entry['costs'] ?? entry['overallCosts'] ?? null,

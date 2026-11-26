@@ -14,7 +14,11 @@ pub(crate) struct PlatformTimeEntryItem {
     pub user_name: String,
     pub activity_name: String,
     pub activity_id: Option<String>,
+    #[serde(default)]
+    pub project_id: Option<String>,
     pub project_name: Option<String>,
+    #[serde(default)]
+    pub work_package_id: Option<String>,
     pub work_package_name: Option<String>,
     pub registered_by_name: Option<String>,
     pub costs: Option<String>,

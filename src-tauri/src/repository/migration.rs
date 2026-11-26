@@ -64,6 +64,8 @@ pub(crate) fn init_tables(conn: &Connection) -> Result<()> {
     let _ = conn.execute("ALTER TABLE activities ADD COLUMN timer_last_started INTEGER", []);
     let _ = conn.execute("ALTER TABLE activities ADD COLUMN created_by_ai INTEGER DEFAULT 0", []);
 
+    crate::repository::statistic::init_tables(conn)?;
+
     conn.execute(
         "CREATE TABLE IF NOT EXISTS favorite_tickets (
             ticket TEXT PRIMARY KEY,

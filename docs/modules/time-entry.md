@@ -1,6 +1,6 @@
 # Módulo: Time Entry (Registro de tiempo en vista completa)
 
-Versión de vista completa del modo compacto: muestra y gestiona las entradas de tiempo locales del día (SQLite) con las mismas acciones, dentro del layout del dashboard.
+Versión de vista completa del modo compacto: muestra y gestiona las entradas de tiempo locales del día (SQLite; las fechas de más de 3 meses se leen de OpenProject) con las mismas acciones, dentro del layout del dashboard.
 
 ## Ubicación y ruta
 
@@ -37,6 +37,12 @@ src/app/modules/time-entry/
 - Todo el estado vive en `ActivityService` (fecha seleccionada, actividades, selección, modales), así que la vista comparte datos con el modo compacto.
 - Este módulo es el dueño de los componentes de actividad (`ActivityRowComponent`, `ActivityFormModalComponent`, `FavoritesModalComponent`, `SyncConfirmModalComponent`, `ResetConfirmModalComponent`); el modo compacto y el detalle de ticket los importan desde aquí. Los favoritos viven en `FavoriteService` (`core/services/favorite.service.ts`). Usa también `TicketDetailPage` (módulo board) dentro del drawer.
 - El filtrado/orden se comparte con el modo compacto mediante `core/utils/activity-filter.util.ts` (`filterActivities`, `hasActiveActivityFilters`).
+
+## Retención local y fechas antiguas
+
+- Las actividades locales se conservan **3 meses** (`LOCAL_RETENTION_MONTHS`, `core/utils/retention.util.ts`). Al iniciar, `ActivityService` llama a `purge_synced_activities(before)`, que borra de SQLite las actividades sincronizadas anteriores a esa fecha (en el navegador, de `localStorage`). Las no sincronizadas y los temporizadores en marcha se conservan para no perder trabajo pendiente.
+- Al abrir una fecha anterior a la ventana, `loadActivities(date)` agrega las entradas de tiempo del usuario en OpenProject de ese día (consulta de "Tiempo y costos": `user_id = me`, `spent_on = date`) como actividades de solo lectura (`readOnly`, `synced`, id `openproject-<id>`), junto a las locales pendientes que queden. En la fila se ocultan editar, eliminar y reenviar; se mantienen contexto del ticket, copiar y detalles. No se guardan en SQLite.
+- El MCP recibe la misma regla en el system prompt: para fechas de más de 3 meses usa `get_time_cost_report`.
 
 ## Contexto del ticket y notificaciones
 

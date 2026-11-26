@@ -25,7 +25,7 @@ src-tauri/src/
 │   ├── tray.rs             System tray icon and menu
 │   └── window.rs           Window events (close is delegated to the frontend)
 ├── command/                Thin #[tauri::command] handlers, one file per domain
-│   ├── activity.rs         Local activities + AI stats
+│   ├── activity.rs         Local activities, retention purge (purge_synced_activities), AI stats
 │   ├── app.rs              exit_app
 │   ├── attachment.rs       Attachment preview, download, upload
 │   ├── board.rs            Boards, board columns, moving cards
@@ -35,6 +35,7 @@ src-tauri/src/
 │   ├── mcp.rs              MCP client install, AI rules injection, MCP contract/status
 │   ├── project.rs          Projects, versions, statuses
 │   ├── report.rs           Time-cost report entries
+│   ├── statistic.rs        Overview time statistics: cached rollup and refresh from OpenProject
 │   ├── ticket.rs           Ticket info and full ticket context
 │   ├── time_entry.rs       Time entry activities, create/update time entries
 │   └── work_package.rs     Work package form, search, revisions, updates, comments
@@ -46,7 +47,8 @@ src-tauri/src/
 │   ├── mcp.rs              MCP config injection into AI clients, versioned AI rules block per project (registered and refreshed on startup), client/rules status
 │   ├── mcp_contract.rs     App <-> pocketproject-mcp contract: protocol version, min MCP version, package spec, single system prompt (resources/mcp/system-prompt.md)
 │   ├── project.rs
-│   ├── report.rs           Paged time-cost report loading
+│   ├── report.rs           Paged time-cost report loading (fetch_time_cost_report_entries fails on HTTP errors; the report command keeps returning [])
+│   ├── statistic.rs        Summarises the user's time entries (time-cost report query, user = me) per day/project and refreshes the cache
 │   ├── ticket.rs           fetch_ticket_info
 │   ├── ticket_context.rs   fetch_ticket_context (description, comments, attachments)
 │   ├── time_entry.rs
@@ -59,15 +61,15 @@ src-tauri/src/
 │   ├── url.rs              Base URL sanitising, origin, href resolution
 │   └── work_package.rs     Work package hierarchy (descendant ids)
 ├── repository/             SQLite access, one file per table or aggregate
-│   ├── activity.rs         activities table
+│   ├── activity.rs         activities table (purge of synced activities older than the retention window)
 │   ├── config.rs           app_config table
 │   ├── connection.rs       Database path, connection setup, timestamp helper
 │   ├── favorite_ticket.rs  favorite_tickets table
 │   ├── migration.rs        CREATE TABLE + additive ALTER TABLE migrations
-│   └── statistic.rs        Aggregate counters
+│   └── statistic.rs        time_entry_daily_statistic cache (OpenProject time entries per day/project), unsynced totals, AI counter
 └── model/                  DTOs and records (serde shapes = IPC contract)
     ├── activity.rs  attachment.rs  board.rs  config.rs  connection.rs
-    ├── favorite_ticket.rs  mcp.rs  project.rs  ticket.rs  time_entry.rs
+    ├── favorite_ticket.rs  mcp.rs  project.rs  statistic.rs  ticket.rs  time_entry.rs
     └── work_package.rs
 ```
 

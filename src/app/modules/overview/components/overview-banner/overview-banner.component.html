@@ -6,12 +6,9 @@
     <!-- Columna Izquierda: Saludo y Usuario -->
     <div class="space-y-1">
       @if (isLoggedIn()) {
-        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight flex items-center gap-2">
-          <span>{{ 'dashboard.welcomeUser' | translate: { user: displayUserName() } }}</span>
+        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+          {{ 'dashboard.welcomeUser' | translate: { user: displayUserName() } }}
         </h2>
-        <p class="text-xs sm:text-sm text-slate-500 dark:text-zinc-400">
-          {{ 'dashboard.readyBanner' | translate }}
-        </p>
       } @else {
         <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
           {{ 'dashboard.readyBanner' | translate }}
@@ -24,6 +21,22 @@
 
     <!-- Columna Derecha: Día de la semana y Estado -->
     <div class="flex flex-wrap sm:flex-nowrap items-center sm:justify-end gap-2.5">
+      @if (isLoggedIn()) {
+        <button
+          pButton
+          type="button"
+          (click)="refresh()"
+          [loading]="isRefreshing()"
+          iconOnly
+          rounded
+          variant="outlined"
+          severity="secondary"
+          size="small"
+          [title]="refreshTitle()"
+        >
+          <ng-icon name="tablerRefresh" size="1rem" />
+        </button>
+      }
       <!-- Widget Día de la semana: THU / Jueves -->
       <div
         class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-white/80 dark:bg-zinc-800/80 border border-slate-200/80 dark:border-zinc-700/80 shadow-xs backdrop-blur-xs"

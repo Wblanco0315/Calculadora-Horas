@@ -1,53 +1,99 @@
 import { Component, computed, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { ProgressBar } from 'primeng/progressbar';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { tablerClock, tablerCalendar, tablerCoffee } from '@ng-icons/tabler-icons';
-import { StorageService } from '../../../../core/services/storage.service';
-import { LanguageService } from '../../../../core/services/language.service';
-import { ScheduleService } from '../../../../core/services/schedule.service';
+import {
+  tablerArrowDownRight,
+  tablerArrowUpRight,
+  tablerCalendarMonth,
+  tablerCalendarWeek,
+  tablerClock,
+  tablerCloudUpload,
+} from '@ng-icons/tabler-icons';
 import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 import { formatWorkMinutes } from '../../../../core/interfaces/config.interface';
+import { StatisticService } from '../../services/statistic.service';
+import { PeriodSummary } from '../../interfaces/statistic.interface';
 
+interface SummaryTile {
+  key: string;
+  label: string;
+  icon: string;
+  summary: PeriodSummary;
+  comparisonLabel: string;
+  detail: { key: string; params: Record<string, string | number> };
+}
+
+/** Day, week and month totals against the schedule target, plus time still to sync. */
 @Component({
   selector: 'app-overview-summary',
   standalone: true,
-  imports: [CommonModule, ProgressBar, NgIcon, TranslatePipe],
+  imports: [ProgressBar, NgIcon, TranslatePipe],
   viewProviders: [
     provideIcons({
       tablerClock,
-      tablerCalendar,
-      tablerCoffee,
+      tablerCalendarWeek,
+      tablerCalendarMonth,
+      tablerCloudUpload,
+      tablerArrowUpRight,
+      tablerArrowDownRight,
     }),
   ],
   templateUrl: './overview-summary.component.html',
 })
 export class OverviewSummaryComponent {
-  private readonly storageService = inject(StorageService);
-  private readonly languageService = inject(LanguageService);
-  private readonly scheduleService = inject(ScheduleService);
+  private readonly statisticService = inject(StatisticService);
 
-  readonly config = this.storageService.config;
-  readonly todaySchedule = this.storageService.todaySchedule;
-  readonly maxDailyMinutes = this.storageService.maxDailyMinutes;
-  readonly weeklyTotalMinutes = this.storageService.weeklyTotalMinutes;
-  readonly workingDaysCount = this.storageService.workingDaysCount;
+  readonly streak = this.statisticService.streak;
+  readonly unsynced = this.statisticService.unsynced;
 
-  readonly todayDayName = computed(() => {
-    const today = this.todaySchedule();
-    if (!today) return '';
-    return this.scheduleService.getDayName(today.day);
+  readonly tiles = computed<SummaryTile[]>(() => {
+    const today = this.statisticService.todaySummary();
+    const week = this.statisticService.weekSummary();
+    const month = this.statisticService.monthSummary();
+    const tiles: SummaryTile[] = [
+      {
+        key: 'today',
+        label: 'overview.today',
+        icon: 'tablerClock',
+        summary: today,
+        comparisonLabel: 'overview.vsYesterday',
+        detail: { key: 'overview.entries', params: { count: today.entryCount } },
+      },
+      {
+        key: 'week',
+        label: 'overview.week',
+        icon: 'tablerCalendarWeek',
+        summary: week,
+        comparisonLabel: 'overview.vsLastWeek',
+        detail: { key: 'overview.activeDays', params: { days: week.activeDays } },
+      },
+      {
+        key: 'month',
+        label: 'overview.month',
+        icon: 'tablerCalendarMonth',
+        summary: month,
+        comparisonLabel: 'overview.vsLastMonth',
+        detail: {
+          key: 'overview.averagePerDay',
+          params: { time: formatWorkMinutes(month.activeDays ? Math.round(month.minutes / month.activeDays) : 0) },
+        },
+      },
+    ];
+    return tiles;
   });
 
-  readonly formattedTodayHours = computed(() => {
-    const today = this.todaySchedule();
-    if (!today || !today.enabled) {
-      return this.languageService.t('dashboard.restDay');
-    }
-    return formatWorkMinutes(this.maxDailyMinutes());
-  });
+  format(minutes: number): string {
+    return formatWorkMinutes(minutes);
+  }
 
-  readonly formattedWeeklyHours = computed(() => {
-    return formatWorkMinutes(this.weeklyTotalMinutes());
-  });
+  progress(summary: PeriodSummary): number {
+    if (summary.targetMinutes <= 0) return 0;
+    return Math.min(100, Math.round((summary.minutes / summary.targetMinutes) * 100));
+  }
+
+  /** Percentage change against the previous period, or null when there is nothing to compare. */
+  trend(summary: PeriodSummary): number | null {
+    if (summary.previousMinutes <= 0) return null;
+    return Math.round(((summary.minutes - summary.previousMinutes) / summary.previousMinutes) * 100);
+  }
 }

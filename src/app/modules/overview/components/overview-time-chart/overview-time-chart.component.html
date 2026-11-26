@@ -1,0 +1,19 @@
+<div class="flex h-full flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-xs sm:p-6 dark:border-zinc-800 dark:bg-zinc-900">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h3 class="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-zinc-100">
+      <ng-icon name="tablerChartBar" size="1.15rem" class="text-primary-500" />
+      {{ 'overview.dailyChart' | translate }}
+    </h3>
+    <p-selectbutton
+      [options]="rangeOptions()"
+      [ngModel]="range()"
+      (ngModelChange)="range.set($event)"
+      optionLabel="label"
+      optionValue="value"
+      [allowEmpty]="false"
+      size="small"
+    />
+  </div>
+
+  <p-chart type="bar" [data]="data()" [options]="options()" height="18rem" [ariaLabel]="'overview.dailyChart' | translate" />
+</div>

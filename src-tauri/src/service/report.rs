@@ -11,8 +11,23 @@ pub(crate) async fn load_time_cost_report_entries(
     token: String,
     filter: TimeCostReportFilter,
 ) -> Result<Vec<PlatformTimeEntryItem>, String> {
-    let clean_url = sanitize_url(&url);
-    let auth_value = build_auth_header(&token);
+    match fetch_time_cost_report_entries(&url, &token, &filter).await {
+        Err(error) if error.starts_with(HTTP_ERROR_PREFIX) => Ok(Vec::new()),
+        result => result,
+    }
+}
+
+const HTTP_ERROR_PREFIX: &str = "OpenProject HTTP ";
+
+/// Same query as the time-cost report, but an HTTP error status is returned as `Err` instead of an
+/// empty list, so callers that cache the result never replace good data with an error response.
+pub(crate) async fn fetch_time_cost_report_entries(
+    url: &str,
+    token: &str,
+    filter: &TimeCostReportFilter,
+) -> Result<Vec<PlatformTimeEntryItem>, String> {
+    let clean_url = sanitize_url(url);
+    let auth_value = build_auth_header(token);
     let client = build_http_client(15)?;
     let mut filters = vec![serde_json::json!({
         "entity_type": { "operator": "=", "values": ["WorkPackage"] }
@@ -68,7 +83,7 @@ pub(crate) async fn load_time_cost_report_entries(
             .await
             .map_err(|error| error.to_string())?;
         if !response.status().is_success() {
-            return Ok(Vec::new());
+            return Err(format!("{}{}", HTTP_ERROR_PREFIX, response.status()));
         }
         let data: serde_json::Value = response.json().await.map_err(|error| error.to_string())?;
         let page = data["_embedded"]["elements"].as_array().cloned().unwrap_or_default();

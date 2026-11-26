@@ -8,6 +8,7 @@ pub(crate) mod mcp;
 pub(crate) mod mcp_contract;
 pub(crate) mod project;
 pub(crate) mod report;
+pub(crate) mod statistic;
 pub(crate) mod ticket;
 pub(crate) mod ticket_context;
 pub(crate) mod time_entry;

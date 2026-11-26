@@ -3,6 +3,7 @@ import { invoke, isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import {
   Activity,
+  PlatformTimeEntry,
   Project,
   StatusOption,
   TimeEntryActivityType,
@@ -12,10 +13,12 @@ import { StorageService } from './storage.service';
 import { NotificationService } from './notification.service';
 import { FavoriteService } from './favorite.service';
 import { LEGACY_STORAGE_KEY } from '../utils/storage-key.util';
+import { isBeforeLocalRetention, localRetentionStart, toDateKey } from '../utils/retention.util';
 import { WorkPackageApiService } from './openproject/work-package-api.service';
 import { ProjectApiService } from './openproject/project-api.service';
 import { BoardApiService } from './openproject/board-api.service';
 import { TimeEntryApiService } from './openproject/time-entry-api.service';
+import { OpenprojectService } from './openproject/openproject.service';
 
 const TIME_FORMAT_KEY = 'pocketproject_time_format';
 const LOCAL_ACTIVITIES_KEY = 'pocketproject_local_activities';
@@ -38,6 +41,7 @@ export class ActivityService {
   private readonly projectApi = inject(ProjectApiService);
   private readonly boardApi = inject(BoardApiService);
   private readonly timeEntryApi = inject(TimeEntryApiService);
+  private readonly openprojectService = inject(OpenprojectService);
   private readonly notificationService = inject(NotificationService);
   private readonly favoriteService = inject(FavoriteService);
 
@@ -130,9 +134,13 @@ export class ActivityService {
 
   constructor() {
     this.favoriteService.loadFavorites().catch(() => {});
-    this.loadActivities(this.selectedDate()).catch((err) => {
-      console.warn('Initial activities load failed:', err);
-    });
+    this.purgeOldActivities()
+      .catch((err) => console.warn('Local activity retention cleanup failed:', err))
+      .finally(() => {
+        this.loadActivities(this.selectedDate()).catch((err) => {
+          console.warn('Initial activities load failed:', err);
+        });
+      });
 
     if (typeof window !== 'undefined') {
       window.addEventListener('focus', () => {
@@ -249,13 +257,71 @@ export class ActivityService {
         resultList = list.map((a) => this.normalizeActivity(a));
       }
 
+      // Dates older than the local retention window: show the OpenProject time entries.
+      if (date && isBeforeLocalRetention(date)) {
+        const platformEntries = await this.loadPlatformEntries(date);
+        if (this.selectedDate() !== date) return;
+        resultList = [...resultList, ...platformEntries];
+      }
+
       this.activities.set(resultList);
-      this.backfillMissingTitles(resultList).catch(() => {});
+      this.backfillMissingTitles(resultList.filter((a) => !a.readOnly)).catch(() => {});
     } catch (err) {
       console.error('Error loading activities:', err);
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  /**
+   * Local retention: activities older than `LOCAL_RETENTION_MONTHS` that are already in OpenProject
+   * are deleted from this device (their time entries stay in OpenProject). Unsynced activities and
+   * running timers are kept.
+   */
+  private async purgeOldActivities(): Promise<void> {
+    const before = toDateKey(localRetentionStart());
+    if (isTauri()) {
+      await invoke<number>('purge_synced_activities', { before });
+      return;
+    }
+    const raw = typeof window !== 'undefined' ? localStorage.getItem(LOCAL_ACTIVITIES_KEY) : null;
+    if (!raw) return;
+    const list: Activity[] = JSON.parse(raw);
+    const kept = list.filter((a) => !(a.date < before && a.synced && a.timerState !== 'running'));
+    if (kept.length !== list.length) localStorage.setItem(LOCAL_ACTIVITIES_KEY, JSON.stringify(kept));
+  }
+
+  /** The user's OpenProject time entries of one day, as read-only activities. */
+  private async loadPlatformEntries(date: string): Promise<Activity[]> {
+    if (!this.storageService.isLoggedIn()) return [];
+    const entries = await this.timeEntryApi.getTimeCostReportEntries({
+      userId: 'me',
+      spentOnFrom: date,
+      spentOnTo: date,
+    });
+    return entries.map((entry) => this.platformEntryToActivity(entry, date));
+  }
+
+  private platformEntryToActivity(entry: PlatformTimeEntry, date: string): Activity {
+    const minutes = this.openprojectService.isoDurationToMinutes(entry.hours);
+    return {
+      id: `openproject-${entry.id}`,
+      name: entry.comment || entry.workPackageName || entry.activityName || '',
+      minutes,
+      seconds: minutes * 60,
+      date: entry.spentOn || date,
+      projectId: entry.projectId || undefined,
+      projectName: entry.projectName || undefined,
+      ticket: entry.workPackageId || undefined,
+      ticketTitle: entry.workPackageName || undefined,
+      activityTypeId: entry.activityId || undefined,
+      activityTypeName: entry.activityName || undefined,
+      synced: true,
+      timerSeconds: 0,
+      timerState: 'idle',
+      createdAt: entry.createdAt,
+      readOnly: true,
+    };
   }
 
   private normalizeActivity(raw: any): Activity {

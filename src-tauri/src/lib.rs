@@ -12,7 +12,7 @@ use tauri_plugin_autostart::MacosLauncher;
 
 use crate::command::{
     activity, app as app_command, attachment, board, config, connection, favorite_ticket, mcp,
-    project, report, ticket, time_entry, work_package,
+    project, report, statistic, ticket, time_entry, work_package,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -37,6 +37,7 @@ pub fn run() {
             activity::save_activity,
             activity::delete_activity,
             activity::clear_activities,
+            activity::purge_synced_activities,
             ticket::fetch_ticket_info,
             ticket::fetch_ticket_context,
             attachment::fetch_attachment_content,
@@ -65,6 +66,8 @@ pub fn run() {
             report::fetch_work_package_time_entries,
             config::get_database_path,
             activity::get_ai_stats,
+            statistic::get_time_statistics,
+            statistic::refresh_time_statistics,
             favorite_ticket::get_favorite_tickets,
             favorite_ticket::save_favorite_ticket,
             favorite_ticket::delete_favorite_ticket,

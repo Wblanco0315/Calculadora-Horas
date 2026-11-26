@@ -145,6 +145,16 @@ pub(crate) fn clear_activities_for_date(conn: &Connection, date: &str) -> Result
     Ok(())
 }
 
+/// Local retention: deletes activities dated before `before` (`YYYY-MM-DD`) that are already in
+/// OpenProject. Unsynced activities and running timers are kept so no pending work is lost.
+pub(crate) fn purge_synced_activities(conn: &Connection, before: &str) -> Result<usize> {
+    conn.execute(
+        "DELETE FROM activities
+         WHERE date < ?1 AND COALESCE(synced, 0) = 1 AND COALESCE(timer_state, 'idle') <> 'running'",
+        params![before],
+    )
+}
+
 #[allow(dead_code)]
 pub(crate) fn mark_activity_synced(conn: &Connection, id: &str) -> Result<()> {
     conn.execute("UPDATE activities SET synced = 1 WHERE id = ?1", params![id])?;

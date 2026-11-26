@@ -125,7 +125,9 @@ export interface PlatformTimeEntry {
   userName: string;
   activityName: string;
   activityId?: string | null;
+  projectId?: string | null;
   projectName?: string | null;
+  workPackageId?: string | null;
   workPackageName?: string | null;
   registeredByName?: string | null;
   costs?: string | number | null;

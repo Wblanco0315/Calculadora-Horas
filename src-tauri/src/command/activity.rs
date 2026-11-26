@@ -31,6 +31,13 @@ pub(crate) fn clear_activities(app: AppHandle, date: String) -> Result<(), Strin
     activity::clear_activities_for_date(&conn, &date).map_err(|e| e.to_string())
 }
 
+/// Local retention: deletes synced activities dated before `before` (`YYYY-MM-DD`).
+#[tauri::command]
+pub(crate) fn purge_synced_activities(app: AppHandle, before: String) -> Result<usize, String> {
+    let conn = open_connection(&app).map_err(|e| e.to_string())?;
+    activity::purge_synced_activities(&conn, &before).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub(crate) fn get_ai_stats(app: AppHandle) -> Result<i32, String> {
     let conn = open_connection(&app).map_err(|e| e.to_string())?;
