@@ -14,27 +14,100 @@
         <p-sidebar-panel class="bg-white dark:bg-zinc-900 border-r border-slate-200 dark:border-zinc-800">
           <!-- Sidebar Header -->
           <p-sidebar-header class="border-b border-slate-100 dark:border-zinc-800">
-            <p-sidebar-menu>
+            <p-sidebar-menu class="gap-3!">
               <p-sidebar-menu-item>
                 <button pSidebarMenuButton class="p-1! cursor-pointer" (click)="navigateTo('/dashboard/overview')">
                   <app-logo [variant]="'isologo'" [size]="'md'" class="shrink-0 drop-shadow-xs" />
                   
                 </button>
               </p-sidebar-menu-item>
+              @if (open() || isMobile()) {
+              <p-sidebar-menu-item class="pb-1">
+                <p-iconfield class="w-full">
+                  <p-inputicon>
+                    <ng-icon name="tablerSearch" size="0.9rem" />
+                  </p-inputicon>
+                  <input #sidebarSearch pInputText type="search" pSize="small" class="w-full text-xs"
+                    [value]="sidebarQuery()" (input)="onSidebarQueryChange(sidebarSearch.value)"
+                    (keydown.enter)="onSidebarSearchSubmit()" (keydown.escape)="onSidebarQueryChange('')"
+                    [placeholder]="'dashboard.sidebarSearch' | translate"
+                    [attr.aria-label]="'dashboard.sidebarSearch' | translate" />
+                </p-iconfield>
+              </p-sidebar-menu-item>
+              } @else {
+              <p-sidebar-menu-item>
+                <button pSidebarMenuButton class="cursor-pointer" (click)="open.set(true)"
+                  [title]="'dashboard.sidebarSearch' | translate">
+                  <ng-icon name="tablerSearch" size="1.1rem" class="shrink-0" />
+                  <span class="text-xs sm:text-sm">{{ 'dashboard.sidebarSearch' | translate }}</span>
+                </button>
+              </p-sidebar-menu-item>
+              }
             </p-sidebar-menu>
           </p-sidebar-header>
 
           <!-- Sidebar Content Navigation -->
           <p-sidebar-content>
-            @for (group of navGroups(); track group.label) {
+            @if (sidebarQuery().trim()) {
+            <p-sidebar-group>
+              <p-sidebar-group-label>{{ 'dashboard.ticketMatches' | translate }}</p-sidebar-group-label>
+              <p-sidebar-group-content>
+                <p-sidebar-menu>
+                  @if (showGoToTicket() && searchTicketId(); as ticketId) {
+                  <p-sidebar-menu-item>
+                    <button pSidebarMenuButton
+                      class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800"
+                      [disabled]="openingTicketId() !== null" (click)="openTicket(ticketId)">
+                      <ng-icon [name]="openingTicketId() === ticketId ? 'tablerLoader2' : 'tablerTicket'" size="1.1rem"
+                        class="shrink-0 text-primary-600 dark:text-primary-400" [class.animate-spin]="openingTicketId() === ticketId" />
+                      <span class="text-xs sm:text-sm">{{ 'dashboard.goToTicket' | translate: { id: ticketId } }}</span>
+                    </button>
+                  </p-sidebar-menu-item>
+                  }
+                  @for (ticket of ticketMatches(); track ticket.id) {
+                  <p-sidebar-menu-item>
+                    <button pSidebarMenuButton
+                      class="w-full flex items-start gap-2.5 px-3 py-1.5 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800 h-auto!"
+                      [disabled]="openingTicketId() !== null" (click)="openTicket(ticket.id)"
+                      [title]="'#' + ticket.id + ' ' + ticket.subject">
+                      <ng-icon [name]="openingTicketId() === ticket.id ? 'tablerLoader2' : 'tablerTicket'" size="1rem"
+                        class="mt-0.5 shrink-0 text-primary-600 dark:text-primary-400" [class.animate-spin]="openingTicketId() === ticket.id" />
+                      <span class="min-w-0 flex-1 text-left">
+                        <span class="block truncate text-xs">
+                          <span class="font-mono text-slate-500 dark:text-zinc-400">#{{ ticket.id }}</span> {{ ticket.subject }}
+                        </span>
+                        <span class="block truncate text-[10px] text-slate-400 dark:text-zinc-500">
+                          {{ ticket.projectName }}@if (ticket.statusName) { · {{ ticket.statusName }} }
+                        </span>
+                      </span>
+                    </button>
+                  </p-sidebar-menu-item>
+                  } @empty {
+                    @if (isSearchingTickets()) {
+                      @for (i of [1, 2]; track i) {
+                      <p-sidebar-menu-item>
+                        <p-skeleton width="85%" height="1.75rem" styleClass="my-1 ml-3" />
+                      </p-sidebar-menu-item>
+                      }
+                    } @else if (!showGoToTicket()) {
+                      <p-sidebar-menu-item>
+                        <span class="block px-3 py-1.5 text-[11px] text-slate-400 dark:text-zinc-500">{{ 'dashboard.noTicketMatches' | translate }}</span>
+                      </p-sidebar-menu-item>
+                    }
+                  }
+                </p-sidebar-menu>
+              </p-sidebar-group-content>
+            </p-sidebar-group>
+            }
+            @for (group of visibleNavGroups(); track group.label) {
             <p-sidebar-group>
               <p-sidebar-group-label>{{ group.label }}</p-sidebar-group-label>
               <p-sidebar-group-content>
                 <p-sidebar-menu>
                   @for (item of group.items; track item.label) {
                   @if (item.id === 'projects') {
-                  <!-- OpenProject projects tree: Projects > project > boards (PrimeNG collapsible menu items) -->
-                  <p-sidebar-menu-item collapsible [open]="projectsMenuOpen()" (openChange)="onProjectsMenuOpenChange($event)">
+                  <!-- OpenProject projects: each entry opens the project's board list -->
+                  <p-sidebar-menu-item collapsible [open]="projectsMenuOpen() || !!sidebarQuery().trim()" (openChange)="onProjectsMenuOpenChange($event)">
                     <button pSidebarMenuButton [isActive]="!!item.isActive" [class.font-semibold]="item.isActive"
                       class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800"
                       [attr.aria-expanded]="projectsMenuOpen()">
@@ -53,40 +126,13 @@
                         </p-sidebar-menu-sub-item>
                         }
                       }
-                      @for (project of sidebarProjects() ?? []; track project.id) {
-                      <p-sidebar-menu-item collapsible [open]="isProjectOpen(project.id)"
-                        (openChange)="onProjectOpenChange(project, $event)">
-                        <button pSidebarMenuButton [isActive]="isProjectActive(project.id)"
-                          class="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800"
-                          [title]="project.name" [attr.aria-expanded]="isProjectOpen(project.id)">
-                          <ng-icon name="tablerChevronRight" size="0.75rem"
-                            class="shrink-0 text-slate-400 transition-transform duration-200"
-                            [class.rotate-90]="isProjectOpen(project.id)" />
-                          <span class="min-w-0 flex-1 truncate text-left text-xs">{{ project.name }}</span>
+                      @for (project of filteredSidebarProjects(); track project.id) {
+                      <p-sidebar-menu-sub-item>
+                        <button pSidebarMenuSubButton size="sm" [isActive]="isProjectActive(project.id)"
+                          class="cursor-pointer" [title]="project.name" (click)="openProject(project)">
+                          <span class="truncate">{{ project.name }}</span>
                         </button>
-                        <p-sidebar-menu-sub>
-                          @if (loadingBoardProjectIds().has(project.id)) {
-                          <p-sidebar-menu-sub-item>
-                            <p-skeleton width="70%" height="1rem" styleClass="my-1.5 ml-2" />
-                          </p-sidebar-menu-sub-item>
-                          }
-                          @for (board of projectBoards().get(project.id) ?? []; track board.id; let index = $index) {
-                          <p-sidebar-menu-sub-item>
-                            <button pSidebarMenuSubButton size="sm" [isActive]="isBoardActive(project.id, board.id, index)"
-                              class="cursor-pointer" [title]="board.name" (click)="openBoard(project, board)">
-                              <ng-icon name="tablerLayoutKanban" size="0.85rem" class="shrink-0" />
-                              <span class="truncate">{{ board.name }}</span>
-                            </button>
-                          </p-sidebar-menu-sub-item>
-                          } @empty {
-                            @if (projectBoards().has(project.id)) {
-                            <p-sidebar-menu-sub-item>
-                              <span class="block px-2 py-1 text-[11px] text-slate-400 dark:text-zinc-500">{{ 'board.noBoards' | translate }}</span>
-                            </p-sidebar-menu-sub-item>
-                            }
-                          }
-                        </p-sidebar-menu-sub>
-                      </p-sidebar-menu-item>
+                      </p-sidebar-menu-sub-item>
                       }
                     </p-sidebar-menu-sub>
                   </p-sidebar-menu-item>
@@ -162,12 +208,12 @@
                 <ng-icon [name]="item.icon" size="1.1rem" />
               </a>
               } @else if (item.routerLink) {
-              <a [routerLink]="item.routerLink"
+              <a [routerLink]="item.routerLink" [queryParams]="item.queryParams"
                 class="font-medium text-slate-500 hover:text-primary-600 dark:text-zinc-400 dark:hover:text-primary-400 transition-colors">
                 {{ item.label }}
               </a>
               } @else {
-              <span class="font-bold text-slate-900 dark:text-zinc-100">
+              <span class="block max-w-[28rem] truncate font-bold text-slate-900 dark:text-zinc-100" [title]="item.label">
                 {{ item.label }}
               </span>
               }

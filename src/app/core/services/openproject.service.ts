@@ -25,6 +25,7 @@ import {
   WorkPackageCostSummary,
   TimeCostReportFilter,
   UploadedAttachment,
+  WorkPackageSearchItem,
 } from '../interfaces/openproject.interface';
 
 @Injectable({
@@ -284,6 +285,40 @@ export class OpenprojectService {
         message: err instanceof Error ? err.message : String(err),
       };
     }
+  }
+
+  /** Searches work packages by subject or ID (OpenProject `typeahead` filter), most recently updated first. */
+  async searchWorkPackages(query: string, limit = 8): Promise<WorkPackageSearchItem[]> {
+    const text = query.trim().replace(/^#/, '');
+    const token = this.getToken();
+    if (!text || !token) return [];
+    const url = this.sanitizeUrl();
+
+    if (this.isTauriApp()) {
+      return invoke<WorkPackageSearchItem[]>('search_work_packages', { url, token, query: text, limit });
+    }
+
+    const params = new URLSearchParams({
+      filters: JSON.stringify([{ typeahead: { operator: '**', values: [text] } }]),
+      sortBy: JSON.stringify([['updatedAt', 'desc']]),
+      pageSize: String(limit),
+    });
+    const response = await fetch(`${url}/api/v3/work_packages?${params.toString()}`, {
+      headers: this.buildAuthHeaders(token),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    const elements: any[] = Array.isArray(data?._embedded?.elements) ? data._embedded.elements : [];
+    return elements
+      .filter((item) => typeof item?.id === 'number')
+      .map((item) => ({
+        id: item.id,
+        subject: item.subject ?? '',
+        projectId: item._links?.project?.href?.split('/').pop() ?? null,
+        projectName: item._links?.project?.title ?? null,
+        typeName: item._links?.type?.title ?? null,
+        statusName: item._links?.status?.title ?? null,
+      }));
   }
 
   async getWorkPackageRevisions(ticketIdList: string[]): Promise<WorkPackageRevision[]> {
@@ -1400,6 +1435,9 @@ export class OpenprojectService {
               links?.['scope']?.title ||
               links?.['page']?.title ||
               `Board ${g['id']}`,
+            kind: ((g as any).options?.type as string | undefined) ?? null,
+            attribute: ((g as any).options?.attribute as string | undefined) ?? null,
+            createdAt: (g['createdAt'] as string | undefined) ?? null,
           };
         });
 

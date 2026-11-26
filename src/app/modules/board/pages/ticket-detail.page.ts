@@ -30,6 +30,7 @@ import {
   tablerFolderOpen,
 } from '@ng-icons/tabler-icons';
 import { openUrl, revealItemInDir } from '@tauri-apps/plugin-opener';
+import { BreadcrumbService } from '../../../core/services/breadcrumb.service';
 import { OpenprojectService } from '../../../core/services/openproject.service';
 import { ActivityService } from '../../../core/services/activity.service';
 import { WorkPackageChangeService } from '../../../core/services/work-package-change.service';
@@ -170,6 +171,7 @@ export class TicketDetailPage {
   private readonly router = inject(Router);
   private readonly workPackageChangeService = inject(WorkPackageChangeService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly breadcrumbService = inject(BreadcrumbService);
   private changeCheckSubscription?: Subscription;
   private updateStreamCursor = '';
   private updateTimestampSnapshot: string | null = null;
@@ -306,6 +308,14 @@ export class TicketDetailPage {
       }
     });
 
+    // Publish the ticket subject for the dashboard breadcrumb.
+    effect(() => {
+      const id = this.ticketId();
+      const subject = this.ticketData()?.subject ?? '';
+      this.breadcrumbService.ticket.set(id ? { id, subject } : null);
+    });
+    this.destroyRef.onDestroy(() => this.breadcrumbService.ticket.set(null));
+
     effect(() => {
       const boardId = this.boardId();
       const ticketId = this.ticketId();
@@ -334,9 +344,21 @@ export class TicketDetailPage {
   }
 
   goBackToBoard(): void {
-    this.router.navigate(['/dashboard/boards', this.projectId(), this.boardId()], {
-      queryParamsHandling: 'preserve',
-    });
+    if (this.projectId() && this.boardId()) {
+      this.router.navigate(['/dashboard/boards', this.projectId(), this.boardId()], {
+        queryParamsHandling: 'preserve',
+      });
+      return;
+    }
+    // Opened directly by ID (sidebar search): go back to the ticket's project board list.
+    const ticket = this.ticketData();
+    if (ticket?.project_id) {
+      this.router.navigate(['/dashboard/boards', ticket.project_id], {
+        queryParams: { name: ticket.project_name || '' },
+      });
+      return;
+    }
+    this.router.navigate(['/dashboard/overview']);
   }
 
   async loadTicket(id: number): Promise<void> {

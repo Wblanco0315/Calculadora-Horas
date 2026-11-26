@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { BoardListPage } from './pages/board-list.page';
 import { BoardPage } from './pages/board.page';
 import { TicketDetailPage } from './pages/ticket-detail.page';
 
@@ -9,10 +10,18 @@ export const boardRoutes: Routes = [
   },
   {
     path: ':projectId',
-    component: BoardPage,
+    component: BoardListPage,
   },
   {
     path: ':projectId/:boardId',
     component: BoardPage,
+  },
+];
+
+/** Direct ticket access (`/dashboard/tickets/:ticketId`), e.g. from the sidebar search, without a board context. */
+export const ticketRoutes: Routes = [
+  {
+    path: ':ticketId',
+    component: TicketDetailPage,
   },
 ];

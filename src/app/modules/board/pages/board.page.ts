@@ -98,6 +98,10 @@ export class BoardPage {
     this.columns().map((column) => `board-column-${encodeURIComponent(column.queryId)}`)
   );
 
+  readonly selectedBoardName = computed(
+    () => this.boards().find((board) => board.id === this.selectedBoardId())?.name ?? this.projectName()
+  );
+
   readonly filteredColumns = computed(() => {
     const q = this.searchQuery().trim().toLowerCase();
     const assignee = this.selectedAssigneeFilter();
@@ -160,15 +164,6 @@ export class BoardPage {
     }
   }
 
-  onBoardChange(boardId: string): void {
-    if (!boardId || boardId === this.selectedBoardId()) return;
-    // Keep the URL in sync so the sidebar highlights the selected board.
-    void this.router.navigate(['/dashboard/boards', this.projectId(), boardId], {
-      queryParamsHandling: 'preserve',
-      replaceUrl: true,
-    });
-  }
-
   async loadColumns(boardId: string, forceRefresh = false): Promise<void> {
     this.isRefreshing.set(true);
     try {
@@ -186,8 +181,10 @@ export class BoardPage {
     await this.loadColumns(boardId, true);
   }
 
-  goBackToProjects(): void {
-    this.router.navigate(['/dashboard/projects']);
+  goBackToBoardList(): void {
+    this.router.navigate(['/dashboard/boards', this.projectId()], {
+      queryParams: { name: this.projectName(), identifier: this.projectIdentifier() },
+    });
   }
 
   openTicketDetail(card: BoardWorkPackageCard, columnQueryId: string): void {

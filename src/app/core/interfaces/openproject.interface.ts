@@ -19,6 +19,11 @@ export interface VersionOption {
 export interface BoardOption {
   id: string;
   name: string;
+  /** OpenProject board kind: `free` (basic) or `action`. */
+  kind?: string | null;
+  /** Attribute an action board is based on (`status`, `assignee`, `version`, `subproject`). */
+  attribute?: string | null;
+  createdAt?: string | null;
 }
 
 export interface BoardWorkPackageCard {
@@ -257,4 +262,14 @@ export interface CreateTimeEntryParams {
   comment: string;
   activityTypeId?: string;
   projectId?: string;
+}
+
+/** Work package match from a typeahead search (subject or ID). */
+export interface WorkPackageSearchItem {
+  id: number;
+  subject: string;
+  projectId?: string | null;
+  projectName?: string | null;
+  typeName?: string | null;
+  statusName?: string | null;
 }

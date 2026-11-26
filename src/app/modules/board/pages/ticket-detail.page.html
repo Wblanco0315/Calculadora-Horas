@@ -40,9 +40,6 @@
             </button>
           }
         </div>
-        @if (ticketData()?.project_name) {
-          <p class="ml-1 truncate text-[11px] text-slate-500 dark:text-zinc-400">{{ ticketData()?.project_name }}</p>
-        }
       </div>
     </div>
     <button
@@ -136,11 +133,8 @@
       <main class="ticket-detail-main min-w-0 space-y-7 p-4 sm:p-6 lg:min-h-0 lg:overflow-y-auto lg:p-7">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-slate-200 pb-4 dark:border-zinc-800">
           <span class="font-mono text-xs font-bold text-slate-500 dark:text-zinc-400">#{{ ticketId() }}</span>
-          @if (ticketData()?.project_name) {
-            <span class="text-xs text-slate-500 dark:text-zinc-400">{{ ticketData()?.project_name }}</span>
-          }
           <span class="text-xs text-slate-500 dark:text-zinc-400">
-            · {{ ticketData()?.authorName || ticketData()?.author_name || ('ticketDetail.unknownAuthor' | translate) }}
+            {{ ticketData()?.authorName || ticketData()?.author_name || ('ticketDetail.unknownAuthor' | translate) }}
             @if (ticketData()?.createdAt || ticketData()?.created_at) {
               {{ 'ticketDetail.createdOn' | translate }} {{ formatDateTime(ticketData()?.createdAt || ticketData()?.created_at || '') }}
             }

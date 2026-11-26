@@ -1,14 +1,17 @@
 import { Component, OnInit, OnDestroy, signal, computed, effect, inject, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterOutlet, RouterLink, NavigationEnd } from '@angular/router';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { filter, map } from 'rxjs';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { catchError, debounceTime, filter, from, map, of, switchMap } from 'rxjs';
 import { AvatarModule } from 'primeng/avatar';
 import { SidebarModule } from 'primeng/sidebar';
 import { ButtonDirective } from 'primeng/button';
 import { Breadcrumb } from 'primeng/breadcrumb';
 import { Menu } from 'primeng/menu';
 import { Skeleton } from 'primeng/skeleton';
+import { IconField } from 'primeng/iconfield';
+import { InputIcon } from 'primeng/inputicon';
+import { InputText } from 'primeng/inputtext';
 import { MenuItem } from 'primeng/api';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -27,14 +30,18 @@ import {
   tablerLayoutKanban,
   tablerUserCog,
   tablerAdjustmentsHorizontal,
+  tablerSearch,
+  tablerTicket,
+  tablerLoader2,
 } from '@ng-icons/tabler-icons';
 import { StorageService } from '../../../core/services/storage.service';
 import { ThemeService } from '../../../core/services/theme.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { WindowService } from '../../../core/services/window.service';
 import { UpdateService } from '../../../core/services/update.service';
+import { BreadcrumbService } from '../../../core/services/breadcrumb.service';
 import { OpenprojectService } from '../../../core/services/openproject.service';
-import { BoardOption, Project } from '../../../core/interfaces/openproject.interface';
+import { BoardOption, Project, WorkPackageSearchItem } from '../../../core/interfaces/openproject.interface';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { AppHeaderComponent } from '../../../shared/components/app-header/app-header.component';
 import { AppLogoComponent } from '../../../shared/components/app-logo/app-logo.component';
@@ -67,6 +74,9 @@ export interface NavGroup {
     Breadcrumb,
     Menu,
     Skeleton,
+    IconField,
+    InputIcon,
+    InputText,
     NgIcon,
     TranslatePipe,
     AppHeaderComponent,
@@ -90,6 +100,9 @@ export interface NavGroup {
       tablerLayoutKanban,
       tablerUserCog,
       tablerAdjustmentsHorizontal,
+      tablerSearch,
+      tablerTicket,
+      tablerLoader2,
     }),
   ],
   templateUrl: './dashboard.page.html',
@@ -111,7 +124,6 @@ export class DashboardPage implements OnInit, OnDestroy {
   readonly projectsMenuOpen = signal<boolean>(false);
   readonly sidebarProjects = signal<Project[] | null>(null);
   readonly isLoadingProjects = signal<boolean>(false);
-  readonly openProjectIds = signal<ReadonlySet<string>>(new Set());
   readonly projectBoards = signal<ReadonlyMap<string, BoardOption[]>>(new Map());
   readonly loadingBoardProjectIds = signal<ReadonlySet<string>>(new Set());
 
@@ -144,7 +156,65 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   readonly isProjects = computed(() => {
     const url = this.currentUrl();
-    return url.startsWith('/dashboard/projects') || url.startsWith('/dashboard/boards');
+    return (
+      url.startsWith('/dashboard/projects') ||
+      url.startsWith('/dashboard/boards') ||
+      url.startsWith('/dashboard/tickets/')
+    );
+  });
+
+  readonly isDirectTicket = computed(() => this.currentUrl().startsWith('/dashboard/tickets/'));
+
+  /** Text typed in the sidebar search. */
+  private readonly breadcrumbService = inject(BreadcrumbService);
+
+  readonly sidebarQuery = signal<string>('');
+
+  /** Tickets matching the sidebar search (subject or ID), fetched after the user stops typing. */
+  readonly ticketMatches = signal<WorkPackageSearchItem[]>([]);
+  readonly isSearchingTickets = signal<boolean>(false);
+
+  /** Show the "go to ticket" shortcut only when the typed ID is not already among the matches. */
+  readonly showGoToTicket = computed(() => {
+    const ticketId = this.searchTicketId();
+    return ticketId !== null && !this.ticketMatches().some((ticket) => ticket.id === ticketId);
+  });
+
+  /** Ticket being resolved to its project/board after a sidebar search. */
+  readonly openingTicketId = signal<number | null>(null);
+
+  private readonly normalizedQuery = computed(() => normalizeSearch(this.sidebarQuery()));
+
+  /** Ticket ID when the search is a work package number (`123` or `#123`). */
+  readonly searchTicketId = computed<number | null>(() => {
+    const match = /^#?(\d+)$/.exec(this.sidebarQuery().trim());
+    const id = match ? Number(match[1]) : NaN;
+    return Number.isSafeInteger(id) && id > 0 ? id : null;
+  });
+
+  /** Sidebar projects matching the search (all of them when the search is empty). */
+  readonly filteredSidebarProjects = computed<Project[]>(() => {
+    const projects = this.sidebarProjects() ?? [];
+    const query = this.normalizedQuery();
+    if (!query) return projects;
+    return projects.filter((project) =>
+      normalizeSearch(`${project.name} ${project.identifier ?? ''}`).includes(query)
+    );
+  });
+
+  /** Navigation groups filtered by the search; the projects entry stays while any project matches. */
+  readonly visibleNavGroups = computed<NavGroup[]>(() => {
+    const query = this.normalizedQuery();
+    if (!query) return this.navGroups();
+    const hasProjectMatch = this.filteredSidebarProjects().length > 0;
+    return this.navGroups()
+      .map((group) => ({
+        ...group,
+        items: group.items.filter(
+          (item) => normalizeSearch(item.label).includes(query) || (item.id === 'projects' && hasProjectMatch)
+        ),
+      }))
+      .filter((group) => group.items.length > 0);
   });
 
   /** Project/board IDs of the current `/dashboard/boards/:projectId/:boardId` route, if any. */
@@ -195,6 +265,68 @@ export class DashboardPage implements OnInit, OnDestroy {
     routerLink: '/dashboard/overview',
   }));
 
+  /** `{project} > Boards > {board} > #ticket` crumbs for `/dashboard/boards/...` routes. */
+  private readonly boardBreadcrumbItems = computed<MenuItem[]>(() => {
+    const route = this.activeBoardRoute();
+    if (!route) return [];
+
+    const queryParams = new URLSearchParams(this.currentUrl().split('?')[1] ?? '');
+    const project = this.sidebarProjects()?.find((item) => item.id === route.projectId);
+    const projectName = project?.name || queryParams.get('name') || route.projectId;
+    const projectQueryParams = { name: projectName, identifier: project?.identifier || queryParams.get('identifier') || '' };
+    const boardListLink = ['/dashboard/boards', route.projectId];
+    const ticketId = /\/tickets\/([^/?#]+)/.exec(this.currentUrl())?.[1] ?? null;
+
+    const items: MenuItem[] = [
+      { label: projectName, routerLink: boardListLink, queryParams: projectQueryParams },
+      {
+        label: this.languageService.t('dashboard.boards'),
+        routerLink: route.boardId ? boardListLink : undefined,
+        queryParams: route.boardId ? projectQueryParams : undefined,
+      },
+    ];
+
+    if (route.boardId) {
+      const board = this.projectBoards().get(route.projectId)?.find((item) => item.id === route.boardId);
+      items.push({
+        label: board?.name || route.boardId,
+        routerLink: ticketId ? ['/dashboard/boards', route.projectId, route.boardId] : undefined,
+        queryParams: ticketId ? projectQueryParams : undefined,
+      });
+    }
+
+    if (ticketId) {
+      items.push({ label: this.breadcrumbService.ticketLabel(decodeURIComponent(ticketId)) });
+    }
+
+    return items;
+  });
+
+  /** `{project} > Boards > #ticket` for `/dashboard/tickets/:id?projectId=...` (ticket found in no board). */
+  private readonly directTicketBreadcrumbItems = computed<MenuItem[]>(() => {
+    const [path, query = ''] = this.currentUrl().split('?');
+    const ticketId = decodeURIComponent(/\/tickets\/([^/#]+)/.exec(path)?.[1] ?? '');
+    const queryParams = new URLSearchParams(query);
+    const projectId = queryParams.get('projectId');
+    const items: MenuItem[] = [];
+
+    if (projectId) {
+      const project = this.sidebarProjects()?.find((item) => item.id === projectId);
+      const projectQueryParams = {
+        name: project?.name || queryParams.get('name') || projectId,
+        identifier: project?.identifier || queryParams.get('identifier') || '',
+      };
+      const boardListLink = ['/dashboard/boards', projectId];
+      items.push(
+        { label: projectQueryParams.name, routerLink: boardListLink, queryParams: projectQueryParams },
+        { label: this.languageService.t('dashboard.boards'), routerLink: boardListLink, queryParams: projectQueryParams }
+      );
+    }
+
+    items.push({ label: this.breadcrumbService.ticketLabel(ticketId) });
+    return items;
+  });
+
   readonly breadcrumbItems = computed<MenuItem[]>(() => {
     this.languageService.currentLang();
     const url = this.currentUrl();
@@ -220,16 +352,18 @@ export class DashboardPage implements OnInit, OnDestroy {
         label: this.languageService.t('report.title'),
         routerLink: '/dashboard/reports',
       });
+    } else if (this.isDirectTicket()) {
+      items.push({
+        label: this.languageService.t('dashboard.projects'),
+        routerLink: '/dashboard/projects',
+      });
+      items.push(...this.directTicketBreadcrumbItems());
     } else if (this.isProjects()) {
       items.push({
         label: this.languageService.t('dashboard.projects'),
         routerLink: '/dashboard/projects',
       });
-      if (url.startsWith('/dashboard/boards')) {
-        items.push({
-          label: this.languageService.t('dashboard.boards'),
-        });
-      }
+      items.push(...this.boardBreadcrumbItems());
     } else {
       items.push({
         label: this.languageService.t('dashboard.overview'),
@@ -308,15 +442,31 @@ export class DashboardPage implements OnInit, OnDestroy {
   });
 
   constructor() {
-    // Reveal the active project/board in the sidebar tree when navigating to a board.
+    // Ticket search: wait until typing pauses, cancel stale requests, ignore 1-letter text queries.
+    toObservable(this.sidebarQuery)
+      .pipe(
+        map((query) => query.trim().replace(/^#/, '')),
+        debounceTime(SIDEBAR_SEARCH_DEBOUNCE_MS),
+        switchMap((query) =>
+          isTicketSearchable(query)
+            ? from(this.openprojectService.searchWorkPackages(query)).pipe(catchError(() => of([])))
+            : of([])
+        ),
+        takeUntilDestroyed()
+      )
+      .subscribe((tickets) => {
+        this.ticketMatches.set(tickets);
+        this.isSearchingTickets.set(false);
+      });
+
+    // Reveal the active project in the sidebar and load the names the breadcrumb needs.
     effect(() => {
       const route = this.activeBoardRoute();
       if (!route) return;
       untracked(() => {
         this.projectsMenuOpen.set(true);
         void this.ensureProjectsLoaded();
-        this.setProjectOpen(route.projectId, true);
-        void this.ensureBoardsLoaded(route.projectId);
+        if (route.boardId) void this.ensureBoardsLoaded(route.projectId);
       });
     });
   }
@@ -329,38 +479,109 @@ export class DashboardPage implements OnInit, OnDestroy {
     }
   }
 
-  onProjectOpenChange(project: Project, open: boolean): void {
-    this.setProjectOpen(project.id, open);
-    if (open) void this.ensureBoardsLoaded(project.id, project.identifier);
+  onSidebarQueryChange(value: string): void {
+    this.sidebarQuery.set(value);
+    // Show the loading state right away; the request itself waits for typing to pause.
+    this.isSearchingTickets.set(isTicketSearchable(value.trim().replace(/^#/, '')));
+    // Project names are searchable too, so make sure they are loaded.
+    if (value.trim()) void this.ensureProjectsLoaded();
   }
 
-  isProjectOpen(projectId: string): boolean {
-    return this.openProjectIds().has(projectId);
+  /** Enter: open the ticket when the search is an ID, otherwise the first match. */
+  onSidebarSearchSubmit(): void {
+    const ticketId = this.searchTicketId();
+    if (ticketId) {
+      void this.openTicket(ticketId);
+      return;
+    }
+    if (!this.sidebarQuery().trim()) return;
+    const firstProject = this.filteredSidebarProjects()[0];
+    const firstNavItem = this.visibleNavGroups()[0]?.items[0];
+    const firstTicket = this.ticketMatches()[0];
+    if (firstProject) {
+      this.openProject(firstProject);
+    } else if (firstNavItem?.action) {
+      firstNavItem.action();
+    } else if (firstTicket) {
+      void this.openTicket(firstTicket.id);
+      return;
+    }
+    this.sidebarQuery.set('');
+  }
+
+  /**
+   * Opens a ticket by ID inside its project and board, so the breadcrumb reads
+   * `Projects > project > Boards > board > #id`. Falls back to `/dashboard/tickets/:id`
+   * (still under its project) when no board column contains the ticket.
+   */
+  async openTicket(ticketId: number): Promise<void> {
+    if (this.openingTicketId() !== null) return;
+    this.openingTicketId.set(ticketId);
+    try {
+      const ticket = await this.openprojectService.getTicketContext(String(ticketId), {
+        includeDescription: false,
+        includeComments: false,
+        includeAttachments: false,
+      });
+      const projectId = ticket.success && ticket.project_id ? String(ticket.project_id) : '';
+      if (!projectId) {
+        this.navigateTo(`/dashboard/tickets/${ticketId}`);
+        return;
+      }
+
+      await this.ensureProjectsLoaded();
+      const project = this.sidebarProjects()?.find((item) => item.id === projectId);
+      const queryParams = {
+        name: project?.name || ticket.project_name || projectId,
+        identifier: project?.identifier || '',
+      };
+      const boardId = await this.findBoardContainingTicket(projectId, queryParams.identifier, ticketId);
+      if (boardId) {
+        this.navigateTo(`/dashboard/boards/${projectId}/${boardId}/tickets/${ticketId}`, queryParams);
+      } else {
+        this.navigateTo(`/dashboard/tickets/${ticketId}`, { ...queryParams, projectId });
+      }
+    } catch {
+      this.navigateTo(`/dashboard/tickets/${ticketId}`);
+    } finally {
+      this.openingTicketId.set(null);
+      this.sidebarQuery.set('');
+    }
+  }
+
+  private async findBoardContainingTicket(
+    projectId: string,
+    identifier: string,
+    ticketId: number
+  ): Promise<string | null> {
+    const boards = await this.openprojectService.getProjectBoards(projectId, identifier || undefined);
+    const matches = await Promise.all(
+      boards.map(async (board) => {
+        try {
+          const columns = await this.openprojectService.getBoardColumns(board.id);
+          return columns.some(
+            (column) =>
+              column.workPackageIds.includes(ticketId) ||
+              column.workPackages?.some((workPackage) => workPackage.id === ticketId)
+          )
+            ? board.id
+            : null;
+        } catch {
+          return null;
+        }
+      })
+    );
+    return matches.find((boardId) => boardId !== null) ?? null;
   }
 
   isProjectActive(projectId: string): boolean {
     return this.activeBoardRoute()?.projectId === projectId;
   }
 
-  isBoardActive(projectId: string, boardId: string, index: number): boolean {
-    const route = this.activeBoardRoute();
-    if (!route || route.projectId !== projectId) return false;
-    return route.boardId ? route.boardId === boardId : index === 0;
-  }
-
-  openBoard(project: Project, board: BoardOption): void {
-    this.navigateTo(`/dashboard/boards/${project.id}/${board.id}`, {
+  openProject(project: Project): void {
+    this.navigateTo(`/dashboard/boards/${project.id}`, {
       name: project.name,
       identifier: project.identifier || '',
-    });
-  }
-
-  private setProjectOpen(projectId: string, open: boolean): void {
-    this.openProjectIds.update((ids) => {
-      const next = new Set(ids);
-      if (open) next.add(projectId);
-      else next.delete(projectId);
-      return next;
     });
   }
 
@@ -440,4 +661,17 @@ export class DashboardPage implements OnInit, OnDestroy {
     const isDark = this.themeService.isDark();
     this.themeService.setTheme(isDark ? 'light' : 'dark');
   }
+}
+
+/** Lowercases and strips accents so searches match regardless of diacritics. */
+function normalizeSearch(value: string): string {
+  return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+}
+
+/** Pause after the last keystroke before searching tickets. */
+const SIDEBAR_SEARCH_DEBOUNCE_MS = 350;
+
+/** IDs are searched from the first digit; text needs at least two characters. */
+function isTicketSearchable(query: string): boolean {
+  return /^\d+$/.test(query) || query.length >= 2;
 }

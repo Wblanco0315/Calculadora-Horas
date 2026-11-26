@@ -44,9 +44,15 @@ pub struct VersionOptionItem {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct BoardOptionItem {
     pub id: String,
     pub name: String,
+    /// OpenProject board kind: `free` (basic) or `action`.
+    pub kind: Option<String>,
+    /// Attribute an action board is based on (`status`, `assignee`, `version`, `subproject`).
+    pub attribute: Option<String>,
+    pub created_at: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -2123,7 +2129,13 @@ async fn fetch_project_boards(
                     .unwrap_or("Board")
                     .to_string();
 
-                list.push(BoardOptionItem { id, name });
+                list.push(BoardOptionItem {
+                    id,
+                    name,
+                    kind: g["options"]["type"].as_str().map(str::to_string),
+                    attribute: g["options"]["attribute"].as_str().map(str::to_string),
+                    created_at: g["createdAt"].as_str().map(str::to_string),
+                });
             }
         }
     }
@@ -2794,6 +2806,76 @@ async fn fetch_available_people(
         Err(_) => return Vec::new(),
     };
     parse_schema_allowed_values(&data)
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkPackageSearchItem {
+    pub id: i64,
+    pub subject: String,
+    pub project_id: Option<String>,
+    pub project_name: Option<String>,
+    pub type_name: Option<String>,
+    pub status_name: Option<String>,
+}
+
+/// Searches work packages by subject or ID with OpenProject's `typeahead` filter (most recently updated first).
+#[tauri::command]
+async fn search_work_packages(
+    url: String,
+    token: String,
+    query: String,
+    limit: Option<u32>,
+) -> Result<Vec<WorkPackageSearchItem>, String> {
+    let query = query.trim().trim_start_matches('#').to_string();
+    if query.is_empty() {
+        return Ok(Vec::new());
+    }
+    let clean_url = sanitize_url(&url);
+    let endpoint = format!("{}/api/v3/work_packages", clean_url);
+    let filters = serde_json::json!([{
+        "typeahead": { "operator": "**", "values": [query] }
+    }])
+    .to_string();
+    let sort_by = serde_json::json!([["updatedAt", "desc"]]).to_string();
+    let page_size = limit.unwrap_or(8).clamp(1, 25).to_string();
+    let client = build_http_client(12)?;
+    let response = client
+        .get(&endpoint)
+        .query(&[
+            ("filters", filters.as_str()),
+            ("sortBy", sort_by.as_str()),
+            ("pageSize", page_size.as_str()),
+        ])
+        .header("Authorization", build_auth_header(&token))
+        .header("Accept", "application/hal+json, application/json")
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!("HTTP {}", response.status()));
+    }
+
+    let data: serde_json::Value = response.json().await.map_err(|error| error.to_string())?;
+    Ok(data["_embedded"]["elements"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|work_package| {
+            let links = &work_package["_links"];
+            Some(WorkPackageSearchItem {
+                id: work_package["id"].as_i64()?,
+                subject: work_package["subject"].as_str().unwrap_or_default().to_string(),
+                project_id: links["project"]["href"]
+                    .as_str()
+                    .and_then(|href| href.split('/').last())
+                    .map(str::to_string),
+                project_name: links["project"]["title"].as_str().map(str::to_string),
+                type_name: links["type"]["title"].as_str().map(str::to_string),
+                status_name: links["status"]["title"].as_str().map(str::to_string),
+            })
+        })
+        .collect())
 }
 
 #[tauri::command]
@@ -3626,6 +3708,7 @@ pub fn run() {
             move_work_package_to_board_column,
             fetch_work_package_form,
             fetch_work_package_revisions,
+            search_work_packages,
             fetch_work_package_update_stream,
             update_work_package,
             add_work_package_comment,

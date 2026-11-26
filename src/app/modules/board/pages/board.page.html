@@ -9,7 +9,7 @@
           iconOnly
           rounded
           severity="secondary"
-          (click)="goBackToProjects()"
+          (click)="goBackToBoardList()"
           [title]="'common.back' | translate"
           class="shrink-0"
         >
@@ -22,19 +22,9 @@
           class="text-primary-600 dark:text-primary-400 shrink-0"
         />
         <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-zinc-100 truncate min-w-0">
-          {{ projectName() }}
+          {{ selectedBoardName() }}
         </h1>
 
-        @if (boards().length > 0) {
-          <p-select
-            [options]="boards()"
-            [ngModel]="selectedBoardId()"
-            (ngModelChange)="onBoardChange($event)"
-            optionLabel="name"
-            optionValue="id"
-            styleClass="!text-xs sm:!text-sm !font-semibold w-full sm:w-auto sm:ml-1"
-          />
-        }
       </div>
 
       <div class="flex flex-col sm:flex-row sm:items-center gap-2 w-full lg:w-auto min-w-0">
