@@ -24,7 +24,7 @@ src/app/modules/setting/
 - **Pestañas** (`SETTINGS_TABS`, `p-tabs` desplazable): Apariencia, Horario, Almuerzo, OpenProject, Actualizaciones y Servidor MCP & IA. Cada pestaña es el mismo componente de paso del setup (`appearance-step`, `schedule-step`, `lunch-step`, `openproject-step`, `update-section`, `mcp-section`).
 - **Estado**: `SetupService` (borrador de toda la configuración). La página llama a `SetupService.init()` al entrar para cargar la configuración guardada.
 - **Guardar**: un único botón guarda todas las pestañas.
-  - `layout="compact"` (ventana compacta, `/setup?edit=true`): botón **Cerrar** y, al guardar, `completeSetup()` vuelve al modo compacto.
+  - `layout="compact"` (ventana compacta, `/setup?edit=true`): botón **Cerrar**; al guardar (`saveSettings()`) o cerrar, `WindowService.returnToCompact()` vuelve a `/compact` sin tocar el tamaño, la posición ni el maximizado de la ventana.
   - `layout="full"` (dashboard): sin botón Cerrar; `saveSettings()` guarda sin cambiar de ventana y muestra el toast `toast.settingsSaved`.
 - **Responsive**: en compacto ocupa la ventana con contenido `max-w-4xl`; en completo se muestra como tarjeta con bordes dentro del dashboard, contenido `max-w-5xl` y la barra de pestañas con desplazamiento horizontal en anchos pequeños.
 

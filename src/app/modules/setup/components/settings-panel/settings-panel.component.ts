@@ -14,6 +14,7 @@ import {
 import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { SetupService } from '../../services/setup.service';
+import { WindowService } from '../../../../core/services/window.service';
 import { AppearanceStepComponent } from '../appearance-step/appearance-step.component';
 import { ScheduleStepComponent } from '../schedule-step/schedule-step.component';
 import { LunchStepComponent } from '../lunch-step/lunch-step.component';
@@ -69,6 +70,7 @@ export type SettingsTabKey = (typeof SETTINGS_TABS)[number]['key'];
 export class SettingsPanelComponent {
   readonly setupService = inject(SetupService);
   private readonly notificationService = inject(NotificationService);
+  private readonly windowService = inject(WindowService);
 
   readonly layout = input<'compact' | 'full'>('compact');
   readonly closed = output<void>();
@@ -77,7 +79,10 @@ export class SettingsPanelComponent {
 
   async save(): Promise<void> {
     if (this.layout() === 'compact') {
-      await this.setupService.completeSetup();
+      // Compact settings live in the compact window: keep its size and position.
+      if (await this.setupService.saveSettings()) {
+        await this.windowService.returnToCompact();
+      }
       return;
     }
     if (await this.setupService.saveSettings()) {

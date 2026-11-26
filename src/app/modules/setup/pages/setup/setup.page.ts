@@ -89,6 +89,6 @@ export class SetupPage implements OnInit {
   }
 
   async closeSettings(): Promise<void> {
-    await this.windowService.setCompactMode();
+    await this.windowService.returnToCompact();
   }
 }

@@ -363,6 +363,7 @@ export const en = {
     clear: 'Clear',
     noMoreRecordsToday: 'No more records\nfor today',
     noMoreRecordsDate: 'No activities recorded\nfor this date',
+    fullMode: 'Full mode',
     openFullMode: 'Open Full Mode (Dashboard)',
     comingSoon: 'Coming soon',
     settings: 'Settings',

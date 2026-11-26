@@ -59,7 +59,7 @@ export class AppHeaderComponent {
     }
 
     if (this.storageService.isConfigured() && this.router.url.includes('setup')) {
-      this.windowService.setCompactMode();
+      this.windowService.returnToCompact();
     } else {
       this.windowService.requestClose();
     }

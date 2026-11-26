@@ -363,6 +363,7 @@ export const es = {
     clear: 'Limpiar',
     noMoreRecordsToday: 'No hay más registros\npor hoy',
     noMoreRecordsDate: 'No hay actividades registradas\npara esta fecha',
+    fullMode: 'Modo completo',
     openFullMode: 'Abrir Modo Completo (Dashboard)',
     comingSoon: 'Próximamente',
     settings: 'Ajustes',

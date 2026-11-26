@@ -425,10 +425,10 @@ export class SetupService {
     }
   }
 
-  /** Onboarding / compact settings: saves and returns to the compact window. */
+  /** End of onboarding: saves and opens the compact window at its default size (onboarding runs maximized). */
   async completeSetup(): Promise<void> {
     if (await this.saveSettings()) {
-      await this.windowService.setCompactMode();
+      await this.windowService.setCompactMode({ reset: true });
     }
   }
 

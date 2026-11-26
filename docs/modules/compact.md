@@ -161,13 +161,9 @@ Cada modal se encuentra aislado en su propio componente standalone dentro de `mo
 
 ## 3. Barra Inferior y Conmutación de Modo
 
-La barra de navegación inferior (`<nav>`) de 3 posiciones permite la conmutación al Modo Completo:
-1. **Botón Izquierdo (Icono de 4 cuadrados `tablerLayoutDashboard`)**:
-   - Al pulsar este botón, la ventana se redimensiona al tamaño del dashboard (~1150x780 px) y navega a `/dashboard/overview` vía `WindowService.setFullMode()`.
-2. **Botón Central (Icono de historial `tablerHistory`)**:
-   - Inactivo / deshabilitado con título "Próximamente" (tal como en la versión original).
-3. **Botón Derecho (Icono de ajustes `tablerSettings`)**:
-   - Abre la configuración (`/setup?edit=true`): el mismo `SettingsPanelComponent` que usa `/dashboard/settings` en modo completo, con disposición compacta.
+La barra inferior (`<footer>`) tiene dos botones con icono y texto:
+1. **Modo completo** (`tablerLayoutDashboard`, `compact.fullMode`): `WindowService.setFullMode('/dashboard/overview', { maximize: true })` cambia al modo completo, navega al overview y maximiza la ventana.
+2. **Configuración** (`tablerSettings`): abre `/setup?edit=true`, el mismo `SettingsPanelComponent` que usa `/dashboard/settings`, con disposición compacta. Al guardar o cerrar se vuelve a `/compact` sin cambiar el tamaño ni la posición de la ventana.
 
 ---
 

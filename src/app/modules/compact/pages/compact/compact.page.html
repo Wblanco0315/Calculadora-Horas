@@ -355,14 +355,15 @@
         <!-- Open Full Mode / Dashboard Button -->
         <button
           type="button"
-          (click)="windowService.setFullMode('/dashboard/overview')"
-          class="cursor-pointer flex items-center justify-center p-2 rounded-xl text-slate-600 dark:text-zinc-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+          (click)="windowService.setFullMode('/dashboard/overview', { maximize: true })"
+          class="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
           [title]="'compact.openFullMode' | translate"
         >
-          <ng-icon name="tablerLayoutDashboard" size="1.25rem" />
+          <ng-icon name="tablerLayoutDashboard" size="1.2rem" />
+          <span class="text-xs font-semibold">{{ 'compact.fullMode' | translate }}</span>
         </button>
 
-        <!-- Settings - Icon + Name (only button with visible destination label) -->
+        <!-- Settings - Icon + Name -->
         <button
           type="button"
           (click)="openSettings()"

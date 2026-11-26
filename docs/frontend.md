@@ -19,6 +19,8 @@ Current owners of components shared between modules:
 - `modules/time-entry/components/activity-row` and `modules/time-entry/modals/{activity-form,favorites,reset-confirm,sync-confirm}-modal`: activity UI, used by `compact`, `time-entry` and the `board` ticket detail.
 - `modules/board/pages/ticket-detail/ticket-detail.page`: also embedded in the time log drawer.
 - `shared/components/close-confirm-modal`: window close confirmation (compact, dashboard, setup).
+- `shared/components/window-transition`: cover shown while the window switches between compact and full mode (`WindowService.isTransitioning`).
+- `index.html` `#app-loader`: static startup loader (logo + progress bar). An inline script applies the saved theme (`pocketproject_theme`) and accent (`pocketproject_color`) before the first paint; `hideAppLoader()` (`core/utils/app-loader.util.ts`) fades it out once `AppComponent.ngOnInit` has loaded the config and placed the window (also on bootstrap errors).
 
 - `modules/setup/components/settings-panel`: the settings tabs shown by the compact window (`/setup` in edit mode) and the full dashboard (`/dashboard/settings`).
 
