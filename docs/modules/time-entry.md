@@ -30,9 +30,10 @@ src/app/modules/time-entry/
 ## Reutilización
 
 - Todo el estado vive en `ActivityService` (fecha seleccionada, actividades, selección, modales), así que la vista comparte datos con el modo compacto.
-- Reutiliza los componentes del módulo `compact`: `ActivityRowComponent` y los modales `ActivityFormModalComponent`, `FavoritesModalComponent`, `SyncConfirmModalComponent`, `ResetConfirmModalComponent` y `TicketContextModalComponent`.
+- Reutiliza los componentes del módulo `compact`: `ActivityRowComponent` y los modales `ActivityFormModalComponent`, `FavoritesModalComponent`, `SyncConfirmModalComponent`, `ResetConfirmModalComponent`, además de `TicketDetailPage` (módulo board) dentro del drawer.
 - El filtrado/orden se comparte con el modo compacto mediante `core/utils/activity-filter.util.ts` (`filterActivities`, `hasActiveActivityFilters`).
 
-## Notificaciones
+## Contexto del ticket y notificaciones
 
+- La acción de contexto del ticket de cada fila abre un `p-drawer` lateral derecho (ancho completo en móvil, 44rem desde `md`; dentro, el detalle se muestra en una sola columna con la actividad debajo: `.ticket-detail-page--embedded`) con la página de detalle del ticket (`TicketDetailPage` con `[ticket]` y `[embedded]="true"`). En modo embebido la página no publica el breadcrumb, no monta su propio modal de actividad (usa el de esta vista) y su botón de volver (icono X) cierra el drawer. El encabezado del drawer se oculta (`.ticket-detail-drawer` en `styles.css`) porque la página trae el suyo; el drawer y su máscara empiezan debajo de la barra de título de la ventana (`--app-header-height`, 2rem) para no taparla. El modo compacto sigue usando el modal de contexto.
 - Las acciones muestran toasts (`NotificationService`, `core/services/notification.service.ts`, sobre `MessageService` global y `<p-toast position="bottom-right">` en el dashboard): crear/editar/eliminar actividad, reiniciar el día, sincronizar (individual o resumen de sincronización masiva con éxitos/errores), favoritos, y cambios de estado, versión o columna. Los textos están en `toast.*` de los idiomas. El modo compacto no monta `<p-toast>`, así que ahí no aparecen.

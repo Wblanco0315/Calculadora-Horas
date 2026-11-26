@@ -207,4 +207,20 @@
 <app-favorites-modal />
 <app-sync-confirm-modal />
 <app-reset-confirm-modal />
-<app-ticket-context-modal />
+<p-drawer
+  [visible]="activityService.showTicketContextModal()"
+  (visibleChange)="!$event && activityService.closeTicketContextModal()"
+  position="right"
+  [modal]="true"
+  [showCloseIcon]="false"
+  [maskStyle]="{ top: 'var(--app-header-height)' }"
+  styleClass="ticket-detail-drawer !w-full md:!w-[44rem]"
+>
+  @if (contextTicketId(); as ticketId) {
+    <app-ticket-detail-page
+      [ticket]="ticketId"
+      [embedded]="true"
+      (closeRequested)="activityService.closeTicketContextModal()"
+    />
+  }
+</p-drawer>

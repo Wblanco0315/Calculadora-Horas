@@ -1,4 +1,4 @@
-import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -178,8 +178,14 @@ export class TicketDetailPage {
   private readonly routeParams = toSignal(this.route.paramMap, { initialValue: this.route.snapshot.paramMap });
   private readonly routeQueryParams = toSignal(this.route.queryParamMap, { initialValue: this.route.snapshot.queryParamMap });
 
+  /** Ticket to show when embedded (e.g. in a drawer) instead of reading it from the route. */
+  readonly ticket = input<number | null>(null);
+  /** Embedded mode: no breadcrumb publishing, no own activity modal, and back closes instead of navigating. */
+  readonly embedded = input<boolean>(false);
+  readonly closeRequested = output<void>();
+
   readonly ticketId = computed(() => {
-    const ticketId = Number(this.routeParams().get('ticketId'));
+    const ticketId = this.ticket() ?? Number(this.routeParams().get('ticketId'));
     return Number.isSafeInteger(ticketId) && ticketId > 0 ? ticketId : null;
   });
   readonly projectId = computed(() => this.routeParams().get('projectId') || '');
@@ -310,11 +316,14 @@ export class TicketDetailPage {
 
     // Publish the ticket subject for the dashboard breadcrumb.
     effect(() => {
+      if (this.embedded()) return;
       const id = this.ticketId();
       const subject = this.ticketData()?.subject ?? '';
       this.breadcrumbService.ticket.set(id ? { id, subject } : null);
     });
-    this.destroyRef.onDestroy(() => this.breadcrumbService.ticket.set(null));
+    this.destroyRef.onDestroy(() => {
+      if (!this.embedded()) this.breadcrumbService.ticket.set(null);
+    });
 
     effect(() => {
       const boardId = this.boardId();
@@ -344,6 +353,10 @@ export class TicketDetailPage {
   }
 
   goBackToBoard(): void {
+    if (this.embedded()) {
+      this.closeRequested.emit();
+      return;
+    }
     if (this.projectId() && this.boardId()) {
       this.router.navigate(['/dashboard/boards', this.projectId(), this.boardId()], {
         queryParamsHandling: 'preserve',

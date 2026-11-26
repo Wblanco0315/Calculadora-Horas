@@ -31,7 +31,8 @@ import {
   hasActiveActivityFilters,
 } from '../../../core/utils/activity-filter.util';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { TicketContextModalComponent } from '../../../shared/components/ticket-context-modal/ticket-context-modal.component';
+import { Drawer } from 'primeng/drawer';
+import { TicketDetailPage } from '../../board/pages/ticket-detail.page';
 import { TimeEntrySummaryComponent } from '../components/time-entry-summary/time-entry-summary.component';
 import { ActivityRowComponent } from '../../compact/components/activity-row/activity-row.component';
 import { ActivityFormModalComponent } from '../../compact/modals/activity-form-modal/activity-form-modal.component';
@@ -61,7 +62,8 @@ import { ResetConfirmModalComponent } from '../../compact/modals/reset-confirm-m
     FavoritesModalComponent,
     SyncConfirmModalComponent,
     ResetConfirmModalComponent,
-    TicketContextModalComponent,
+    Drawer,
+    TicketDetailPage,
   ],
   viewProviders: [
     provideIcons({
@@ -95,6 +97,11 @@ export class TimeEntryPage implements OnInit {
 
   readonly isSyncing = computed<boolean>(() => this.activityService.isSyncing());
 
+  /** Ticket opened from a row's "ticket context" action, shown in the ticket detail drawer. */
+  readonly contextTicketId = computed<number | null>(() => {
+    const id = Number((this.activityService.contextTicket() ?? '').replace(/^#/, ''));
+    return Number.isSafeInteger(id) && id > 0 ? id : null;
+  });
   readonly hasToken = computed<boolean>(() => this.storageService.isLoggedIn());
 
   readonly selectedDateObj = computed<Date>(() => new Date(`${this.activityService.selectedDate()}T00:00:00`));

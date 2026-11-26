@@ -367,6 +367,51 @@ router-outlet {
   }
 }
 
+/* Ticket detail page rendered inside a drawer (time log view): the page brings its own header.
+   The drawer and its mask start below the custom window title bar (app-header, h-8). */
+:root {
+  --app-header-height: 2rem;
+}
+
+.ticket-detail-drawer.p-drawer {
+  top: var(--app-header-height) !important;
+  height: calc(100% - var(--app-header-height)) !important;
+}
+
+.ticket-detail-drawer .p-drawer-header {
+  display: none;
+}
+
+/* Embedded (narrow drawer): always one scrolling column, activity below the details. */
+.ticket-detail-page--embedded {
+  overflow-y: auto !important;
+}
+
+.ticket-detail-page--embedded .ticket-detail-layout {
+  display: flex !important;
+  flex-direction: column;
+  flex: none;
+}
+
+.ticket-detail-page--embedded .ticket-detail-main {
+  overflow: visible !important;
+  min-height: auto !important;
+}
+
+.ticket-detail-page--embedded .ticket-detail-activity {
+  flex-shrink: 0 !important;
+  min-height: 32rem !important;
+  border-left-width: 0 !important;
+  border-top-width: 1px !important;
+}
+
+.ticket-detail-drawer .p-drawer-content {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
 /* ==========================================================================
    OpenProject rich content (rendered descriptions / comments) + CKEditor 5
    ========================================================================== */
