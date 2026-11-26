@@ -1,4 +1,4 @@
-import { Component, DestroyRef, computed, effect, inject, input, output, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -293,8 +293,39 @@ export class TicketDetailPage {
       const ticketId = this.ticketId();
       if (boardId) {
         void this.loadBoardColumns(boardId, ticketId);
+        return;
+      }
+      // Opened without a board (time log drawer, /dashboard/tickets/:id): find the board that
+      // contains the ticket in its project, once per ticket, so the column selector still works.
+      const projectId = this.ticketData()?.project_id;
+      if (ticketId && projectId) {
+        untracked(() => void this.resolveTicketBoard(String(projectId), ticketId));
       }
     });
+  }
+
+  /** `projectId:ticketId` whose board was already looked up (avoids repeating it on every reload). */
+  private resolvedBoardKey: string | null = null;
+
+  private async resolveTicketBoard(projectId: string, ticketId: number): Promise<void> {
+    const key = `${projectId}:${ticketId}`;
+    if (this.resolvedBoardKey === key) return;
+    this.resolvedBoardKey = key;
+    this.boardColumns.set([]);
+    this.selectedColumnQueryId.set(null);
+    try {
+      const location = await this.boardApi.findTicketBoardColumn(
+        projectId,
+        String(ticketId),
+        this.projectIdentifier() || undefined
+      );
+      // Ignore the answer if another ticket was opened meanwhile.
+      if (location && this.resolvedBoardKey === key) {
+        await this.loadBoardColumns(location.boardId, ticketId);
+      }
+    } catch {
+      // No board contains the ticket: there is no column to move it to.
+    }
   }
 
   async loadBoardColumns(boardId: string, ticketId: number | null): Promise<void> {
