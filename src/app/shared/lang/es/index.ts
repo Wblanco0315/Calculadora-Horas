@@ -127,7 +127,7 @@ export const es = {
       neutralStyle: 'Neutro Puro',
       neutralStyleDesc: 'Lienzo #F8F9FA · Superficie #FFFFFF',
       warmStyle: 'Cálido Papel',
-      warmStyleDesc: 'Lienzo #F7F6F2 · Superficie #FDFCFB',
+      warmStyleDesc: 'Lienzo #F5F4EE · Superficie #FCFAF6',
       language: 'Idioma de la Interfaz',
       accentColor: 'Color de Acento',
       presetColors: 'Colores Recomendados',

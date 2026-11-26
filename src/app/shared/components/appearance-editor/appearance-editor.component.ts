@@ -119,58 +119,6 @@ export const PRESET_COLORS: ColorOption[] = [
             <span class="text-[11px] sm:text-xs font-semibold truncate">{{ 'setup.appearance.dark' | translate }}</span>
           </button>
         </div>
-
-        <!-- Light Mode Palette Style (Neutro Puro vs Cálido Papel) -->
-        @if (themeService.themeMode() !== 'dark') {
-          <div class="mt-3 animate-fadeIn">
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-zinc-400 mb-2">
-              {{ 'setup.appearance.lightStyle' | translate }}
-            </label>
-            <div class="grid grid-cols-2 gap-2 sm:gap-3">
-              <!-- Neutro Puro -->
-              <button
-                pButton
-                type="button"
-                (click)="themeService.setLightStyle('neutral')"
-                [severity]="themeService.lightStyle() === 'neutral' ? 'primary' : 'secondary'"
-                [variant]="themeService.lightStyle() === 'neutral' ? undefined : 'outlined'"
-                class="w-full flex items-center justify-between p-2.5 rounded-xl cursor-pointer transition-all"
-              >
-                <div class="flex items-center gap-2">
-                  <span class="w-4 h-4 rounded-full border border-slate-300 bg-[#FFFFFF] shadow-xs shrink-0"></span>
-                  <div class="text-left">
-                    <div class="text-xs font-semibold leading-tight">{{ 'setup.appearance.neutralStyle' | translate }}</div>
-                    <div class="text-[10px] opacity-75 font-mono">#F8F9FA · #FFFFFF</div>
-                  </div>
-                </div>
-                @if (themeService.lightStyle() === 'neutral') {
-                  <ng-icon name="tablerCheck" size="1rem" />
-                }
-              </button>
-
-              <!-- Cálido Papel -->
-              <button
-                pButton
-                type="button"
-                (click)="themeService.setLightStyle('warm')"
-                [severity]="themeService.lightStyle() === 'warm' ? 'primary' : 'secondary'"
-                [variant]="themeService.lightStyle() === 'warm' ? undefined : 'outlined'"
-                class="w-full flex items-center justify-between p-2.5 rounded-xl cursor-pointer transition-all"
-              >
-                <div class="flex items-center gap-2">
-                  <span class="w-4 h-4 rounded-full border border-[#E4E0D8] bg-[#FDFCFB] shadow-xs shrink-0"></span>
-                  <div class="text-left">
-                    <div class="text-xs font-semibold leading-tight">{{ 'setup.appearance.warmStyle' | translate }}</div>
-                    <div class="text-[10px] opacity-75 font-mono">#F7F6F2 · #FDFCFB</div>
-                  </div>
-                </div>
-                @if (themeService.lightStyle() === 'warm') {
-                  <ng-icon name="tablerCheck" size="1rem" />
-                }
-              </button>
-            </div>
-          </div>
-        }
       </div>
 
       <!-- Language Selector -->

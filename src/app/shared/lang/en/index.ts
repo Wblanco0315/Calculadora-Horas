@@ -127,7 +127,7 @@ export const en = {
       neutralStyle: 'Pure Neutral',
       neutralStyleDesc: 'Canvas #F8F9FA · Surface #FFFFFF',
       warmStyle: 'Warm Paper',
-      warmStyleDesc: 'Canvas #F7F6F2 · Surface #FDFCFB',
+      warmStyleDesc: 'Canvas #F5F4EE · Surface #FCFAF6',
       language: 'Interface Language',
       accentColor: 'Accent Color',
       presetColors: 'Recommended Colors',

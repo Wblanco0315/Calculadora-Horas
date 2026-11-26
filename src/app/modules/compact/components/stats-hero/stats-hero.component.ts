@@ -24,15 +24,15 @@ function padZero(val: number): string {
   ],
   template: `
     <div
-      class="px-4 py-3 sm:px-8 bg-linear-to-b from-primary-500 to-primary-600 dark:from-primary-950 dark:to-zinc-900 text-white shadow-inner shrink-0 select-none"
+      class="px-4 py-3 sm:px-8 bg-linear-to-b from-primary-600 to-primary-700 dark:from-primary-950 dark:to-zinc-900 text-[#FAF8F5] shadow-inner shrink-0 select-none transition-colors border-b border-black/10 dark:border-zinc-800"
     >
       <div class="max-w-4xl mx-auto w-full">
         <!-- Top Row: Total Registrado + Meta del Día -->
         <div class="flex justify-between items-baseline mb-1 text-xs">
-          <span class="text-white/80 font-medium uppercase tracking-wider">
+          <span class="text-[#FAF8F5]/75 font-medium uppercase tracking-wider">
             {{ 'compact.totalRegistered' | translate }}
           </span>
-          <div class="h-4 flex items-baseline justify-end text-white/80 font-medium">
+          <div class="h-4 flex items-baseline justify-end text-[#FAF8F5]/75 font-medium">
             @if (activityService.timeFormat() === 'decimal') {
               <span class="animate-timeSwap">
                 {{ 'compact.dailyGoal' | translate: { goal: formattedGoal() } }}
@@ -50,14 +50,14 @@ function padZero(val: number): string {
           <div class="h-10 flex items-baseline select-none">
             @if (activityService.timeFormat() === 'decimal') {
               <div class="flex items-baseline animate-timeSwap">
-                <span class="text-4xl font-bold font-mono tracking-tight text-white leading-none tabular-nums">
+                <span class="text-4xl font-bold font-mono tracking-tight text-[#FAF8F5] leading-none tabular-nums drop-shadow-xs">
                   {{ formattedTotalNumber() }}
                 </span>
-                <span class="text-2xl text-white/80 ml-1 font-medium leading-none">h</span>
+                <span class="text-2xl text-[#FAF8F5]/75 ml-1 font-medium leading-none">h</span>
               </div>
             } @else {
               <div class="flex items-baseline animate-timeSwap">
-                <span class="text-4xl font-bold font-mono tracking-tight text-white leading-none tabular-nums">
+                <span class="text-4xl font-bold font-mono tracking-tight text-[#FAF8F5] leading-none tabular-nums drop-shadow-xs">
                   {{ formattedTotalNumber() }}
                 </span>
               </div>
@@ -71,7 +71,7 @@ function padZero(val: number): string {
             severity="danger"
             variant="outlined"
             size="small"
-            class="mb-1 !px-2.5 !py-1 !text-white !border-white/30 hover:!bg-red-500/80 hover:!border-red-500 text-xs cursor-pointer"
+            class="mb-1 !px-2.5 !py-1 !text-[#FAF8F5]/90 !border-white/20 hover:!bg-white/10 hover:!text-rose-200 hover:!border-rose-300/40 text-xs cursor-pointer rounded-lg transition-colors"
             [title]="'compact.resetTitle' | translate"
           >
             <ng-icon name="tablerTrash" size="0.95rem" class="mr-1" />
@@ -82,7 +82,7 @@ function padZero(val: number): string {
         <!-- Format Toggle with PrimeNG SelectButton + Remaining / Overtime -->
         <div class="flex items-center justify-between gap-3 mb-3 mt-2 min-h-[30px]">
           <div class="flex items-center gap-2.5">
-            <span class="text-white/90 text-xs font-medium tracking-wide uppercase">
+            <span class="text-[#FAF8F5]/80 text-xs font-medium tracking-wide uppercase">
               {{ 'compact.format' | translate }}
             </span>
             <p-selectbutton
@@ -98,25 +98,37 @@ function padZero(val: number): string {
           </div>
 
           <!-- Overtime or Remaining status message -->
-          <div class="text-xs text-white/90 font-medium tracking-wide text-right flex items-center justify-end h-5">
+          <div class="text-xs font-medium tracking-wide text-right flex items-center justify-end h-5">
             @if (activityService.timeFormat() === 'decimal') {
               <span class="animate-timeSwap">
                 @if (activityService.totalMinutes() > storageService.maxDailyMinutes()) {
-                  {{ 'compact.goalAchievedExtras' | translate: { time: formattedOvertime() } }}
+                  <span class="text-amber-200 font-semibold drop-shadow-xs">
+                    {{ 'compact.goalAchievedExtras' | translate: { time: formattedOvertime() } }}
+                  </span>
                 } @else if (activityService.totalMinutes() === storageService.maxDailyMinutes() && storageService.maxDailyMinutes() > 0) {
-                  {{ 'compact.goalAchieved' | translate }}
+                  <span class="text-emerald-200 font-semibold drop-shadow-xs">
+                    {{ 'compact.goalAchieved' | translate }}
+                  </span>
                 } @else {
-                  {{ 'compact.timeRemaining' | translate: { time: formattedRemaining() } }}
+                  <span class="text-[#FAF8F5]/90">
+                    {{ 'compact.timeRemaining' | translate: { time: formattedRemaining() } }}
+                  </span>
                 }
               </span>
             } @else {
               <span class="animate-timeSwap">
                 @if (activityService.totalMinutes() > storageService.maxDailyMinutes()) {
-                  {{ 'compact.goalAchievedExtras' | translate: { time: formattedOvertime() } }}
+                  <span class="text-amber-200 font-semibold drop-shadow-xs">
+                    {{ 'compact.goalAchievedExtras' | translate: { time: formattedOvertime() } }}
+                  </span>
                 } @else if (activityService.totalMinutes() === storageService.maxDailyMinutes() && storageService.maxDailyMinutes() > 0) {
-                  {{ 'compact.goalAchieved' | translate }}
+                  <span class="text-emerald-200 font-semibold drop-shadow-xs">
+                    {{ 'compact.goalAchieved' | translate }}
+                  </span>
                 } @else {
-                  {{ 'compact.timeRemaining' | translate: { time: formattedRemaining() } }}
+                  <span class="text-[#FAF8F5]/90">
+                    {{ 'compact.timeRemaining' | translate: { time: formattedRemaining() } }}
+                  </span>
                 }
               </span>
             }
@@ -124,9 +136,9 @@ function padZero(val: number): string {
         </div>
 
         <!-- Thin Progress Bar (faithful to original calculator.vue h-1.5) -->
-        <div class="w-full bg-black/20 rounded-full h-1.5 overflow-hidden">
+        <div class="w-full bg-black/25 dark:bg-white/10 rounded-full h-1.5 overflow-hidden">
           <div
-            class="bg-white rounded-full h-1.5 transition-all duration-500"
+            class="bg-[#FAF8F5] rounded-full h-1.5 transition-all duration-500 shadow-xs"
             [style.width.%]="activityService.progressPercentage()"
           ></div>
         </div>

@@ -79,52 +79,36 @@ html.dark {
 }
 
 /* --------------------------------------------------------------------------
-   Light Mode - Paleta: Neutro Puro (Default)
+   Light Mode - Paleta: Cálido Papel (Optimizado para legibilidad y confort visual)
    -------------------------------------------------------------------------- */
 :root:not(.dark),
-:root[data-light-style="neutral"]:not(.dark) {
-  /* Paleta: Neutro Puro */
-  --bg-canvas: #F8F9FA;
-  --bg-surface: #FFFFFF;
-  --bg-subtle: #F1F3F5;
-  --border-default: #E2E8F0;
-  --text-primary: #18181B;
-  --text-secondary: #52525B;
-  --text-muted: #A1A1AA;
-
-  /* PrimeNG & Tailwind token bindings */
-  --color-white: #FFFFFF;
-  --p-surface-0: #FFFFFF;
-  --p-surface-50: #F8F9FA;
-  --p-surface-100: #F1F3F5;
-  --p-surface-200: #E2E8F0;
-  --p-content-border-color: #E2E8F0;
-  --p-text-color: #18181B;
-  --p-text-muted-color: #52525B;
-}
-
-/* --------------------------------------------------------------------------
-   Light Mode - Paleta: Cálido Papel
-   -------------------------------------------------------------------------- */
 :root[data-light-style="warm"]:not(.dark) {
-  /* Paleta: Cálido Papel */
-  --bg-canvas: #F7F6F2;
-  --bg-surface: #FDFCFB;
-  --bg-subtle: #EFECE6;
-  --border-default: #E4E0D8;
-  --text-primary: #1C1917;
-  --text-secondary: #57534E;
-  --text-muted: #A8A29E;
+  /* Paleta: Cálido Papel Confort */
+  --bg-canvas: #F5F4EE;         /* Lienzo suave, cálido natural anti-fatiga, sin amarilleo agresivo */
+  --bg-surface: #FCFAF6;        /* Superficie de tarjeta / panel: descanso visual sin el reflejo cegador de #FFF */
+  --bg-subtle: #EDE9DF;         /* Superficie secundaria / hover / chips */
+  --border-default: #DFD9CE;    /* Bordes nítidos y definidos con contraste equilibrado */
+  --text-primary: #191715;      /* Tinta obsidiana cálida profunda: nitidez extrema (>14:1) */
+  --text-secondary: #45403A;    /* Carbón cálido legible: alta claridad sin fatiga (>8.5:1) */
+  --text-muted: #69635A;        /* Piedra media: supera WCAG AA (>4.8:1) eliminando textos borrosos */
 
   /* PrimeNG & Tailwind token bindings */
-  --color-white: #FDFCFB;
-  --p-surface-0: #FDFCFB;
-  --p-surface-50: #F7F6F2;
-  --p-surface-100: #EFECE6;
-  --p-surface-200: #E4E0D8;
-  --p-content-border-color: #E4E0D8;
-  --p-text-color: #1C1917;
-  --p-text-muted-color: #57534E;
+  --color-white: #FCFAF6;
+  --p-surface-0: #FCFAF6;
+  --p-surface-50: #F5F4EE;
+  --p-surface-100: #EDE9DF;
+  --p-surface-200: #DFD9CE;
+  --p-surface-300: #D0C8B9;
+  --p-surface-400: #A89F8F;
+  --p-surface-500: #7E7566;
+  --p-surface-600: #69635A;
+  --p-surface-700: #45403A;
+  --p-surface-800: #2C2823;
+  --p-surface-900: #191715;
+  --p-surface-950: #100F0D;
+  --p-content-border-color: #DFD9CE;
+  --p-text-color: #191715;
+  --p-text-muted-color: #5C564E;
 }
 
 /* --------------------------------------------------------------------------
@@ -140,13 +124,97 @@ html.dark {
   --text-muted: #64748B;
 }
 
+/* --------------------------------------------------------------------------
+   Light Mode Global Adaptations (Mapeo Armónico para Anti-Fatiga y Legibilidad)
+   -------------------------------------------------------------------------- */
 :root:not(.dark) body {
   background-color: var(--bg-canvas);
   color: var(--text-primary);
 }
 
+/* Mapeo de superficies para eliminar el brillo cegador de blanco puro */
+:root:not(.dark) .bg-white {
+  background-color: var(--bg-surface);
+}
+
+:root:not(.dark) .bg-white\/80 {
+  background-color: color-mix(in srgb, var(--bg-surface) 85%, transparent);
+}
+
 :root:not(.dark) .bg-slate-50 {
   background-color: var(--bg-canvas);
+}
+
+:root:not(.dark) .bg-slate-50\/70 {
+  background-color: color-mix(in srgb, var(--bg-canvas) 70%, transparent);
+}
+
+:root:not(.dark) .bg-slate-50\/60 {
+  background-color: color-mix(in srgb, var(--bg-canvas) 60%, transparent);
+}
+
+:root:not(.dark) .bg-slate-100 {
+  background-color: var(--bg-subtle);
+}
+
+:root:not(.dark) .bg-slate-100\/30 {
+  background-color: color-mix(in srgb, var(--bg-subtle) 30%, transparent);
+}
+
+:root:not(.dark) .to-slate-100 {
+  --tw-gradient-to: var(--bg-subtle);
+}
+
+/* Mapeo armónico de bordes para evitar choques cromáticos fríos vs cálidos */
+:root:not(.dark) .border-slate-100 {
+  border-color: var(--bg-subtle);
+}
+
+:root:not(.dark) .border-slate-200,
+:root:not(.dark) .border-slate-200\/80 {
+  border-color: var(--border-default);
+}
+
+:root:not(.dark) .border-slate-300 {
+  border-color: #C8C0B2;
+}
+
+/* Mejora crítica de legibilidad y contraste tipográfico (>4.5:1 en todos los niveles) */
+:root:not(.dark) .text-slate-400 {
+  color: var(--text-muted); /* #69635A en lugar del tenue #94A3B8 */
+}
+
+:root:not(.dark) .text-slate-500 {
+  color: var(--text-secondary); /* #45403A en lugar del lavado #64748B */
+}
+
+:root:not(.dark) .text-slate-600 {
+  color: var(--text-secondary);
+}
+
+:root:not(.dark) .text-slate-700,
+:root:not(.dark) .text-slate-800,
+:root:not(.dark) .text-slate-900 {
+  color: var(--text-primary); /* #191715: tinta nítida de máxima legibilidad */
+}
+
+/* Estados hover cálidos y consistentes */
+:root:not(.dark) .hover\:bg-slate-50:hover {
+  background-color: var(--bg-canvas);
+}
+
+:root:not(.dark) .hover\:bg-slate-100:hover {
+  background-color: var(--bg-subtle);
+}
+
+:root:not(.dark) .hover\:bg-slate-200:hover {
+  background-color: color-mix(in srgb, var(--border-default) 85%, #000 15%);
+}
+
+/* Placeholders de campos de formulario nítidos sin fatiga */
+:root:not(.dark) ::placeholder {
+  color: var(--text-muted);
+  opacity: 0.85;
 }
 
 body {
@@ -218,13 +286,37 @@ router-outlet {
   will-change: opacity, transform;
 }
 
-/* PrimeNG SelectButton in stats hero: equal option widths and smooth color transition */
+/* PrimeNG SelectButton in stats hero: integrated pill design without white glare */
+.stats-format-select {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.625rem;
+  padding: 2px;
+  background: rgba(0, 0, 0, 0.18);
+  display: inline-flex;
+}
+
 .stats-format-select .p-togglebutton {
-  min-width: 64px;
+  min-width: 60px;
   justify-content: center;
-  transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-              color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  background: transparent !important;
+  border: none !important;
+  color: rgba(250, 248, 245, 0.8) !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  border-radius: 0.5rem !important;
+  padding: 0.2rem 0.5rem !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.stats-format-select .p-togglebutton:hover {
+  color: #FAF8F5 !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.stats-format-select .p-togglebutton.p-togglebutton-checked {
+  background: #FAF8F5 !important;
+  color: var(--p-primary-800, #3730A3) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
 }
 
 /* Ensure PrimeNG dialog and overlay masks never cover the desktop application header (32px / 2rem) */
