@@ -34,7 +34,7 @@ import {
   filterActivities,
   hasActiveActivityFilters,
 } from '../../../../core/utils/activity-filter.util';
-import { WindowService } from '../../../../core/services/window.service';
+import { WindowService } from '../../../../core/window/window.service';
 import { StorageService } from '../../../../core/services/storage.service';
 import { LanguageService } from '../../../../core/services/language.service';
 import { UpdateService } from '../../../../core/services/update.service';

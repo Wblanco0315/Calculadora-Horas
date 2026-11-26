@@ -13,4 +13,5 @@ pub(crate) mod report;
 pub(crate) mod statistic;
 pub(crate) mod ticket;
 pub(crate) mod time_entry;
+pub(crate) mod window;
 pub(crate) mod work_package;

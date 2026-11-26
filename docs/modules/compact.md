@@ -162,14 +162,14 @@ Cada modal se encuentra aislado en su propio componente standalone dentro de `mo
 ## 3. Barra Inferior y Conmutación de Modo
 
 La barra inferior (`<footer>`) tiene dos botones con icono y texto:
-1. **Modo completo** (`tablerLayoutDashboard`, `compact.fullMode`): `WindowService.setFullMode('/dashboard/overview', { maximize: true })` cambia al modo completo, navega al overview y maximiza la ventana.
+1. **Modo completo** (`tablerLayoutDashboard`, `compact.fullMode`): `WindowService.setFullMode('/dashboard/overview', { maximize: true })` cambia al modo completo y navega al overview; si la ventana no estaba maximizada, la maximiza.
 2. **Configuración** (`tablerSettings`): abre `/setup?edit=true`, el mismo `SettingsPanelComponent` que usa `/dashboard/settings`, con disposición compacta. Al guardar o cerrar se vuelve a `/compact` sin cambiar el tamaño ni la posición de la ventana.
 
 ---
 
 ## 4. Estado Reactivo (Signals) e Integración de Servicios
 
-* **[`WindowService`](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/core/services/window.service.ts)**: Control de dimensiones compacta (525x800) vs completa (1150x780), minimizado a la bandeja (iconos ocultos), interceptor de cierre con confirmación (`showCloseModal`) y arrastre nativo.
+* **`WindowService`** (`core/window/window.service.ts`, ver `docs/frontend.md` § Window): cambio entre modo compacto (525x800) y completo (1150x780), minimizado a la bandeja (iconos ocultos), interceptor de cierre con confirmación (`showCloseModal`) y arrastre nativo.
 * **[`ActivityService`](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/core/services/activity.service.ts)**:
   - Signals: `activities`, `selectedDate`, `projects`, `favoriteTickets`, `timeFormat`, `isSelectionMode`, `showActivityForm`, `showFavoritesModal`, `showResetModal`, `showSyncModal`, `presetActivity`.
   - Computeds: `dailyActivities`, `totalMinutes`, `progressPercentage`, `unsyncedActivities`, `selectedActivities`.

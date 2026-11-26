@@ -30,6 +30,10 @@ tauri-plugin-updater = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-dialog = "2"
 
+[target.'cfg(windows)'.dependencies]
+# Single-step window move + resize (SetWindowPos) for the compact/full mode switch.
+windows = { version = "0.62", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
+
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
 [profile.release]

@@ -106,7 +106,11 @@ src/app/
 │   │   ├── activity.service.ts   # Actividades locales (SQLite), navegación de día, sincronización, estado de modales
 │   │   ├── favorite.service.ts   # Tickets favoritos
 │   │   ├── notification.service.ts, breadcrumb.service.ts
-│   │   └── storage, theme, language, schedule, update, window, work-package-change
+│   │   └── storage, theme, language, schedule, update, work-package-change
+│   ├── window/                   # Comportamiento de la ventana (ver docs/frontend.md § Window)
+│   │   ├── window.service.ts           # Fachada: modo compacto/completo, transición, arranque, cierre, bandeja, arrastre
+│   │   ├── window-bounds.service.ts    # Geometría nativa: maximizado, redimensionado en un paso, últimos límites
+│   │   └── window.constants.ts         # Tamaños por modo, claves de almacenamiento, tiempos
 │   └── utils/                    # Funciones puras y constantes (*.util.ts)
 ├── modules/<module>/             # Un módulo por dominio o vista enrutada (singular)
 │   ├── components/<name>/        # <name>.component.{ts,html[,css]}: componentes del módulo (o que el módulo posee y otros importan)

@@ -12,5 +12,6 @@ pub(crate) mod statistic;
 pub(crate) mod ticket;
 pub(crate) mod ticket_context;
 pub(crate) mod time_entry;
+pub(crate) mod window;
 pub(crate) mod work_package;
 pub(crate) mod work_package_edit;

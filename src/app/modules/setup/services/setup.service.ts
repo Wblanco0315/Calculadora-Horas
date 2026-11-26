@@ -4,7 +4,7 @@ import { StorageService } from '../../../core/services/storage.service';
 import { ThemeService } from '../../../core/services/theme.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { ScheduleService } from '../../../core/services/schedule.service';
-import { WindowService } from '../../../core/services/window.service';
+import { WindowService } from '../../../core/window/window.service';
 import {
   AppConfig,
   AppLanguage,

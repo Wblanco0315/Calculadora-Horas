@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 import { SetupService } from '../../services/setup.service';
 import { StorageService } from '../../../../core/services/storage.service';
 import { UpdateService } from '../../../../core/services/update.service';
-import { WindowService } from '../../../../core/services/window.service';
+import { WindowService } from '../../../../core/window/window.service';
 import { AppHeaderComponent } from '../../../../shared/components/app-header/app-header.component';
 import { ScheduleStepComponent } from '../../components/schedule-step/schedule-step.component';
 import { LunchStepComponent } from '../../components/lunch-step/lunch-step.component';

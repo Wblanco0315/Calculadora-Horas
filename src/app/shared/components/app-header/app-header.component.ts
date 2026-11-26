@@ -8,7 +8,7 @@ import {
   tablerRefresh,
   tablerDownload,
 } from '@ng-icons/tabler-icons';
-import { WindowService } from '../../../core/services/window.service';
+import { WindowService } from '../../../core/window/window.service';
 import { ThemeService } from '../../../core/services/theme.service';
 import { UpdateService } from '../../../core/services/update.service';
 import { StorageService } from '../../../core/services/storage.service';

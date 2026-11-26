@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { WindowService } from '../../../core/services/window.service';
+import { WindowService } from '../../../core/window/window.service';
 import { AppLogoComponent } from '../app-logo/app-logo.component';
 
 /**

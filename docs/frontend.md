@@ -52,3 +52,21 @@ Inject only the services a component needs (`workPackageApi`, `boardApi`, …) i
 Module-specific services stay in their module: `modules/setup/services/mcp.service.ts` (MCP install, AI rules, local database info, compatibility contract and status; the system prompt is never copied in the frontend) and `modules/setup/services/setup.service.ts`.
 
 The Rust side is described in [`backend.md`](backend.md).
+
+## Window
+
+All main-window behaviour lives in `core/window/` (backend counterpart: `command/window.rs` + `service/window.rs`).
+
+- `window.service.ts` (`WindowService`, the only entry point for components): view mode (`viewMode`, persisted in `pocketproject_view_mode`), `setCompactMode` / `setFullMode` / `returnToCompact`, startup placement (`restoreWindow`), the transition cover (`isTransitioning` → `shared/components/window-transition`), close confirmation, tray, maximize and dragging.
+- `window-bounds.service.ts` (`WindowBoundsService`): native geometry. `resize(width, height, { center })` calls the Rust command `resize_window`, which computes the final rectangle and applies it in **one** `SetWindowPos` (keeps the window center, or centers it in the work area, and clamps it to the current monitor). `restoreLastBounds()` uses `set_window_bounds`; `setRestoreSize()` uses `set_window_restore_size`. Every move/resize (debounced 400 ms) stores the last normal bounds and maximized state in `pocketproject_window_bounds` (logical px); app-made changes are not tracked while they run.
+- `window.constants.ts`: content size per mode (compact 525x800, full 1150x780), storage keys, timings.
+
+Rules:
+- **One default size per mode**: un-maximizing (drag, double-click, restore button) always returns to the current mode's size, never to the other mode's. While maximized, `setRestoreSize` (Rust `set_window_restore_size`, `SetWindowPlacement` on Windows) changes the restore rectangle without un-maximizing; `rcNormalPosition` is converted between screen and workspace coordinates with the monitor's work-area offset.
+- **Compact → full while maximized**: it stays maximized (only the route changes behind the cover); its restore size becomes the full size.
+- **Full → compact while maximized**: un-maximized straight to the compact size, centered in the monitor work area.
+- **Mode switch with a normal window**: one native resize to the mode size around the window's own center, on the same monitor. No hide/show and no separate move + resize, so the window does not jump.
+- **"Full mode" button** (compact view): resizes to the full size first and then maximizes, so un-maximizing later gives the full size.
+- **Compact settings** (`/setup?edit=true`): saving or closing only navigates back to `/compact` (`returnToCompact`).
+- **End of onboarding** (`setCompactMode({ reset: true })`): un-maximizes and centers the default compact size.
+- **Startup** (behind the `index.html` loader): restores the last bounds if they are on a connected monitor, otherwise the current mode's size centered; full mode then opens `/dashboard/overview`.

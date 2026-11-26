@@ -38,6 +38,7 @@ src-tauri/src/
 │   ├── statistic.rs        Overview time statistics: cached rollup and refresh from OpenProject
 │   ├── ticket.rs           Ticket info and full ticket context
 │   ├── time_entry.rs       Time entry activities, create/update time entries
+│   ├── window.rs           resize_window, set_window_bounds, set_window_restore_size (mode switch, startup restore, restore size while maximized)
 │   └── work_package.rs     Work package form, search, revisions, updates, comments
 ├── service/                Business logic per domain
 │   ├── attachment.rs
@@ -52,6 +53,7 @@ src-tauri/src/
 │   ├── ticket.rs           fetch_ticket_info
 │   ├── ticket_context.rs   fetch_ticket_context (description, comments, attachments)
 │   ├── time_entry.rs
+│   ├── window.rs           Window bounds: target rectangle around the window center inside the monitor work area, applied in one SetWindowPos (Windows); restore rectangle of a maximized window (SetWindowPlacement)
 │   ├── work_package.rs     Status/version updates, search, revisions, update stream, costs
 │   └── work_package_edit.rs Edit form schema, field updates, comments
 ├── openproject/            OpenProject infrastructure (no business decisions)
