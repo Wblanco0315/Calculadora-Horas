@@ -445,12 +445,6 @@ export const en = {
       partialBulk: 'Synced: {success}, Failed: {fail}',
       error: 'Error syncing',
     },
-    closeConfirmModal: {
-      title: 'Close PocketProject',
-      message: 'Are you sure you want to exit the application or would you prefer to minimize it to the system tray?',
-      minimizeToTray: 'Minimize to tray',
-      confirmExit: 'Close application',
-    },
   },
   ticketContext: {
     title: 'Ticket Info',

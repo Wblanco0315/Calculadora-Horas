@@ -445,12 +445,6 @@ export const es = {
       partialBulk: 'Sincronizadas: {success}, Fallidas: {fail}',
       error: 'Error al sincronizar',
     },
-    closeConfirmModal: {
-      title: 'Cerrar PocketProject',
-      message: '¿Estás seguro de que deseas salir de la aplicación o prefieres minimizarla a la bandeja del sistema?',
-      minimizeToTray: 'Minimizar a bandeja',
-      confirmExit: 'Cerrar aplicación',
-    },
   },
   ticketContext: {
     title: 'Informacion del Ticket',

@@ -45,7 +45,6 @@ import { ActivityFormModalComponent } from '../../../time-entry/modals/activity-
 import { FavoritesModalComponent } from '../../../time-entry/modals/favorites-modal/favorites-modal.component';
 import { SyncConfirmModalComponent } from '../../../time-entry/modals/sync-confirm-modal/sync-confirm-modal.component';
 import { ResetConfirmModalComponent } from '../../../time-entry/modals/reset-confirm-modal/reset-confirm-modal.component';
-import { CloseConfirmModalComponent } from '../../../../shared/components/close-confirm-modal/close-confirm-modal.component';
 import { TicketContextModalComponent } from '../../modals/ticket-context-modal/ticket-context-modal.component';
 import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 
@@ -67,7 +66,6 @@ import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
     FavoritesModalComponent,
     SyncConfirmModalComponent,
     ResetConfirmModalComponent,
-    CloseConfirmModalComponent,
     TicketContextModalComponent,
     TranslatePipe,
   ],

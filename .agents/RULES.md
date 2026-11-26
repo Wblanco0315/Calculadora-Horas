@@ -120,7 +120,7 @@ src/app/
 │   ├── interfaces/               # Tipos exclusivos del módulo
 │   └── <module>.routes.ts        # Rutas con carga diferida (export const <module>Routes: Routes)
 └── shared/                       # Reutilizable sin estado de negocio propio
-    ├── components/               # app-header, app-logo, close-confirm-modal, rich-text-editor, schedule-editor, ...
+    ├── components/               # app-header, app-logo, window-transition, rich-text-editor, schedule-editor, ...
     ├── pipes/                    # translate.pipe.ts
     ├── format/                   # Formateadores puros (time.ts)
     └── lang/                     # es/, en/ y primeng-locale.ts
@@ -141,7 +141,7 @@ Módulos actuales: `board` (tableros, listado de tableros y detalle de ticket), 
 | Capas de un componente | Separadas: `.ts` (lógica), `.html` (plantilla) y `.css` solo si tiene estilos propios. Excepción: un componente muy pequeño (plantilla de ~20 líneas o menos, sin estilos propios y con poca lógica) puede quedarse en un solo `.ts` con `template` inline. Las páginas siempre van separadas |
 | Rutas de un módulo | `<module>.routes.ts` en la raíz del módulo (nunca `.router.ts`) |
 
-- **Dueños actuales de componentes compartidos**: `modules/time-entry/components/activity-row` y `modules/time-entry/modals/*` (los usan `compact`, `time-entry` y el detalle de ticket de `board`); `modules/board/pages/ticket-detail.page` (también embebido en el drawer de `time-entry`); `shared/components/close-confirm-modal` (compact, dashboard y setup).
+- **Dueños actuales de componentes compartidos**: `modules/time-entry/components/activity-row` y `modules/time-entry/modals/*` (los usan `compact`, `time-entry` y el detalle de ticket de `board`); `modules/board/pages/ticket-detail.page` (también embebido en el drawer de `time-entry`).
 - **Prohibido duplicar componentes** entre módulos: si dos módulos necesitan el mismo componente, se mueve al dueño del dominio o a `shared/`.
 - **Prohibido reexportar** componentes desde otra carpeta para "aparentar" que pertenecen a un módulo; se importan desde su ubicación real.
 - **`core/` no depende de `modules/`**; `shared/` no depende de `modules/`.

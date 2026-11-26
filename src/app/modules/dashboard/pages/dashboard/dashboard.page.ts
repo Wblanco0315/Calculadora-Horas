@@ -49,7 +49,6 @@ import { BoardOption, Project, WorkPackageSearchItem } from '../../../../core/in
 import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 import { AppHeaderComponent } from '../../../../shared/components/app-header/app-header.component';
 import { AppLogoComponent } from '../../../../shared/components/app-logo/app-logo.component';
-import { CloseConfirmModalComponent } from '../../../../shared/components/close-confirm-modal/close-confirm-modal.component';
 import { SETTINGS_TABS } from '../../../setup/components/settings-panel/settings-panel.component';
 
 export interface NavItem {
@@ -87,7 +86,6 @@ export interface NavGroup {
     TranslatePipe,
     AppHeaderComponent,
     AppLogoComponent,
-    CloseConfirmModalComponent,
   ],
   viewProviders: [
     provideIcons({

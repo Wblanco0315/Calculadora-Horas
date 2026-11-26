@@ -18,7 +18,6 @@ Current owners of components shared between modules:
 
 - `modules/time-entry/components/activity-row` and `modules/time-entry/modals/{activity-form,favorites,reset-confirm,sync-confirm}-modal`: activity UI, used by `compact`, `time-entry` and the `board` ticket detail.
 - `modules/board/pages/ticket-detail/ticket-detail.page`: also embedded in the time log drawer.
-- `shared/components/close-confirm-modal`: window close confirmation (compact, dashboard, setup).
 - `shared/components/window-transition`: cover shown while the window switches between compact and full mode (`WindowService.isTransitioning`).
 - `index.html` `#app-loader`: static startup loader (logo + progress bar). An inline script applies the saved theme (`pocketproject_theme`) and accent (`pocketproject_color`) before the first paint; `hideAppLoader()` (`core/utils/app-loader.util.ts`) fades it out once `AppComponent.ngOnInit` has loaded the config and placed the window (also on bootstrap errors).
 
@@ -69,4 +68,5 @@ Rules:
 - **"Full mode" button** (compact view): resizes to the full size first and then maximizes, so un-maximizing later gives the full size.
 - **Compact settings** (`/setup?edit=true`): saving or closing only navigates back to `/compact` (`returnToCompact`).
 - **End of onboarding** (`setCompactMode({ reset: true })`): un-maximizes and centers the default compact size.
+- **Minimize / close**: the minimize button minimizes to the taskbar (`minimize`). The close button hides the window into the tray (hidden icons, `hideToTray`) and the app keeps running; Rust does the same for Alt+F4 / taskbar close (`app/window.rs`). The app exits only from the tray menu ("Salir"). There is no close confirmation dialog.
 - **Startup** (behind the `index.html` loader): restores the last bounds if they are on a connected monitor, otherwise the current mode's size centered; full mode then opens `/dashboard/overview`.

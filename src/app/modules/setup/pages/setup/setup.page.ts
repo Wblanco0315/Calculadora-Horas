@@ -19,7 +19,6 @@ import { LunchStepComponent } from '../../components/lunch-step/lunch-step.compo
 import { AppearanceStepComponent } from '../../components/appearance-step/appearance-step.component';
 import { OpenprojectStepComponent } from '../../components/openproject-step/openproject-step.component';
 import { SettingsPanelComponent } from '../../components/settings-panel/settings-panel.component';
-import { CloseConfirmModalComponent } from '../../../../shared/components/close-confirm-modal/close-confirm-modal.component';
 
 @Component({
   selector: 'app-setup-page',
@@ -38,7 +37,6 @@ import { CloseConfirmModalComponent } from '../../../../shared/components/close-
     AppearanceStepComponent,
     OpenprojectStepComponent,
     SettingsPanelComponent,
-    CloseConfirmModalComponent,
   ],
   viewProviders: [
     provideIcons({

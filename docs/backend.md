@@ -23,7 +23,7 @@ src-tauri/src/
 ├── app/                    Application bootstrap
 │   ├── setup.rs            Tauri setup hook: IPC server, autostart (release builds only), --minimized, tray
 │   ├── tray.rs             System tray icon and menu
-│   └── window.rs           Window events (close is delegated to the frontend)
+│   └── window.rs           Close hides to the tray (Alt+F4, taskbar, title bar)
 ├── command/                Thin #[tauri::command] handlers, one file per domain
 │   ├── activity.rs         Local activities, retention purge (purge_synced_activities), AI stats
 │   ├── app.rs              exit_app

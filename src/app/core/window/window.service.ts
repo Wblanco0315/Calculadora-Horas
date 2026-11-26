@@ -1,8 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { invoke, isTauri } from '@tauri-apps/api/core';
+import { isTauri } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { listen } from '@tauri-apps/api/event';
 import { WindowBoundsService } from './window-bounds.service';
 import {
   AppViewMode,
@@ -18,7 +17,10 @@ function delay(ms: number): Promise<void> {
 
 /**
  * Behaviour of the main window: view mode (compact / full), mode switches, startup placement,
- * close confirmation, tray, maximize and dragging. Native geometry lives in `WindowBoundsService`.
+ * minimize, close to the tray, maximize and dragging. Native geometry lives in `WindowBoundsService`.
+ * Closing never quits: the window is hidden in the tray (Rust also hides it on Alt+F4 / taskbar
+ * close) and the app exits only from the tray menu. A second launch focuses this instance
+ * (`tauri-plugin-single-instance`).
  *
  * Mode switch rules:
  * - The cover (`app-window-transition`, `isTransitioning`) hides the content while it changes.
@@ -38,13 +40,8 @@ export class WindowService {
   private readonly bounds = inject(WindowBoundsService);
 
   readonly viewMode = signal<AppViewMode>(this.getInitialViewMode());
-  readonly showCloseModal = signal<boolean>(false);
   /** True while the window is switching mode: `app-window-transition` covers the content. */
   readonly isTransitioning = signal<boolean>(false);
-
-  constructor() {
-    this.initCloseListener();
-  }
 
   // ──────────────────────────────────────────────
   // View modes
@@ -153,7 +150,7 @@ export class WindowService {
   }
 
   // ──────────────────────────────────────────────
-  // Maximize, tray, dragging
+  // Minimize, tray, maximize, dragging
   // ──────────────────────────────────────────────
 
   async maximize(): Promise<void> {
@@ -173,9 +170,8 @@ export class WindowService {
     }
   }
 
-  /** Hides the window into the system tray. */
-  async minimizeToTray(): Promise<void> {
-    this.showCloseModal.set(false);
+  /** Close button: hides the window into the system tray (hidden icons); the app keeps running. */
+  async hideToTray(): Promise<void> {
     if (!isTauri()) return;
     try {
       await getCurrentWindow().hide();
@@ -184,9 +180,14 @@ export class WindowService {
     }
   }
 
-  /** Minimize button: hides into the system tray. */
+  /** Minimize button: minimizes to the taskbar. */
   async minimize(): Promise<void> {
-    await this.minimizeToTray();
+    if (!isTauri()) return;
+    try {
+      await getCurrentWindow().minimize();
+    } catch (err) {
+      console.warn('Error minimizing window:', err);
+    }
   }
 
   /**
@@ -206,45 +207,6 @@ export class WindowService {
       await win.startDragging();
     } catch (err) {
       console.warn('Error starting Tauri window drag:', err);
-    }
-  }
-
-  // ──────────────────────────────────────────────
-  // Close confirmation
-  // ──────────────────────────────────────────────
-
-  private initCloseListener(): void {
-    if (!isTauri()) return;
-    listen('close-requested', () => this.requestClose()).catch((err) => {
-      console.warn('Error setting up close-requested listener:', err);
-    });
-  }
-
-  requestClose(): void {
-    this.showCloseModal.set(true);
-  }
-
-  cancelClose(): void {
-    this.showCloseModal.set(false);
-  }
-
-  close(): void {
-    this.requestClose();
-  }
-
-  /** Exits the application completely. */
-  async confirmExit(): Promise<void> {
-    this.showCloseModal.set(false);
-    if (!isTauri()) return;
-    try {
-      await invoke('exit_app');
-    } catch (err) {
-      console.warn('Error invoking exit_app, attempting window destroy fallback:', err);
-      try {
-        await getCurrentWindow().destroy();
-      } catch (destroyErr) {
-        console.warn('Error destroying window:', destroyErr);
-      }
     }
   }
 }

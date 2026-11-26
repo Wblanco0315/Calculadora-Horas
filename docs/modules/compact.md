@@ -22,7 +22,7 @@ src/app/modules/compact/
 └── compact.routes.ts                         # Enrutador del módulo con carga diferida
 ```
 
-La fila de actividad y los modales de actividad (`app-activity-row`, `app-activity-form-modal`, `app-favorites-modal`, `app-reset-confirm-modal`, `app-sync-confirm-modal`) pertenecen al dominio de registro de tiempo y viven en el módulo `time-entry` (`modules/time-entry/components` y `modules/time-entry/modals`); el modo compacto los importa desde allí. `app-close-confirm-modal` está en `shared/components/close-confirm-modal` porque lo usan compacto, dashboard y setup.
+La fila de actividad y los modales de actividad (`app-activity-row`, `app-activity-form-modal`, `app-favorites-modal`, `app-reset-confirm-modal`, `app-sync-confirm-modal`) pertenecen al dominio de registro de tiempo y viven en el módulo `time-entry` (`modules/time-entry/components` y `modules/time-entry/modals`); el modo compacto los importa desde allí.
 
 
 ---
@@ -34,7 +34,7 @@ La fila de actividad y los modales de actividad (`app-activity-row`, `app-activi
 - **Responsabilidad y Diseño**:
   - Altura nativa de 32px (`h-8`), coincidiendo con la barra de título original de Windows.
   - Barra de título unificada y reutilizable con arrastre programático fluido (`WindowService.startDragging`) en todo el encabezado con exclusión automática de controles interactivos, isologo oficial (`app-logo`), título de la aplicación y versión actual (`v{{ version }}`).
-  - Botón de alternancia de tema claro/oscuro (`tablerSun` / `tablerMoon`): `StorageService.toggleTheme()` aplica el tema y lo guarda en la configuración (SQLite y `localStorage`), igual que el botón del dashboard, para que no se pierda al recargar la configuración (por ejemplo al abrir los ajustes). Durante el onboarding solo se aplica; el asistente lo guarda al terminar. Botón de minimizar (oculta a la bandeja del sistema / iconos ocultos), botón de maximizar / restaurar y botón de cerrar que invoca el modal de confirmación `app-close-confirm-modal`.
+  - Botón de alternancia de tema claro/oscuro (`tablerSun` / `tablerMoon`): `StorageService.toggleTheme()` aplica el tema y lo guarda en la configuración (SQLite y `localStorage`), igual que el botón del dashboard, para que no se pierda al recargar la configuración (por ejemplo al abrir los ajustes). Durante el onboarding solo se aplica; el asistente lo guarda al terminar. Botón de minimizar (minimiza a la barra de tareas), botón de maximizar / restaurar y botón de cerrar, que oculta la ventana en la bandeja del sistema (iconos ocultos) sin salir de la app; se sale desde el menú del icono de la bandeja. En los ajustes del modo compacto, cerrar vuelve a `/compact`.
 
 ### 2.2. Panel de Estadísticas Hero (`app-stats-hero`)
 - **Ubicación**: `components/stats-hero/stats-hero.component.ts`
@@ -134,10 +134,7 @@ Cada modal se encuentra aislado en su propio componente standalone dentro de `mo
    - Totalmente desacoplado de la plantilla principal `compact.page.html`.
 4. **`app-sync-confirm-modal`**:
    - Modal dedicado para seleccionar el tipo de actividad de OpenProject y enviar tiempos individuales o masivos.
-5. **`app-close-confirm-modal`**:
-   - Modal dedicado para confirmar el cierre de la aplicación al pulsar el botón de cerrar (`X`) o mediante solicitudes de cierre del sistema.
-   - Proporciona opciones limpias para Cancelar, Minimizar a la bandeja (guardar en los iconos ocultos) o Cerrar la aplicación definitivamente.
-6. **`app-ticket-context-modal` (Modal de Contexto Extendido de Ticket)**:
+5. **`app-ticket-context-modal` (Modal de Contexto Extendido de Ticket)**:
    - **Ubicación**: `src/app/modules/compact/modals/ticket-context-modal/ticket-context-modal.component.ts` (+ `.html`).
    - **Dimensiones y Responsividad**:
      - Tamaño mínimo garantizado de `min(94vw, 540px)` de ancho y `min(75vh, 480px)` de alto, con contenedor de pestañas de `min-h-[380px]`.
@@ -169,7 +166,7 @@ La barra inferior (`<footer>`) tiene dos botones con icono y texto:
 
 ## 4. Estado Reactivo (Signals) e Integración de Servicios
 
-* **`WindowService`** (`core/window/window.service.ts`, ver `docs/frontend.md` § Window): cambio entre modo compacto (525x800) y completo (1150x780), minimizado a la bandeja (iconos ocultos), interceptor de cierre con confirmación (`showCloseModal`) y arrastre nativo.
+* **`WindowService`** (`core/window/window.service.ts`, ver `docs/frontend.md` § Window): cambio entre modo compacto (525x800) y completo (1150x780), minimizar, cerrar a la bandeja (iconos ocultos) y arrastre nativo.
 * **[`ActivityService`](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/core/services/activity.service.ts)**:
   - Signals: `activities`, `selectedDate`, `projects`, `favoriteTickets`, `timeFormat`, `isSelectionMode`, `showActivityForm`, `showFavoritesModal`, `showResetModal`, `showSyncModal`, `presetActivity`.
   - Computeds: `dailyActivities`, `totalMinutes`, `progressPercentage`, `unsyncedActivities`, `selectedActivities`.

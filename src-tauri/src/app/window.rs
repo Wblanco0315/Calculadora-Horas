@@ -1,11 +1,13 @@
-//! Window event handling.
+//! Main window lifecycle: close hides to the tray.
 
-use tauri::{Emitter, Window, WindowEvent};
+use tauri::{Window, WindowEvent};
 
-/// Closing the main window is delegated to the frontend through the `close-requested` event.
+/// Closing the main window (title bar button, Alt+F4, taskbar) keeps the app running in the tray:
+/// the window is only hidden. Quitting is done from the tray menu ("Salir").
 pub(crate) fn handle_window_event(window: &Window, event: &WindowEvent) {
     if let WindowEvent::CloseRequested { api, .. } = event {
         api.prevent_close();
-        let _ = window.emit("close-requested", ());
+        let _ = window.hide();
     }
 }
+
