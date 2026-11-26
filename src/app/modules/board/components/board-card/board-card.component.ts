@@ -32,14 +32,17 @@ import { BoardWorkPackageCard, StatusOption } from '../../../../core/interfaces/
               '--p-select-border-color': 'transparent',
               '--p-select-hover-border-color': 'transparent',
               '--p-select-focus-border-color': 'transparent',
-              '--p-select-color': '#ffffff',
-              '--p-select-dropdown-color': '#ffffff',
+              '--p-select-color': resolvedStatusTextColor(),
+              '--p-select-dropdown-color': resolvedStatusTextColor(),
               backgroundColor: resolvedStatusColor()
             }"
             styleClass="!rounded-md !py-0 !px-1.5 !h-5 !min-h-5 !text-[11px] !font-semibold !leading-none !border-0 op-card-status-select"
           >
             <ng-template #selectedItem let-selected>
-              <span class="text-[11px] font-semibold text-white truncate">
+              <span
+                class="truncate text-[11px] font-semibold"
+                [style.color]="resolvedStatusTextColor()"
+              >
                 {{ selected?.name || card().statusName || '—' }}
               </span>
             </ng-template>
@@ -122,13 +125,13 @@ import { BoardWorkPackageCard, StatusOption } from '../../../../core/interfaces/
       :host ::ng-deep .op-card-status-select .p-select-label {
         padding: 0 0.25rem !important;
         line-height: 1.25rem !important;
-        color: #ffffff !important;
+        color: var(--p-select-color) !important;
         display: flex !important;
         align-items: center !important;
       }
       :host ::ng-deep .op-card-status-select .p-select-dropdown {
         width: 1.1rem !important;
-        color: #ffffff !important;
+        color: var(--p-select-color) !important;
       }
       :host ::ng-deep .op-card-status-select .p-select-dropdown svg {
         width: 0.6rem !important;
@@ -159,6 +162,8 @@ export class BoardCardComponent {
     }
     return 'var(--p-primary-500)';
   });
+
+  readonly resolvedStatusTextColor = computed(() => getContrastingTextColor(this.resolvedStatusColor()));
 
   readonly resolvedTypeColor = computed(() => {
     if (this.card().typeColor) return this.card().typeColor!;
@@ -209,4 +214,31 @@ export class BoardCardComponent {
     if (!statusId || statusId === this.card().statusId) return;
     this.statusChange.emit({ card: this.card(), statusId });
   }
+}
+
+function getContrastingTextColor(color: string): string {
+  const normalizedColor = color.trim();
+  const hexMatch = normalizedColor.match(/^#([\da-f]{3}|[\da-f]{6})$/i);
+  const rgbMatch = normalizedColor.match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/i);
+  let channels: number[] | null = null;
+
+  if (hexMatch) {
+    const hex = hexMatch[1];
+    const expandedHex = hex.length === 3 ? hex.split('').map((digit) => digit + digit).join('') : hex;
+    channels = [0, 2, 4].map((index) => Number.parseInt(expandedHex.slice(index, index + 2), 16));
+  } else if (rgbMatch) {
+    channels = rgbMatch.slice(1).map((channel) => Number(channel));
+  }
+
+  if (!channels) return '#ffffff';
+
+  const [red, green, blue] = channels.map((channel) => {
+    const value = Math.min(255, Math.max(0, channel)) / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  const luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+  const lightContrast = 1.05 / (luminance + 0.05);
+  const darkContrast = (luminance + 0.05) / 0.058;
+
+  return lightContrast >= darkContrast ? '#ffffff' : '#111827';
 }

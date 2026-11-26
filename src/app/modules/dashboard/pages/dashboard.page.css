@@ -3,6 +3,11 @@
   width: 100%;
 }
 
+.ticket-detail-shell {
+  overflow: hidden;
+  padding: 0;
+}
+
 /* Active sidebar item styling synchronized with dynamic primary palette */
 .p-sidebar-menu-button[data-active="true"],
 button[pSidebarMenuButton][data-active="true"] {

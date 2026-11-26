@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Dialog } from 'primeng/dialog';
@@ -148,7 +148,7 @@ import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
             </div>
 
             <!-- View Context Button -->
-            @if (ticketNumber.trim()) {
+            @if (showTicketContextButton() && ticketNumber.trim()) {
               <button
                 type="button"
                 (click)="activityService.openTicketContextModal(ticketNumber)"
@@ -391,6 +391,8 @@ import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 })
 export class ActivityFormModalComponent {
   readonly activityService = inject(ActivityService);
+  /** Hide the ticket context shortcut where the ticket is already on screen (e.g. ticket detail). */
+  readonly showTicketContextButton = input<boolean>(true);
   readonly storageService = inject(StorageService);
   readonly languageService = inject(LanguageService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -475,6 +477,9 @@ export class ActivityFormModalComponent {
           this.ticketNumber = preset.ticket || '';
           this.ticketTitle = preset.title || '';
           this.isTicketFound.set(!!preset.ticket && !!preset.title);
+          this.ticketStatusId.set(preset.statusId || undefined);
+          this.ticketStatusName.set(preset.statusName || undefined);
+          this.ticketStatusColor.set(preset.statusColor || undefined);
           this.activityName = '';
           this.selectedProjectId = preset.projectId || '';
           this.cdr.markForCheck();

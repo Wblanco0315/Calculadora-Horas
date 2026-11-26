@@ -1,4 +1,5 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -59,7 +60,7 @@ import {
     class: 'flex flex-col flex-1 min-h-0 min-w-0 w-full',
   },
 })
-export class BoardPage implements OnInit {
+export class BoardPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly openprojectService = inject(OpenprojectService);
@@ -115,38 +116,57 @@ export class BoardPage implements OnInit {
     });
   });
 
-  async ngOnInit(): Promise<void> {
-    const params = this.route.snapshot.paramMap;
-    const qParams = this.route.snapshot.queryParamMap;
+  constructor() {
+    // The component is reused when navigating between boards/projects (e.g. from the sidebar),
+    // so react to route parameter changes instead of reading the snapshot once.
+    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+      void this.applyRoute(params.get('projectId') || '', params.get('boardId'));
+    });
+  }
 
-    const pid = params.get('projectId') || '';
-    const bid = params.get('boardId');
-    this.projectId.set(pid);
-    this.projectName.set(qParams.get('name') || pid);
-    this.projectIdentifier.set(qParams.get('identifier') || '');
+  private async applyRoute(projectId: string, boardId: string | null): Promise<void> {
+    const queryParams = this.route.snapshot.queryParamMap;
+
+    if (projectId === this.projectId() && this.boards().length > 0) {
+      const targetBoardId = boardId && this.boards().some((b) => b.id === boardId) ? boardId : this.boards()[0].id;
+      if (targetBoardId !== this.selectedBoardId()) {
+        this.selectedBoardId.set(targetBoardId);
+        await this.loadColumns(targetBoardId);
+      }
+      return;
+    }
+
+    this.projectId.set(projectId);
+    this.projectName.set(queryParams.get('name') || projectId);
+    this.projectIdentifier.set(queryParams.get('identifier') || '');
+    this.columns.set([]);
 
     const [statuses, boards] = await Promise.all([
       this.openprojectService.getStatuses(),
-      this.openprojectService.getProjectBoards(pid, this.projectIdentifier() || undefined),
+      this.openprojectService.getProjectBoards(projectId, this.projectIdentifier() || undefined),
     ]);
+    if (projectId !== this.projectId()) return;
 
     this.statuses.set(statuses);
     this.boards.set(boards);
 
     if (boards.length > 0) {
-      const targetBoardId =
-        bid && boards.some((b) => b.id === bid) ? bid : boards[0].id;
+      const targetBoardId = boardId && boards.some((b) => b.id === boardId) ? boardId : boards[0].id;
       this.selectedBoardId.set(targetBoardId);
       await this.loadColumns(targetBoardId);
     } else {
+      this.selectedBoardId.set(null);
       this.isLoaded.set(true);
     }
   }
 
-  async onBoardChange(boardId: string): Promise<void> {
+  onBoardChange(boardId: string): void {
     if (!boardId || boardId === this.selectedBoardId()) return;
-    this.selectedBoardId.set(boardId);
-    await this.loadColumns(boardId);
+    // Keep the URL in sync so the sidebar highlights the selected board.
+    void this.router.navigate(['/dashboard/boards', this.projectId(), boardId], {
+      queryParamsHandling: 'preserve',
+      replaceUrl: true,
+    });
   }
 
   async loadColumns(boardId: string, forceRefresh = false): Promise<void> {
@@ -242,7 +262,8 @@ export class BoardPage implements OnInit {
         event.targetQueryId,
         event.sourceQueryId,
         event.targetStatusId,
-        event.position
+        event.position,
+        event.lockVersion
       );
       if (!result.ok) {
         this.columns.set(previousColumns);
@@ -267,6 +288,8 @@ export class BoardPage implements OnInit {
     );
     if (res.ok && boardId) {
       await this.loadColumns(boardId, true);
+    } else if (!res.ok) {
+      this.moveError.set(res.error || 'Could not update the ticket status. Refresh the board and try again.');
     }
   }
 

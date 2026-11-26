@@ -11,6 +11,7 @@ import { BoardCardComponent } from '../board-card/board-card.component';
 
 export interface BoardCardDropEvent {
   ticketId: number;
+  lockVersion?: number;
   sourceQueryId: string;
   targetQueryId: string;
   targetStatusId?: string;
@@ -24,6 +25,17 @@ export interface BoardCardDropEvent {
   host: {
     class: 'flex flex-col h-full max-h-full min-h-0 shrink-0',
   },
+  styles: [
+    `
+      /* Drawn inside the border box so the horizontal scroll container never clips it
+         (a ring/box-shadow is painted outside and gets cut by overflow). */
+      .board-column--drag-over {
+        outline: 2px solid var(--p-primary-500);
+        outline-offset: -2px;
+        background-color: color-mix(in srgb, var(--p-primary-500) 6%, transparent);
+      }
+    `,
+  ],
   template: `
     <div
       cdkDropList
@@ -33,9 +45,8 @@ export interface BoardCardDropEvent {
       (cdkDropListEntered)="onDragEnter()"
       (cdkDropListExited)="onDragLeave()"
       (cdkDropListDropped)="onDrop($event)"
-      [class.ring-2]="isDragOver()"
-      [class.ring-primary-500]="isDragOver()"
-      class="w-[82vw] sm:w-76 lg:w-80 shrink-0 flex flex-col h-full max-h-full min-h-0 rounded-2xl bg-slate-100/80 dark:bg-zinc-900/60 border border-slate-200 dark:border-zinc-800 transition-all"
+      [class.board-column--drag-over]="isDragOver()"
+      class="board-column w-[82vw] sm:w-76 lg:w-80 shrink-0 flex flex-col h-full max-h-full min-h-0 rounded-2xl bg-slate-100/80 dark:bg-zinc-900/60 border border-slate-200 dark:border-zinc-800 transition-colors"
     >
       <div class="px-3.5 py-3 flex items-center justify-between gap-2 border-b border-slate-200/80 dark:border-zinc-800 shrink-0">
         <h2 class="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-zinc-100 truncate">
@@ -105,6 +116,7 @@ export class BoardColumnComponent {
 
     this.cardDrop.emit({
       ticketId: card.id,
+      lockVersion: card.lockVersion,
       sourceQueryId: sourceColumn.queryId,
       targetQueryId: targetColumn.queryId,
       targetStatusId: targetColumn.statusId,
