@@ -48,15 +48,14 @@ export class WindowService {
   // ──────────────────────────────────────────────
 
   /**
-   * Startup (behind the index.html loader): restores the last window bounds, or the current mode's
-   * default size centered when nothing usable is saved, and opens the dashboard in full mode.
+   * Startup and webview reloads (behind the index.html loader): the current mode's default size at
+   * the last place and maximized state (`WindowBoundsService.restorePlacement`); full mode then
+   * opens the dashboard.
    */
   async restoreWindow(): Promise<void> {
     try {
-      if (!(await this.bounds.restoreLastBounds())) {
-        const size = WINDOW_SIZE[this.viewMode()];
-        await this.bounds.resize(size.width, size.height, { center: true });
-      }
+      const size = WINDOW_SIZE[this.viewMode()];
+      await this.bounds.restorePlacement(size.width, size.height);
     } catch (err) {
       console.warn('Error restoring the window:', err);
     }

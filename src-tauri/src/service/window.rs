@@ -38,13 +38,36 @@ pub(crate) fn target_bounds(current: Bounds, work_area: Bounds, width: i32, heig
     }
 }
 
+/// Moving or resizing a maximized window with `SetWindowPos` leaves it "maximized" with the wrong
+/// rectangle and the webview offset inside it, so it is always un-maximized first.
+fn ensure_normal(window: &WebviewWindow) -> Result<(), String> {
+    if window.is_maximized().map_err(|e| e.to_string())? {
+        window.unmaximize().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/// Difference between the outer window and its content area, in physical px. An undecorated
+/// window draws its content over the whole window, so it has none (its shadow is outside the rect).
+fn frame_size(window: &WebviewWindow) -> Result<(i32, i32), String> {
+    if !window.is_decorated().map_err(|e| e.to_string())? {
+        return Ok((0, 0));
+    }
+    let outer = window.outer_size().map_err(|e| e.to_string())?;
+    let inner = window.inner_size().map_err(|e| e.to_string())?;
+    Ok((
+        outer.width.saturating_sub(inner.width) as i32,
+        outer.height.saturating_sub(inner.height) as i32,
+    ))
+}
+
 /// Resizes the window so its content area is `width` x `height` logical pixels, keeping the window
 /// center (or centering it in the monitor work area) and staying on the current monitor.
 pub(crate) fn resize(window: &WebviewWindow, width: f64, height: f64, center_in_work_area: bool) -> Result<(), String> {
+    ensure_normal(window)?;
     let scale = window.scale_factor().map_err(|e| e.to_string())?;
     let position = window.outer_position().map_err(|e| e.to_string())?;
     let outer = window.outer_size().map_err(|e| e.to_string())?;
-    let inner = window.inner_size().map_err(|e| e.to_string())?;
     let current = Bounds {
         x: position.x,
         y: position.y,
@@ -65,9 +88,8 @@ pub(crate) fn resize(window: &WebviewWindow, width: f64, height: f64, center_in_
         })
         .unwrap_or(current);
 
-    // Requested size is the content area; keep the frame the window already has (0 when undecorated).
-    let frame_width = outer.width.saturating_sub(inner.width) as i32;
-    let frame_height = outer.height.saturating_sub(inner.height) as i32;
+    // Requested size is the content area; add the frame the window has (none when undecorated).
+    let (frame_width, frame_height) = frame_size(window)?;
     let target = target_bounds(
         current,
         work_area,
@@ -78,8 +100,11 @@ pub(crate) fn resize(window: &WebviewWindow, width: f64, height: f64, center_in_
     set_outer_bounds(window, target)
 }
 
-/// Work area of the window's monitor and that monitor's origin, in physical px.
-fn monitor_areas(window: &WebviewWindow) -> Result<Option<(Bounds, (i32, i32))>, String> {
+/// Work area of a monitor and the monitor's origin, in physical px.
+type MonitorAreas = (Bounds, (i32, i32));
+
+/// Work area of the window's monitor and that monitor's origin.
+fn monitor_areas(window: &WebviewWindow) -> Result<Option<MonitorAreas>, String> {
     Ok(window.current_monitor().map_err(|e| e.to_string())?.map(|monitor| {
         let area = monitor.work_area();
         (
@@ -174,16 +199,16 @@ fn set_restore_rect(
 
 /// Moves and resizes the window to logical `x`, `y`, `width`, `height` (content size) in one step.
 pub(crate) fn set_bounds(window: &WebviewWindow, x: f64, y: f64, width: f64, height: f64) -> Result<(), String> {
+    ensure_normal(window)?;
     let scale = window.scale_factor().map_err(|e| e.to_string())?;
-    let outer = window.outer_size().map_err(|e| e.to_string())?;
-    let inner = window.inner_size().map_err(|e| e.to_string())?;
+    let (frame_width, frame_height) = frame_size(window)?;
     set_outer_bounds(
         window,
         Bounds {
             x: (x * scale).round() as i32,
             y: (y * scale).round() as i32,
-            width: (width * scale).round() as i32 + outer.width.saturating_sub(inner.width) as i32,
-            height: (height * scale).round() as i32 + outer.height.saturating_sub(inner.height) as i32,
+            width: (width * scale).round() as i32 + frame_width,
+            height: (height * scale).round() as i32 + frame_height,
         },
     )
 }

@@ -71,16 +71,32 @@ export class WindowBoundsService {
     await invoke('set_window_restore_size', { width, height, center: !!options.center });
   }
 
-  /** Puts the window back where it was last left. Returns false when there is nothing usable saved. */
-  async restoreLastBounds(): Promise<boolean> {
-    if (!isTauri()) return false;
+  /**
+   * Startup and webview reloads (Ctrl+Shift+R): the window always gets the mode's default content
+   * size (`width` x `height`); only where it was (its center, on a connected monitor) and whether it
+   * was maximized are restored. Without usable saved bounds it is centered on its monitor.
+   * - Saved maximized and still maximized (a reload): stays maximized; its restore size is set.
+   * - Saved maximized: placed and resized first, then maximized (un-maximizing returns there).
+   * - Otherwise: un-maximized if needed (Rust), moved to the saved place and resized around it.
+   */
+  async restorePlacement(width: number, height: number): Promise<void> {
+    if (!isTauri()) return;
     const saved = this.readBounds();
-    if (!saved || !(await this.isOnScreen(saved))) return false;
+    const usable = !!saved && (await this.isOnScreen(saved));
+    const maximized = await this.isMaximized();
     await this.withoutTracking(async () => {
-      await invoke('set_window_bounds', { x: saved.x, y: saved.y, width: saved.width, height: saved.height });
-      if (saved.maximized) await getCurrentWindow().maximize();
+      if (usable && saved.maximized && maximized) {
+        await invoke('set_window_restore_size', { width, height, center: false });
+        return;
+      }
+      if (usable) {
+        await invoke('set_window_bounds', { x: saved.x, y: saved.y, width: saved.width, height: saved.height });
+        await invoke('resize_window', { width, height, center: false });
+      } else {
+        await invoke('resize_window', { width, height, center: true });
+      }
+      if (usable && saved.maximized) await getCurrentWindow().maximize();
     });
-    return true;
   }
 
   // ──────────────────────────────────────────────
