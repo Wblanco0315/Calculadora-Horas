@@ -5,6 +5,7 @@ pub(crate) mod board;
 pub(crate) mod board_move;
 pub(crate) mod connection;
 pub(crate) mod mcp;
+pub(crate) mod mcp_api;
 pub(crate) mod mcp_contract;
 pub(crate) mod project;
 pub(crate) mod report;

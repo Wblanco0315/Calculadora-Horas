@@ -38,6 +38,10 @@ pub(crate) async fn request_attachment(
 ) -> Result<(reqwest::Response, String), String> {
     let clean_url = sanitize_url(url);
     let full_url = resolve_openproject_href(&clean_url, download_url);
+    // Never send the API key to another host: the first request must target the configured origin.
+    if openproject_origin(&full_url).to_lowercase() != openproject_origin(&clean_url).to_lowercase() {
+        return Err("El adjunto no pertenece al servidor de OpenProject configurado.".to_string());
+    }
     let auth_value = build_auth_header(token);
     let client = reqwest::Client::builder()
         .user_agent(BROWSER_USER_AGENT)

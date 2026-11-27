@@ -19,7 +19,7 @@ command  ──►  service  ──►  openproject (HTTP infrastructure)
 src-tauri/src/
 ├── main.rs                 Binary entry point, calls pocketproject_lib::run()
 ├── lib.rs                  Module declarations and run(): plugins, setup, generate_handler!
-├── ipc.rs                  Local HTTP server for the PocketProject MCP (/ping, /notify, /show)
+├── ipc.rs                  Local HTTP server for the PocketProject MCP (/ping, /api/<operation>, /action, /notify, /show; token, thread per connection)
 ├── app/                    Application bootstrap
 │   ├── setup.rs            Tauri setup hook: IPC server, autostart (release builds only), --minimized, tray
 │   ├── tray.rs             System tray icon and menu
@@ -46,6 +46,7 @@ src-tauri/src/
 │   ├── board_move.rs       Column move + query order delta (build_query_order_delta)
 │   ├── connection.rs
 │   ├── mcp.rs              MCP config injection into AI clients, versioned AI rules block per project (registered and refreshed on startup), client/rules status
+│   ├── mcp_api.rs          MCP local API: operation dispatch (local first, then OpenProject), lock_version / user_authorized / same-origin guards, interface actions
 │   ├── mcp_contract.rs     App <-> pocketproject-mcp contract: protocol version, min MCP version, package spec, single system prompt (resources/mcp/system-prompt.md)
 │   ├── project.rs
 │   ├── report.rs           Paged time-cost report loading (fetch_time_cost_report_entries fails on HTTP errors; the report command keeps returning [])
