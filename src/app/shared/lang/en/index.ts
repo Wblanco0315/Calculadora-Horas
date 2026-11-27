@@ -576,6 +576,10 @@ export const en = {
     uploadFailed: 'Could not upload the file to OpenProject.',
   },
   ticketDetail: {
+    aiDraft: 'Comment drafted by the AI: review it and press Send',
+    uploadAttachment: 'Attach file',
+    uploadRequested: 'The AI asked to attach a file: pick it yourself',
+    uploadFailed: 'Could not upload the file: {error}',
     pocketProjectUtils: 'PocketProject Utils',
     logTime: 'Log time',
     activityFilter: {

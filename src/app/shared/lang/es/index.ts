@@ -576,6 +576,10 @@ export const es = {
     uploadFailed: 'No se pudo subir el archivo a OpenProject.',
   },
   ticketDetail: {
+    aiDraft: 'Comentario propuesto por la IA: revísalo y pulsa Enviar',
+    uploadAttachment: 'Adjuntar archivo',
+    uploadRequested: 'La IA pidió adjuntar un archivo: elígelo tú',
+    uploadFailed: 'No se pudo subir el archivo: {error}',
     pocketProjectUtils: 'PocketProject Utils',
     logTime: 'Registrar tiempo',
     activityFilter: {

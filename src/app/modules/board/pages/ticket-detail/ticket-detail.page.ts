@@ -21,6 +21,7 @@ import {
   tablerCheck,
   tablerX,
   tablerPaperclip,
+  tablerRobot,
   tablerPhoto,
   tablerSend,
   tablerAlertCircle,
@@ -38,6 +39,7 @@ import { AttachmentApiService } from '../../../../core/services/openproject/atta
 import { BoardApiService } from '../../../../core/services/openproject/board-api.service';
 import { ActivityService } from '../../../../core/services/activity.service';
 import { WorkPackageChangeService } from '../../../../core/services/work-package-change.service';
+import { TicketIntentService } from '../../../../core/services/ticket-intent.service';
 import {
   BoardColumnOption,
   TicketAttachment,
@@ -109,6 +111,7 @@ function readStoredOption<T extends string>(key: string, allowed: readonly T[], 
       tablerCheck,
       tablerX,
       tablerPaperclip,
+      tablerRobot,
       tablerPhoto,
       tablerSend,
       tablerAlertCircle,
@@ -133,6 +136,7 @@ export class TicketDetailPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly workPackageChangeService = inject(WorkPackageChangeService);
+  private readonly ticketIntents = inject(TicketIntentService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly breadcrumbService = inject(BreadcrumbService);
   private changeCheckSubscription?: Subscription;
@@ -185,6 +189,12 @@ export class TicketDetailPage {
   readonly descriptionDraft = signal<string>('');
   readonly newComment = signal<string>('');
   readonly isComposingComment = signal<boolean>(false);
+  /** The comment in the editor was drafted by the AI (MCP): the user reviews it and sends it. */
+  readonly isAiCommentDraft = signal<boolean>(false);
+  /** The AI asked the user to upload a file: the upload button is highlighted. */
+  readonly isUploadRequested = signal<boolean>(false);
+  readonly isUploadingAttachment = signal<boolean>(false);
+  readonly attachmentUploadError = signal<string | null>(null);
   readonly downloadingAttachmentIds = signal<ReadonlySet<TicketAttachment['id']>>(new Set());
   readonly downloadedAttachmentPaths = signal<ReadonlyMap<TicketAttachment['id'], string>>(new Map());
   readonly attachmentDownloadErrors = signal<ReadonlySet<TicketAttachment['id']>>(new Set());
@@ -275,6 +285,36 @@ export class TicketDetailPage {
       } else {
         this.errorMessage.set('Invalid ticket ID.');
       }
+    });
+
+    // Work prepared by the AI (MCP) that the user finishes here.
+    effect(() => {
+      const id = this.ticketId();
+      if (!id) return;
+      const draft = this.ticketIntents.commentDraft(id);
+      if (draft !== null) {
+        untracked(() => {
+          this.ticketIntents.clearCommentDraft(id);
+          this.activeTab.set('comments');
+          this.newComment.set(draft);
+          this.isAiCommentDraft.set(true);
+          this.isComposingComment.set(true);
+        });
+      }
+      if (this.ticketIntents.uploadRequest() === id) {
+        untracked(() => {
+          this.ticketIntents.clearUploadRequest();
+          this.activeTab.set('attachments');
+          this.isUploadRequested.set(true);
+        });
+      }
+    });
+
+    // The MCP changed this ticket (status, fields, column): show the new data.
+    effect(() => {
+      const update = this.ticketIntents.ticketUpdate();
+      const id = untracked(() => this.ticketId());
+      if (update && id && update.ticket === id) void this.loadTicket(id);
     });
 
     // Publish the ticket subject for the dashboard breadcrumb.
@@ -698,6 +738,7 @@ export class TicketDetailPage {
       if (res.ok) {
         this.newComment.set('');
         this.isComposingComment.set(false);
+        this.isAiCommentDraft.set(false);
         await this.loadTicket(id);
       }
     } finally {
@@ -708,6 +749,32 @@ export class TicketDetailPage {
   discardComment(): void {
     this.newComment.set('');
     this.isComposingComment.set(false);
+    this.isAiCommentDraft.set(false);
+  }
+
+  /** Uploads the files the user picked in the Attachments tab. */
+  async uploadAttachments(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const files = Array.from(input.files ?? []);
+    input.value = '';
+    const id = this.ticketId();
+    if (!id || files.length === 0) return;
+
+    this.isUploadingAttachment.set(true);
+    this.attachmentUploadError.set(null);
+    try {
+      for (const file of files) {
+        const result = await this.attachmentApi.uploadWorkPackageAttachment(String(id), file);
+        if (!result.ok) {
+          this.attachmentUploadError.set(result.error || file.name);
+          break;
+        }
+      }
+      this.isUploadRequested.set(false);
+      await this.loadTicket(id);
+    } finally {
+      this.isUploadingAttachment.set(false);
+    }
   }
 
   async openInBrowser(): Promise<void> {

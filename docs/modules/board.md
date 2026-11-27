@@ -36,6 +36,11 @@ Recreates OpenProject's Kanban board and ticket detail experience in Full Mode, 
 - Icons inside PrimeNG buttons use `pButtonIcon` / `pButtonLabel`; a global `.p-button > ng-icon` rule centers every `ng-icon` placed in a button.
 - Mentions: typing `@` in the editor lists the work package's available assignees and responsibles (`TicketDetailPage.mentionUsers`). They are stored with the same markup as OpenProject's editor, `<mention class="mention" data-id="{id}" data-type="user" data-text="@Name">@Name</mention>`, kept as raw HTML by the GFM processor (`keepHtml('mention')`), so OpenProject links the user and sends the mention notification.
 
+## AI (MCP) Drafts and Uploads
+- A comment drafted by the AI (`draft_ticket_comment` → `TicketIntentService`) opens the composer on the Activity tab with the text preloaded in the rich text editor and the notice "Comentario propuesto por la IA: revísalo y pulsa Enviar" (`isAiCommentDraft`). Only the user's **Comentar** posts it; **Descartar** drops it.
+- `request_attachment_upload` opens the **Archivos** tab with the **Adjuntar archivo** button highlighted (`isUploadRequested`). The button (also available without the AI) opens the file picker and uploads with `AttachmentApiService.uploadWorkPackageAttachment`; errors show under it.
+- When the MCP changes the ticket (status, fields, column), the open detail reloads (`TicketIntentService.ticketUpdate`).
+
 ## Activity Filters
 - The activity tab mirrors OpenProject's options: `activityFilter` (`all`, `changes`, `comments`) and `activityOrder` (`oldestFirst` = newest at the bottom, `newestFirst`). `visibleActivities` hides the comment body or the change details of each journal entry depending on the filter. Both choices persist in `localStorage`.
 
