@@ -1,6 +1,6 @@
 [package]
 name = "pocketproject"
-version = "1.1.0"
+version = "1.2.0"
 description = "PocketProject - OpenProject Time & Schedule Tracker"
 authors = ["Wilson Blanco"]
 edition = "2024"

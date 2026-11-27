@@ -2,13 +2,13 @@ import { Injectable, inject } from '@angular/core';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { ActivityService } from '../../../core/services/activity.service';
-import { McpContract, McpInstallResult, McpStatus } from '../interfaces/mcp.interface';
+import { McpContract, McpInstallResult } from '../../../core/interfaces/mcp.interface';
 
 const DESKTOP_ONLY: McpInstallResult = { success: false, path: '', message: 'Solo disponible en la app de escritorio' };
 
 /**
  * PocketProject MCP: local database info, client installation, AI rules and the compatibility
- * contract. The system prompt comes only from the app (`get_mcp_contract`), never from a copy here.
+ * contract. Status and required updates live in `McpCompatibilityService` (core). The system prompt comes only from the app (`get_mcp_contract`), never from a copy here.
  */
 @Injectable({ providedIn: 'root' })
 export class McpService {
@@ -63,21 +63,5 @@ export class McpService {
   /** Contract with the single system prompt; `null` outside the desktop app. */
   async getContract(): Promise<McpContract | null> {
     return isTauri() ? invoke<McpContract>('get_mcp_contract') : null;
-  }
-
-  async getStatus(): Promise<McpStatus | null> {
-    return isTauri() ? invoke<McpStatus>('get_mcp_status') : null;
-  }
-
-  /** Rewrites outdated client configs and the injected rules block when it is outdated. */
-  async updateOutdated(status: McpStatus): Promise<void> {
-    for (const client of status.clients) {
-      if (client.configured && !client.upToDate) {
-        await this.installMcpToClient(client.client);
-      }
-    }
-    if (status.rules.some((rules) => rules.present && !rules.upToDate)) {
-      await this.refreshRules();
-    }
   }
 }

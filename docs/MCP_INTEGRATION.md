@@ -87,6 +87,8 @@ PocketProject es el **único intermediario**: el MCP (2.x) no abre SQLite ni lla
 | `get_ticket_history` / `get_ticket_costs` | `ticket` | Comments and change history / cost totals. |
 | `get_openproject_context` / `get_user_info` | — | PocketProject configuration and the connected OpenProject user. |
 | `get_projects` / `get_statuses` / `get_project_versions` | `query`, `limit` / — / `project_id` | Reference data. |
+| `sync_time_entries` | `ids` or `date` | Opens the app's send confirmation modal with those entries (one date); the user presses Send. The AI never sends time itself. |
+| `get_my_tickets` | `statuses`, `project_id`, `role`, `include_closed` | Tickets assigned to the user (or where they are responsible) by status and project, grouped project by project with counts per status and each ticket's `lockVersion`. Without `statuses`: open tickets. |
 | `get_project_boards` / `get_board_columns` | `project_id` / `board_id` | Boards and their real columns. |
 | `get_time_cost_report` | ticket, project, user, activity, date range, `group_by` | OpenProject time entries (same query as the app's "Tiempo y costos" page); use it for dates older than 3 months. |
 | `get_time_statistics` | `from`, `to`, `refresh` | Hours logged in OpenProject per day and project (app cache). |
@@ -118,6 +120,8 @@ PocketProject es el **único intermediario**: el MCP (2.x) no abre SQLite ni lla
 | `get_user_info` | Ninguno | Obtiene el perfil completo del usuario autenticado en OpenProject (ID, nombre, correo, login, admin, horario). |
 | `get_projects` | `query`, `active`, `limit` | Lista y busca proyectos accesibles en OpenProject con ID, nombre, slug y jerarquía. |
 | `get_statuses` | Ninguno | Retorna la lista oficial de estados disponibles en OpenProject (ID, nombre, color hexadecimal). |
+| `sync_time_entries` | `ids` o `date` | Acción de interfaz `sync_time_entries`: Rust valida las entradas (una sola fecha; omite las sin ticket, ya enviadas o con cronómetro corriendo) y `McpActionService` abre el modal de confirmación de envío (`sync-confirm-modal`) con ellas seleccionadas. Solo el botón Enviar del usuario las sube, con el tipo de actividad de cada entrada (regla 11). |
+| `get_my_tickets` | `statuses`, `project_id`, `role` (`assignee`/`responsible`/`any`), `include_closed` | Tickets del usuario por estado y proyecto (operación `my_tickets`), agrupados proyecto por proyecto con conteo por estado y el `lockVersion` de cada ticket. Los estados se aceptan por nombre (sin distinguir mayúsculas ni tildes) o ID; sin `statuses` devuelve los abiertos. Máximo 500 tickets (`truncated`). La IA pregunta primero si es un proyecto o todos (regla 9). |
 | `get_time_cost_report` | `ticket`, `project_id`, `user_id`, `activity_id`, `date_from`, `date_to`, `include_descendants`, `group_by` | Consulta entradas de tiempo con filtros equivalentes a la página de informes, incluye paquetes hijos y agrupa por fecha/usuario/actividad/proyecto/ticket. Devuelve totales de costo del paquete cuando OpenProject los permite; la API no expone costo monetario por entrada. |
 | `update_ticket_status` | `ticket` (req), `status_id` (req), `lock_version` (req) | Actualiza el estado de un ticket en OpenProject con soporte de concurrencia optimista. |
 | `get_project_boards` | `project_id` (req), `project_identifier` (opc) | Lista los tableros Kanban / de acción disponibles en el proyecto indicado. |
@@ -176,6 +180,14 @@ Resultado de la comprobación (`compatible` / `reason`):
 
 El panel **Compatibilidad MCP** (setup → MCP y Configuración → Sistema) muestra la versión de la app y del protocolo, el último MCP que arrancó, cada cliente configurado (actualizado si usa el `packageSpec` vigente) y cada archivo de reglas registrado. **Actualizar todo** reescribe las configuraciones de cliente desactualizadas y los bloques de reglas desactualizados (`refresh_mcp_rules`).
 
+### Aviso de actualización obligatoria
+
+`core/services/mcp-compatibility.service.ts` guarda el estado (`get_mcp_status`) que comparten el panel y el diálogo global `shared/components/mcp-update-dialog` (montado en `AppComponent`). Se consulta al arrancar la app y cada vez que un MCP envía `mcp_hello`. El diálogo aparece, una vez terminado el onboarding, cuando:
+- el último MCP que arrancó es incompatible (`protocol_mismatch` o `mcp_outdated`, p. ej. tras una actualización de la app que subió `MIN_MCP_VERSION`), o
+- algún cliente de IA configurado usa un `packageSpec` distinto del vigente.
+
+Muestra la versión instalada frente a la requerida, permite reescribir la configuración de los clientes y copiar `npx -y <packageSpec> setup`, y pide reiniciar el cliente de IA. **Más tarde** lo oculta hasta que cambie la situación o se reinicie la app; se cierra solo cuando se conecta un MCP compatible.
+
 ---
 
 ## 6. API local de la app para el MCP (protocolo 2)
@@ -192,7 +204,7 @@ El panel **Compatibilidad MCP** (setup → MCP y Configuración → Sistema) mue
 **Operaciones** (`mcp_api::OPERATIONS`):
 - Locales: `app_context` (configuración sin token), `activities`, `activity_save`, `activity_delete`, `favorites`, `favorite_save` (emiten `db-changed`).
 - Primero local, luego OpenProject: `search_tickets` (favoritos → historial → búsqueda en OpenProject), `ticket_info`, `ticket_context` (resumen local + datos en vivo), `time_statistics` (caché o `refresh`).
-- Lectura en OpenProject: `current_user`, `projects`, `statuses`, `project_versions`, `boards`, `board_columns`, `ticket_form`, `ticket_costs`, `time_cost_report`.
+- Lectura en OpenProject: `current_user`, `projects`, `statuses`, `project_versions`, `boards`, `board_columns`, `ticket_form`, `ticket_costs`, `time_cost_report`, `my_tickets` (tickets del usuario por estado y proyecto, `service/my_ticket.rs`).
 - Escritura (exigen `lock_version`; la IA pide autorización antes): `update_status`, `update_version`, `update_fields`, `move_column`. Emiten `mcp-event` `ticket_updated` y el detalle abierto se recarga.
 - Adjuntos (exigen `user_authorized: true` y mismo origen que el OpenProject configurado; `request_attachment` lo vuelve a comprobar): `attachment_content`, `attachment_download` (carpeta Descargas).
 
@@ -200,3 +212,4 @@ El panel **Compatibilidad MCP** (setup → MCP y Configuración → Sistema) mue
 - `open_app`, `set_mode` (`compact` / `full`), `navigate` (`compact`, `overview`, `time-entries`, `projects`, `boards`, `board`, `ticket`, `reports`, `settings` con sus parámetros), `open_ticket`.
 - `draft_comment {ticket, text}`: abre `/dashboard/tickets/:id` con el comentario precargado en el editor y el aviso "Comentario propuesto por la IA"; **solo el usuario lo envía** (`TicketIntentService`, sin pasar el texto por la URL).
 - `upload_attachment {ticket}`: abre la pestaña Archivos con el botón **Adjuntar archivo** resaltado; el usuario elige y sube el archivo.
+- `sync_time_entries {ids | date}`: abre el modal de confirmación de envío de tiempos (ventana compacta o vista Registro de tiempo) con esas entradas seleccionadas (`ActivityService.openSyncConfirmation`); **solo el usuario las envía** pulsando Enviar.

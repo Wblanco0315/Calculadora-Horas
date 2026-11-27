@@ -23,6 +23,9 @@
               <p-step [value]="4">
                 <span>{{ 'setup.step4' | translate }}</span>
               </p-step>
+              <p-step [value]="6">
+                <span>{{ 'setup.step6' | translate }}</span>
+              </p-step>
             </p-step-list>
           </p-stepper>
         </div>
@@ -49,6 +52,10 @@
             @case (4) {
               <app-openproject-step />
             }
+            @case (6) {
+              <p class="mb-4 text-xs text-slate-500 dark:text-zinc-400">{{ 'setup.mcp.onboardingHint' | translate }}</p>
+              <app-mcp-section />
+            }
           }
         </div>
       </div>
@@ -68,7 +75,7 @@
               </button>
             }
 
-            @if (setupService.activeStep() < 4) {
+            @if (setupService.activeStep() !== lastStep) {
               <button pButton (click)="nextStep()" [disabled]="isNextDisabled()" class="flex items-center">
                 <span>{{ 'common.next' | translate }}</span>
                 <ng-icon name="tablerArrowRight" size="1rem" class="ml-1" />

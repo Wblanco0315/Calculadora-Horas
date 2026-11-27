@@ -50,12 +50,16 @@ export class SyncConfirmModalComponent implements OnInit {
     }));
   });
 
-  readonly syncCount = computed(() => {
-    if (this.activityService.isSelectionMode() && this.activityService.selectedActivities().length > 0) {
-      return this.activityService.selectedActivities().length;
-    }
-    return this.activityService.unsyncedActivities().length;
-  });
+  /** Activities the bulk send covers (same rule as `ActivityService.syncAllUnsynced`). */
+  readonly bulkActivities = computed<Activity[]>(() =>
+    this.activityService.isSelectionMode() && this.activityService.selectedActivities().length > 0
+      ? this.activityService.selectedActivities()
+      : this.activityService.unsyncedActivities(),
+  );
+
+  readonly syncCount = computed(() => this.bulkActivities().length);
+
+  readonly bulkMinutes = computed(() => this.bulkActivities().reduce((acc, a) => acc + (Number(a.minutes) || 0), 0));
 
   readonly hasPredefinedType = computed<boolean>(() => {
     const single = this.singleActivity();
