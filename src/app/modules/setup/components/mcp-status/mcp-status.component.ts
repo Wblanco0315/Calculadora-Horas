@@ -1,12 +1,9 @@
-import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
-import { isTauri } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ButtonDirective, ButtonIcon, ButtonLabel } from 'primeng/button';
 import { Tag } from 'primeng/tag';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { tablerPlugConnected, tablerRefresh, tablerDownload } from '@ng-icons/tabler-icons';
-import { McpService } from '../../services/mcp.service';
-import { McpStatus } from '../../interfaces/mcp.interface';
+import { McpCompatibilityService } from '../../../../core/services/mcp-compatibility.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { TranslatePipe } from '../../../../shared/pipes/translate.pipe';
 
@@ -24,11 +21,11 @@ type TagSeverity = 'success' | 'warn' | 'danger' | 'secondary';
   templateUrl: './mcp-status.component.html',
 })
 export class McpStatusComponent implements OnInit {
-  private readonly mcpService = inject(McpService);
+  private readonly compatibility = inject(McpCompatibilityService);
   private readonly notificationService = inject(NotificationService);
-  private readonly destroyRef = inject(DestroyRef);
 
-  readonly status = signal<McpStatus | null>(null);
+  /** Shared with the global update dialog; refreshed whenever an MCP server starts. */
+  readonly status = this.compatibility.status;
   readonly isLoading = signal<boolean>(false);
   readonly isUpdating = signal<boolean>(false);
 
@@ -56,43 +53,33 @@ export class McpStatusComponent implements OnInit {
   readonly hasOutdated = computed(() => {
     const status = this.status();
     if (!status) return false;
-    return status.clients.some((client) => client.configured && !client.upToDate) || status.rules.some((rules) => rules.present && !rules.upToDate);
+    return this.compatibility.outdatedClients().length > 0 || status.rules.some((rules) => rules.present && !rules.upToDate);
   });
 
   async ngOnInit(): Promise<void> {
+    // Also covers the onboarding, which runs before AppComponent starts the shared listener.
+    this.compatibility.start();
     await this.refresh();
-    if (isTauri()) {
-      // pocketproject-mcp announces itself through the IPC /notify endpoint when it starts.
-      const unlisten = await listen<{ event?: string }>('mcp-event', (event) => {
-        if (event.payload?.event === 'mcp_hello') this.refresh();
-      });
-      this.destroyRef.onDestroy(unlisten);
-    }
   }
 
   async refresh(): Promise<void> {
     this.isLoading.set(true);
     try {
-      this.status.set(await this.mcpService.getStatus());
-    } catch (err) {
-      console.warn('Could not load MCP status:', err);
+      await this.compatibility.refresh();
     } finally {
       this.isLoading.set(false);
     }
   }
 
   async updateOutdated(): Promise<void> {
-    const status = this.status();
-    if (!status) return;
     this.isUpdating.set(true);
     try {
-      await this.mcpService.updateOutdated(status);
+      await this.compatibility.updateOutdated();
       this.notificationService.success('mcpStatus.updated');
     } catch (err) {
       this.notificationService.error('mcpStatus.updateFailed', String(err));
     } finally {
       this.isUpdating.set(false);
-      await this.refresh();
     }
   }
 

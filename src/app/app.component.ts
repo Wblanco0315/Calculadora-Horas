@@ -5,14 +5,16 @@ import { ThemeService } from './core/services/theme.service';
 import { UpdateService } from './core/services/update.service';
 import { WindowService } from './core/window/window.service';
 import { McpActionService } from './core/services/mcp-action.service';
+import { McpCompatibilityService } from './core/services/mcp-compatibility.service';
 import { hideAppLoader } from './core/utils/app-loader.util';
 import { UpdateDialogComponent } from './shared/components/update-dialog/update-dialog.component';
+import { McpUpdateDialogComponent } from './shared/components/mcp-update-dialog/mcp-update-dialog.component';
 import { WindowTransitionComponent } from './shared/components/window-transition/window-transition.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, UpdateDialogComponent, WindowTransitionComponent],
+  imports: [RouterOutlet, UpdateDialogComponent, McpUpdateDialogComponent, WindowTransitionComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
@@ -22,6 +24,7 @@ export class AppComponent implements OnInit {
   private readonly updateService = inject(UpdateService);
   private readonly windowService = inject(WindowService);
   private readonly mcpActionService = inject(McpActionService);
+  private readonly mcpCompatibilityService = inject(McpCompatibilityService);
 
   async ngOnInit(): Promise<void> {
     try {
@@ -36,6 +39,8 @@ export class AppComponent implements OnInit {
       }
       // Interface actions requested by the PocketProject MCP (open views, tickets, comment drafts).
       this.mcpActionService.start();
+      // Warns with a dialog when this app version requires a newer pocketproject-mcp.
+      this.mcpCompatibilityService.start();
     } finally {
       // The index.html loader covers the boot, the config load and the window placement.
       hideAppLoader();
