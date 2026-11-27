@@ -22,12 +22,12 @@ use tauri::{AppHandle, Emitter};
 use crate::model::activity::ActivityRecord;
 use crate::model::favorite_ticket::FavoriteTicketRecord;
 use crate::model::time_entry::TimeCostReportFilter;
-use crate::model::work_package::UpdateWorkPackagePayload;
+use crate::model::work_package::{MyTicketFilter, UpdateWorkPackagePayload};
 use crate::repository::connection::open_connection;
 use crate::repository::{activity, config, favorite_ticket};
 use crate::service::{
-    attachment, board, board_move, connection, project, report, statistic, ticket, ticket_context,
-    work_package, work_package_edit,
+    attachment, board, board_move, connection, my_ticket, project, report, statistic, ticket,
+    ticket_context, work_package, work_package_edit,
 };
 
 /// Operations of `POST /api/<operation>` (also listed by `/ping`).
@@ -54,6 +54,7 @@ pub(crate) const OPERATIONS: &[&str] = &[
     "ticket_form",
     "ticket_costs",
     "time_cost_report",
+    "my_tickets",
     // OpenProject writes (after the user authorizes them in the chat)
     "update_status",
     "update_version",
@@ -72,6 +73,7 @@ pub(crate) const ACTIONS: &[&str] = &[
     "open_ticket",
     "draft_comment",
     "upload_attachment",
+    "sync_time_entries",
 ];
 
 /// Views `navigate` accepts (routes of the full dashboard, plus the compact window).
@@ -146,6 +148,12 @@ pub(crate) async fn dispatch(app: &AppHandle, operation: &str, body: Value) -> R
         "projects" => {
             let (url, token) = credentials(app)?;
             to_value(project::fetch_openproject_projects(url, token).await?)
+        }
+        "my_tickets" => {
+            let filter: MyTicketFilter =
+                serde_json::from_value(body).map_err(|e| format!("Filtro inválido: {}", e))?;
+            let (url, token) = credentials(app)?;
+            to_value(my_ticket::fetch_my_tickets(url, token, filter).await?)
         }
         "statuses" => {
             let (url, token) = credentials(app)?;
@@ -289,6 +297,22 @@ pub(crate) fn run_action(app: &AppHandle, body: Value) -> Result<Value, String> 
                 return Err("El comentario está vacío".to_string());
             }
         }
+        "sync_time_entries" => {
+            // Only opens the app's send confirmation; the user sends from the modal.
+            let pending = pending_sync(app, &body)?;
+            crate::app::window::show_main_window(app);
+            let mut payload = body.clone();
+            payload["date"] = json!(pending.date);
+            payload["ids"] = json!(pending.ids);
+            app.emit("mcp-action", &payload).map_err(|e| e.to_string())?;
+            return Ok(json!({
+                "action": action,
+                "date": pending.date,
+                "count": pending.ids.len(),
+                "totalMinutes": pending.total_minutes,
+                "skipped": pending.skipped,
+            }));
+        }
         other => {
             return Err(format!("Acción desconocida: '{}'. Disponibles: {}", other, ACTIONS.join(", ")));
         }
@@ -296,6 +320,67 @@ pub(crate) fn run_action(app: &AppHandle, body: Value) -> Result<Value, String> 
     crate::app::window::show_main_window(app);
     app.emit("mcp-action", &body).map_err(|e| e.to_string())?;
     Ok(json!({ "action": action }))
+}
+
+/// Activities `sync_time_entries` will offer to send: explicit `ids` (of one date) or every pending
+/// activity of `date`. Pending means not synced, with a ticket and no running timer.
+struct PendingSync {
+    date: String,
+    ids: Vec<String>,
+    total_minutes: i32,
+    skipped: Vec<Value>,
+}
+
+fn pending_sync(app: &AppHandle, body: &Value) -> Result<PendingSync, String> {
+    let ids: Vec<String> = opt(body, "ids")?.unwrap_or_default();
+    let date: Option<String> = opt::<String>(body, "date")?.map(|d| d.trim().to_string()).filter(|d| !d.is_empty());
+    if ids.is_empty() && date.is_none() {
+        return Err("Indica 'ids' o 'date' (YYYY-MM-DD) de las entradas a enviar.".to_string());
+    }
+    let conn = open_connection(app).map_err(|e| e.to_string())?;
+    let all = activity::load_activities(&conn, None).map_err(|e| e.to_string())?;
+    let skip_reason = |a: &ActivityRecord| -> Option<&'static str> {
+        if a.synced.unwrap_or(false) {
+            Some("ya enviada")
+        } else if a.ticket.as_deref().map(str::trim).unwrap_or("").is_empty() {
+            Some("sin ticket")
+        } else if a.timer_state.as_deref() == Some("running") {
+            Some("cronómetro corriendo")
+        } else {
+            None
+        }
+    };
+
+    let mut skipped = Vec::new();
+    let chosen: Vec<&ActivityRecord> = if ids.is_empty() {
+        let date = date.clone().unwrap_or_default();
+        all.iter().filter(|a| a.date == date && skip_reason(a).is_none()).collect()
+    } else {
+        let mut chosen = Vec::new();
+        for id in &ids {
+            match all.iter().find(|a| &a.id == id) {
+                None => skipped.push(json!({ "id": id, "reason": "no existe" })),
+                Some(a) => match skip_reason(a) {
+                    Some(reason) => skipped.push(json!({ "id": id, "reason": reason })),
+                    None => chosen.push(a),
+                },
+            }
+        }
+        chosen
+    };
+    let Some(first) = chosen.first() else {
+        return Err(format!("No hay entradas pendientes de enviar con ese filtro. Omitidas: {}", Value::Array(skipped)));
+    };
+    let target_date = date.unwrap_or_else(|| first.date.clone());
+    if chosen.iter().any(|a| a.date != target_date) {
+        return Err("La confirmación de envío de PocketProject trabaja por día: envía entradas de una sola fecha por vez.".to_string());
+    }
+    Ok(PendingSync {
+        date: target_date,
+        ids: chosen.iter().map(|a| a.id.clone()).collect(),
+        total_minutes: chosen.iter().map(|a| a.minutes).sum(),
+        skipped,
+    })
 }
 
 // ──────────────────────────────────────────────────────────────────────

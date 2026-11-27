@@ -5,21 +5,26 @@ import { listen } from '@tauri-apps/api/event';
 import { WindowService } from '../window/window.service';
 import { StorageService } from './storage.service';
 import { TicketIntentService } from './ticket-intent.service';
+import { ActivityService } from './activity.service';
 
 /** Payload of the `mcp-action` event (validated by the Rust `service::mcp_api::run_action`). */
 interface McpAction {
-  action: 'open_app' | 'set_mode' | 'navigate' | 'open_ticket' | 'draft_comment' | 'upload_attachment';
+  action: 'open_app' | 'set_mode' | 'navigate' | 'open_ticket' | 'draft_comment' | 'upload_attachment' | 'sync_time_entries';
   mode?: 'compact' | 'full';
   view?: string;
   params?: Record<string, string | number | boolean | null | undefined>;
   ticket?: string | number;
   text?: string;
+  /** `sync_time_entries`: date and activity IDs resolved by Rust. */
+  date?: string;
+  ids?: string[];
 }
 
 /**
  * Carries out the interface actions the PocketProject MCP requests (`POST /action` → `mcp-action`):
  * open the app, switch mode, open a view or a ticket, and prepare work the user finishes:
- * a comment draft (the user sends it) or an attachment upload (the user picks the file).
+ * a comment draft (the user sends it), an attachment upload (the user picks the file) or the send
+ * confirmation of time entries (the user presses Send).
  * The window is already shown and focused by Rust.
  */
 @Injectable({ providedIn: 'root' })
@@ -28,6 +33,7 @@ export class McpActionService {
   private readonly windowService = inject(WindowService);
   private readonly storageService = inject(StorageService);
   private readonly intents = inject(TicketIntentService);
+  private readonly activityService = inject(ActivityService);
   private started = false;
 
   /** Registers the listeners once (called by `AppComponent`). */
@@ -65,6 +71,12 @@ export class McpActionService {
         if (!action.text?.trim()) return;
         this.intents.setCommentDraft(ticket, action.text);
         await this.openTicket(ticket);
+        return;
+      case 'sync_time_entries':
+        // The send modal lives in the compact window and in the time entries view.
+        if (!action.date || !action.ids?.length) return;
+        if (this.windowService.viewMode() === 'full') await this.openFull('/dashboard/time-entries');
+        await this.activityService.openSyncConfirmation(action.date, action.ids);
         return;
       case 'upload_attachment':
         this.intents.requestUpload(ticket);

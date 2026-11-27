@@ -17,8 +17,10 @@ use tauri::{AppHandle, Manager};
 use crate::model::mcp::{McpConnectionStatus, McpContract, McpRuntime};
 
 /// 2: the MCP talks to OpenProject and SQLite only through the app (`/api`, `/action`).
+/// 2.1.0 adds `get_my_tickets` and `sync_time_entries` (`/api/my_tickets`, action `sync_time_entries`), which
+/// the system prompt relies on.
 pub(crate) const MCP_PROTOCOL_VERSION: u32 = 2;
-pub(crate) const MIN_MCP_VERSION: &str = "2.0.0";
+pub(crate) const MIN_MCP_VERSION: &str = "2.1.0";
 /// Major-version spec: `npx` picks the newest compatible release on every client start.
 pub(crate) const MCP_PACKAGE_SPEC: &str = "pocketproject-mcp@2";
 

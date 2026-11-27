@@ -74,3 +74,71 @@ pub(crate) struct WorkPackageSearchItem {
     pub type_name: Option<String>,
     pub status_name: Option<String>,
 }
+
+/// Filter of `my_tickets`: work packages of the connected user by status and project.
+#[derive(Debug, Deserialize, Clone, Default)]
+pub(crate) struct MyTicketFilter {
+    /// Status names or IDs (names are matched without case or accents). Empty: open statuses,
+    /// or every status with `include_closed`.
+    #[serde(default)]
+    pub statuses: Vec<String>,
+    /// Numeric OpenProject project ID; `None` covers every project.
+    #[serde(default)]
+    pub project_id: Option<String>,
+    /// `assignee` (default), `responsible` or `any` (assignee or responsible).
+    #[serde(default)]
+    pub role: Option<String>,
+    /// With no `statuses`, also return closed tickets.
+    #[serde(default)]
+    pub include_closed: bool,
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct MyTicketItem {
+    pub id: i64,
+    pub subject: String,
+    pub type_name: Option<String>,
+    pub status_id: Option<String>,
+    pub status_name: Option<String>,
+    pub priority_name: Option<String>,
+    pub assignee_name: Option<String>,
+    pub responsible_name: Option<String>,
+    pub version_name: Option<String>,
+    pub due_date: Option<String>,
+    pub updated_at: Option<String>,
+    /// Needed by `update_status` / `move_column` when the user asks to move the ticket.
+    pub lock_version: Option<i64>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct MyTicketStatusCount {
+    pub status: String,
+    pub count: usize,
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct MyTicketProjectGroup {
+    pub project_id: Option<String>,
+    pub project_name: String,
+    pub total: usize,
+    pub by_status: Vec<MyTicketStatusCount>,
+    pub tickets: Vec<MyTicketItem>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct MyTicketResult {
+    pub role: String,
+    /// Statuses actually filtered (OpenProject names), or `open` / `all`.
+    pub statuses: Vec<String>,
+    /// Requested statuses that do not exist in OpenProject.
+    pub unknown_statuses: Vec<String>,
+    pub project_id: Option<String>,
+    pub total: usize,
+    /// More tickets matched than the app returns in one call.
+    pub truncated: bool,
+    pub projects: Vec<MyTicketProjectGroup>,
+}
