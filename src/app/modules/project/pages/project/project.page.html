@@ -1,0 +1,71 @@
+@defer (when isLoaded(); prefetch on idle) {
+  <div class="animate-fadeIn flex flex-1 min-h-0 min-w-0 flex-col w-full space-y-5">
+    <div class="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <ng-icon name="tablerFolder" size="1.4rem" class="text-primary-600 dark:text-primary-400 shrink-0" />
+        <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-zinc-100 truncate">
+          {{ 'project.title' | translate }}
+        </h1>
+        <span class="font-mono text-xs text-slate-400 dark:text-zinc-500 shrink-0">
+          ({{ filteredProjects().length }})
+        </span>
+      </div>
+
+      <div class="flex items-center gap-2 w-full sm:w-auto">
+        <p-iconfield class="flex-1 sm:w-72">
+          <p-inputicon>
+            <ng-icon name="tablerSearch" size="1rem" />
+          </p-inputicon>
+          <input
+            pInputText
+            type="text"
+            [ngModel]="searchQuery()"
+            (ngModelChange)="searchQuery.set($event)"
+            [placeholder]="'project.searchPlaceholder' | translate"
+            class="w-full text-xs sm:text-sm"
+          />
+        </p-iconfield>
+
+        <button
+          pButton
+          type="button"
+          iconOnly
+          rounded
+          severity="secondary"
+          [disabled]="isRefreshing()"
+          (click)="loadProjects()"
+          [title]="'dashboard.refresh' | translate"
+        >
+          <ng-icon name="tablerRefresh" size="1.15rem" [class.animate-spin]="isRefreshing()" />
+        </button>
+      </div>
+    </div>
+
+    @if (filteredProjects().length === 0) {
+      <div class="flex flex-col items-center justify-center gap-2 py-12 text-center">
+        <ng-icon name="tablerFolderOff" size="2rem" class="text-slate-400 dark:text-zinc-500" />
+        <p class="text-sm font-medium text-slate-600 dark:text-zinc-400">
+          {{ 'project.empty' | translate }}
+        </p>
+      </div>
+    } @else {
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        @for (project of filteredProjects(); track project.id) {
+          <app-project-card [project]="project" (openBoards)="openProjectBoards($event)" />
+        }
+      </div>
+    }
+  </div>
+} @placeholder (minimum 300ms) {
+  <div class="space-y-5 animate-pulse">
+    <div class="flex items-center justify-between gap-3">
+      <p-skeleton width="11rem" height="1.75rem" borderRadius="0.5rem" />
+      <p-skeleton width="16rem" height="2.25rem" borderRadius="0.75rem" />
+    </div>
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      @for (i of [1, 2, 3, 4, 5, 6, 7, 8]; track i) {
+        <p-skeleton width="100%" height="3.75rem" borderRadius="0.75rem" />
+      }
+    </div>
+  </div>
+}

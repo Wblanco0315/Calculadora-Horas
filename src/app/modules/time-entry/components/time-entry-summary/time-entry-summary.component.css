@@ -1,0 +1,15 @@
+.summary-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--p-text-muted-color);
+}
+
+.summary-value {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 2rem;
+  font-variant-numeric: tabular-nums;
+}

@@ -1,13 +1,14 @@
 import { Injectable, signal, effect, computed } from '@angular/core';
 import { updatePrimaryPalette, palette } from '@primeuix/themes';
-import { ThemeMode, PrimaryColor } from '../interfaces/config.interface';
+import { ThemeMode, PrimaryColor, LightStyle } from '../interfaces/config.interface';
 
 export const THEME_STORAGE_KEY = 'pocketproject_theme';
 export const COLOR_STORAGE_KEY = 'pocketproject_color';
+export const LIGHT_STYLE_STORAGE_KEY = 'pocketproject_light_style';
 
 export const PRIMARY_PALETTES: Record<string, string> = {
+  indigo: '#6366F1',
   violet: '#5E4DA2',
-  indigo: '#4F46E5',
   blue: '#2563EB',
   emerald: '#059669',
   amber: '#D97706',
@@ -48,6 +49,10 @@ export function getInitialStoredTheme(): ThemeMode {
   return 'system';
 }
 
+export function getInitialStoredLightStyle(): LightStyle {
+  return 'warm';
+}
+
 export function getInitialStoredColor(): PrimaryColor {
   if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
     try {
@@ -77,6 +82,7 @@ export function getInitialStoredColor(): PrimaryColor {
 })
 export class ThemeService {
   readonly themeMode = signal<ThemeMode>(getInitialStoredTheme());
+  readonly lightStyle = signal<LightStyle>(getInitialStoredLightStyle());
   readonly primaryColor = signal<PrimaryColor>(getInitialStoredColor());
 
   readonly isDark = computed<boolean>(() => {
@@ -95,6 +101,7 @@ export class ThemeService {
 
   constructor() {
     this.applyTheme(this.themeMode());
+    this.applyLightStyle(this.lightStyle());
     this.applyPrimaryColor(this.primaryColor());
 
     effect(() => {
@@ -102,6 +109,14 @@ export class ThemeService {
       this.applyTheme(mode);
       if (typeof window !== 'undefined') {
         localStorage.setItem(THEME_STORAGE_KEY, mode);
+      }
+    });
+
+    effect(() => {
+      const style = this.lightStyle();
+      this.applyLightStyle(style);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(LIGHT_STYLE_STORAGE_KEY, style);
       }
     });
 
@@ -132,9 +147,17 @@ export class ThemeService {
     this.applyTheme(mode);
   }
 
-  toggleTheme(): void {
-    const isDark = this.isDark();
-    this.setTheme(isDark ? 'light' : 'dark');
+  setLightStyle(style: LightStyle = 'warm'): void {
+    this.lightStyle.set('warm');
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LIGHT_STYLE_STORAGE_KEY, 'warm');
+    }
+    this.applyLightStyle('warm');
+  }
+
+  applyLightStyle(style: LightStyle = 'warm'): void {
+    if (typeof document === 'undefined') return;
+    document.documentElement.setAttribute('data-light-style', 'warm');
   }
 
   setPrimaryColor(color: PrimaryColor, force: boolean = false): void {

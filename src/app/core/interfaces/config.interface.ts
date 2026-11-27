@@ -1,4 +1,5 @@
 export type ThemeMode = 'system' | 'light' | 'dark';
+export type LightStyle = 'neutral' | 'warm';
 
 export type PresetColor = 'indigo' | 'blue' | 'emerald' | 'violet' | 'amber' | 'rose';
 
@@ -40,6 +41,7 @@ export interface AppConfig {
   openproject_url: string;
   openproject_token: string;
   theme_mode: ThemeMode;
+  light_style?: LightStyle;
   primary_color: PrimaryColor;
   is_configured: boolean;
   language: AppLanguage;
@@ -120,6 +122,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   openproject_url: 'https://openproject.wposs.com/openproject',
   openproject_token: '',
   theme_mode: 'system',
+  light_style: 'warm',
   primary_color: 'violet',
   is_configured: false,
   language: 'es',

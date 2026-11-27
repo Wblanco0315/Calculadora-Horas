@@ -1,0 +1,72 @@
+@let full = layout() === 'full';
+
+<div
+  class="shrink-0 border-b border-slate-100 bg-slate-50/50 dark:border-zinc-800 dark:bg-zinc-900/50"
+  [class]="full ? 'rounded-t-2xl border border-slate-200 px-2 sm:px-4 dark:border-zinc-800' : 'px-2 pt-1.5 sm:px-6'"
+>
+  <div class="mx-auto w-full" [class.max-w-4xl]="!full">
+    <p-tabs [value]="setupService.activeStep()" (valueChange)="setupService.goToStep($event)" [scrollable]="true">
+      <p-tablist class="flex w-full gap-1" [class.justify-between]="!full">
+        @for (tab of tabs; track tab.step) {
+          <p-tab [value]="tab.step" class="cursor-pointer px-2.5 py-2 text-xs font-medium sm:px-3 sm:text-sm">
+            <span class="inline-flex items-center gap-1.5 whitespace-nowrap">
+              <ng-icon [name]="tab.icon" size="1rem" />
+              <span>{{ tab.label | translate }}</span>
+            </span>
+          </p-tab>
+        }
+      </p-tablist>
+    </p-tabs>
+  </div>
+</div>
+
+<div
+  class="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+  [class]="full ? 'border-x border-slate-200 bg-white px-4 py-5 sm:px-6 lg:px-8 dark:border-zinc-800 dark:bg-zinc-900' : 'px-4 py-4 sm:px-8 sm:py-6'"
+>
+  <div class="mx-auto w-full" [class]="full ? 'max-w-5xl' : 'max-w-4xl'">
+    @switch (setupService.activeStep()) {
+      @case (1) {
+        <app-appearance-step />
+      }
+      @case (2) {
+        <app-schedule-step />
+      }
+      @case (3) {
+        <app-lunch-step />
+      }
+      @case (4) {
+        <app-openproject-step />
+      }
+      @case (5) {
+        <app-update-section />
+      }
+      @case (6) {
+        <app-mcp-section />
+      }
+    }
+  </div>
+</div>
+
+<footer
+  class="shrink-0 border-t border-slate-100 bg-white/95 backdrop-blur-xs dark:border-zinc-800 dark:bg-zinc-900/95"
+  [class]="full ? 'rounded-b-2xl border border-slate-200 px-4 py-3 sm:px-6 dark:border-zinc-800' : 'px-4 py-2.5 sm:px-8 sm:py-3'"
+>
+  <div class="mx-auto flex w-full items-center" [class]="full ? 'max-w-5xl justify-end' : 'max-w-4xl justify-between'">
+    @if (!full) {
+      <button pButton type="button" (click)="closed.emit()" variant="outlined" severity="secondary">
+        <span pButtonLabel>{{ 'common.close' | translate }}</span>
+      </button>
+    }
+    <button
+      pButton
+      type="button"
+      (click)="save()"
+      [loading]="setupService.isSaving()"
+      [disabled]="setupService.isSaving() || !setupService.isScheduleValid()"
+    >
+      <ng-icon pButtonIcon name="tablerCheck" size="1rem" />
+      <span pButtonLabel>{{ 'common.save' | translate }}</span>
+    </button>
+  </div>
+</footer>

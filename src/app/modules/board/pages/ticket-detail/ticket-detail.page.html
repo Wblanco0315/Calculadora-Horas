@@ -1,0 +1,670 @@
+<section class="ticket-detail-page flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto lg:overflow-hidden" [class.ticket-detail-page--embedded]="embedded()">
+  <header class="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-3 py-3 dark:border-zinc-800 dark:bg-zinc-950 sm:gap-4 sm:px-6">
+    <div class="flex min-w-0 flex-1 items-center gap-3">
+      <button
+        pButton
+        type="button"
+        iconOnly
+        rounded
+        severity="secondary"
+        (click)="goBackToBoard()"
+        [title]="(embedded() ? 'common.close' : 'common.back') | translate"
+        class="shrink-0"
+      >
+        <ng-icon [name]="embedded() ? 'tablerX' : 'tablerArrowLeft'" size="1.1rem" />
+      </button>
+      <div class="min-w-0 flex-1">
+        <div class="flex min-w-0 items-center gap-2">
+          <span class="shrink-0 text-xs font-semibold tracking-wide text-primary-600 dark:text-primary-400">{{ 'ticketDetail.taskLabel' | translate }}</span>
+          <span class="shrink-0 font-mono text-xs text-slate-500 dark:text-zinc-400">#{{ ticketId() }}</span>
+          @if (isEditingSubject()) {
+            <input
+              pInputText
+              type="text"
+              [ngModel]="subjectDraft()"
+              (ngModelChange)="subjectDraft.set($event)"
+              class="min-w-0 flex-1 text-sm font-semibold"
+            />
+            <button pButton type="button" size="small" iconOnly [loading]="isSaving()" (click)="saveSubject()" [title]="'common.save' | translate">
+              <ng-icon name="tablerCheck" size="1rem" />
+            </button>
+            <button pButton type="button" size="small" iconOnly severity="secondary" variant="outlined" (click)="isEditingSubject.set(false)" [title]="'common.cancel' | translate">
+              <ng-icon name="tablerX" size="1rem" />
+            </button>
+          } @else {
+            <h1 class="min-w-0 flex-1 truncate text-sm font-bold text-slate-900 dark:text-zinc-100 sm:text-base">
+              {{ ticketData()?.subject || ('ticketContext.title' | translate) }}
+            </h1>
+            <button pButton type="button" iconOnly rounded severity="secondary" size="small" (click)="startEditSubject()" [title]="'common.edit' | translate">
+              <ng-icon name="tablerEdit" size="0.9rem" />
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+    <button
+      pButton
+      type="button"
+      variant="outlined"
+      severity="secondary"
+      size="small"
+      (click)="openInBrowser()"
+      class="flex shrink-0 items-center gap-1.5 text-xs"
+    >
+      <ng-icon name="tablerExternalLink" size="0.9rem" />
+      <span class="hidden sm:inline">{{ 'ticketContext.openInBrowser' | translate }}</span>
+    </button>
+  </header>
+
+  <p-dialog
+    [visible]="remoteChangeAvailable()"
+    [modal]="true"
+    [closable]="false"
+    [closeOnEscape]="false"
+    [dismissableMask]="false"
+    [draggable]="false"
+    [resizable]="false"
+    [style]="{ width: '92vw', maxWidth: '440px' }"
+    styleClass="p-dialog-rounded"
+  >
+    <ng-template #header>
+      <div class="flex items-center gap-2.5">
+        <ng-icon name="tablerAlertCircle" size="1.25rem" class="shrink-0 text-amber-600 dark:text-amber-400" />
+        <h3 class="text-sm font-bold text-slate-900 dark:text-zinc-100">
+          {{ 'ticketDetail.remoteChangesTitle' | translate }}
+        </h3>
+      </div>
+    </ng-template>
+    <p class="py-2 text-sm leading-relaxed text-slate-600 dark:text-zinc-300">
+      {{ 'ticketDetail.remoteChangesDetected' | translate }}
+    </p>
+    <ng-template #footer>
+      <div class="flex w-full justify-end">
+        <button pButton type="button" severity="warn" (click)="reloadRemoteChanges()">
+          {{ 'ticketDetail.discardAndRefresh' | translate }}
+        </button>
+      </div>
+    </ng-template>
+  </p-dialog>
+
+  <p-dialog
+    [visible]="!!previewImageUrl()"
+    (visibleChange)="!$event && previewImageUrl.set(null)"
+    [modal]="true"
+    [dismissableMask]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [style]="{ width: 'auto', maxWidth: '94vw' }"
+    styleClass="p-dialog-rounded"
+    [header]="'ticketDetail.imagePreview' | translate"
+  >
+    @if (previewImageUrl(); as imageUrl) {
+      <img [src]="imageUrl" [alt]="'ticketDetail.imagePreview' | translate" class="mx-auto max-h-[78vh] max-w-full rounded object-contain" />
+    }
+  </p-dialog>
+
+  @if (isLoading()) {
+    <div class="grid min-h-0 flex-1 grid-cols-1 animate-pulse lg:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]">
+      <div class="space-y-5 overflow-hidden p-5 sm:p-7">
+        <p-skeleton width="75%" height="1.5rem" />
+        <p-skeleton width="100%" height="3.5rem" />
+        <p-skeleton width="100%" height="8rem" />
+        <p-skeleton width="100%" height="8rem" />
+      </div>
+      <div class="hidden space-y-4 border-l border-slate-200 p-5 dark:border-zinc-800 lg:block">
+        @for (item of [1, 2, 3, 4]; track item) {
+          <p-skeleton width="100%" height="3.5rem" />
+        }
+      </div>
+    </div>
+  } @else if (errorMessage()) {
+    <div class="m-5 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300">
+      <ng-icon name="tablerAlertCircle" size="1.25rem" class="shrink-0 text-rose-500" />
+      <p>{{ errorMessage() }}</p>
+    </div>
+  } @else if (ticketData()) {
+    @if (saveError()) {
+      <div role="alert" class="flex shrink-0 items-center gap-2 border-b border-rose-200 bg-rose-50 px-4 py-2 text-xs text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300">
+        <ng-icon name="tablerAlertCircle" size="1rem" class="shrink-0" />
+        <span>{{ (saveError() ?? '') | translate }}</span>
+      </div>
+    }
+    <div class="ticket-detail-layout flex min-h-0 min-w-0 flex-1 flex-col lg:grid lg:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.9fr)] lg:grid-rows-[minmax(0,1fr)]">
+      <main class="ticket-detail-main min-w-0 space-y-7 p-4 sm:p-6 lg:min-h-0 lg:overflow-y-auto lg:p-7">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-slate-200 pb-4 dark:border-zinc-800">
+          <span class="font-mono text-xs font-bold text-slate-500 dark:text-zinc-400">#{{ ticketId() }}</span>
+          <span class="text-xs text-slate-500 dark:text-zinc-400">
+            {{ ticketData()?.authorName || ticketData()?.author_name || ('ticketDetail.unknownAuthor' | translate) }}
+            @if (ticketData()?.createdAt || ticketData()?.created_at) {
+              {{ 'ticketDetail.createdOn' | translate }} {{ formatDateTime(ticketData()?.createdAt || ticketData()?.created_at || '') }}
+            }
+          </span>
+          <div class="ml-auto flex min-w-44 items-center gap-2">
+            <p-select
+              [options]="statusOptions()"
+              [ngModel]="selectedStatusId()"
+              (ngModelChange)="onStatusChange($event)"
+              optionLabel="name"
+              optionValue="id"
+              [disabled]="isSaving()"
+              appendTo="body"
+              [style]="{
+                '--p-select-background': selectedStatusColor(),
+                '--p-select-border-color': 'transparent',
+                '--p-select-hover-border-color': 'transparent',
+                '--p-select-focus-border-color': 'transparent',
+                '--p-select-color': selectedStatusTextColor(),
+                '--p-select-dropdown-color': selectedStatusTextColor(),
+                backgroundColor: selectedStatusColor()
+              }"
+              class="w-full"
+              styleClass="w-full !text-xs ticket-status-select"
+            >
+              <ng-template #selectedItem let-selected>
+                <span class="truncate text-xs font-semibold" [style.color]="selectedStatusTextColor()">
+                  {{ selected?.name || ticketData()?.status_name || '—' }}
+                </span>
+              </ng-template>
+              <ng-template #item let-item>
+                <div class="flex items-center gap-2 text-xs">
+                  <span class="size-2 shrink-0 rounded-full" [style.backgroundColor]="item.color || '#3b82f6'"></span>
+                  <span>{{ item.name }}</span>
+                </div>
+              </ng-template>
+            </p-select>
+          </div>
+        </div>
+
+        <section class="space-y-3" aria-labelledby="ticket-description-heading">
+          <div class="flex items-center justify-between gap-3">
+            <h3 id="ticket-description-heading" class="text-sm font-bold text-slate-900 dark:text-zinc-100">
+              {{ 'ticketContext.descriptionTab' | translate }}
+            </h3>
+            @if (!isEditingDescription()) {
+              <button
+                pButton
+                type="button"
+                size="small"
+                variant="text"
+                severity="secondary"
+                (click)="startEditDescription()"
+              >
+                <ng-icon pButtonIcon name="tablerEdit" size="0.9rem" />
+                <span pButtonLabel>{{ 'common.edit' | translate }}</span>
+              </button>
+            }
+          </div>
+          @if (isEditingDescription()) {
+            <div class="space-y-2">
+              <app-rich-text-editor
+                [(value)]="descriptionDraft"
+                [workPackageId]="ticketId()"
+                [mentionUsers]="mentionUsers()"
+                [disabled]="isSaving()"
+                [autofocus]="true"
+                (submitShortcut)="saveDescription()"
+                (cancelShortcut)="isEditingDescription.set(false)"
+              />
+              <div class="flex justify-end gap-2">
+                <button pButton type="button" size="small" severity="secondary" variant="outlined" (click)="isEditingDescription.set(false)">
+                  {{ 'common.cancel' | translate }}
+                </button>
+                <button pButton type="button" size="small" [loading]="isSaving()" (click)="saveDescription()">
+                  {{ 'common.save' | translate }}
+                </button>
+              </div>
+            </div>
+          } @else if (sanitizedDescription()) {
+            <div
+              class="op-rich-content break-words text-sm leading-relaxed text-slate-700 dark:text-zinc-300"
+              [innerHTML]="sanitizedDescription()"
+              (click)="onRichContentClick($event)"
+            ></div>
+          } @else {
+            <p class="text-sm italic text-slate-400 dark:text-zinc-500">{{ 'ticketContext.noDescription' | translate }}</p>
+          }
+        </section>
+
+        <section class="space-y-3" aria-labelledby="ticket-people-heading">
+          <h3 id="ticket-people-heading" class="border-b border-slate-200 pb-2 text-sm font-bold uppercase text-slate-800 dark:border-zinc-700 dark:text-zinc-100">
+            {{ 'ticketDetail.people' | translate }}
+          </h3>
+          <div class="ticket-field-grid">
+            <div class="ticket-field">
+              <label class="text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ 'ticketContext.assignedTo' | translate }}</label>
+              <p-select
+                [options]="formSchema().assignees"
+                [ngModel]="selectedAssigneeId()"
+                (ngModelChange)="onAssigneeChange($event)"
+                optionLabel="name"
+                optionValue="id"
+                [filter]="true"
+                [showClear]="true"
+                [placeholder]="'ticketDetail.unassigned' | translate"
+                [disabled]="isSaving()"
+                appendTo="body"
+                class="w-full min-w-0"
+                styleClass="w-full !text-xs"
+              />
+            </div>
+            <div class="ticket-field">
+              <label class="text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ 'ticketContext.responsible' | translate }}</label>
+              <p-select
+                [options]="formSchema().responsibles"
+                [ngModel]="selectedResponsibleId()"
+                (ngModelChange)="onResponsibleChange($event)"
+                optionLabel="name"
+                optionValue="id"
+                [filter]="true"
+                [showClear]="true"
+                [placeholder]="'ticketDetail.unassigned' | translate"
+                [disabled]="isSaving()"
+                appendTo="body"
+                class="w-full min-w-0"
+                styleClass="w-full !text-xs"
+              />
+            </div>
+            <div class="ticket-field">
+              <label class="text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ 'ticketContext.priority' | translate }}</label>
+              <p-select
+                [options]="formSchema().priorities"
+                [ngModel]="selectedPriorityId()"
+                (ngModelChange)="onFieldPatch({ priorityId: $event })"
+                optionLabel="name"
+                optionValue="id"
+                [disabled]="isSaving()"
+                appendTo="body"
+                class="w-full min-w-0"
+                styleClass="w-full !text-xs"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section class="space-y-3" aria-labelledby="ticket-details-heading">
+          <h3 id="ticket-details-heading" class="border-b border-slate-200 pb-2 text-sm font-bold uppercase text-slate-800 dark:border-zinc-700 dark:text-zinc-100">
+            {{ 'ticketDetail.details' | translate }}
+          </h3>
+          <div class="ticket-field-grid">
+            <div class="ticket-field">
+              <label class="text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ 'ticketContext.startDate' | translate }}</label>
+              <p-datepicker
+                [ngModel]="startDateValue()"
+                (ngModelChange)="onDateChange('startDate', $event)"
+                dateFormat="yy-mm-dd"
+                [showClear]="true"
+                appendTo="body"
+                [disabled]="isSaving()"
+                styleClass="w-full"
+                inputStyleClass="w-full !text-xs !font-mono"
+              />
+            </div>
+            <div class="ticket-field">
+              <label class="text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ 'ticketContext.dueDate' | translate }}</label>
+              <p-datepicker
+                [ngModel]="dueDateValue()"
+                (ngModelChange)="onDateChange('dueDate', $event)"
+                dateFormat="yy-mm-dd"
+                [showClear]="true"
+                appendTo="body"
+                [disabled]="isSaving()"
+                styleClass="w-full"
+                inputStyleClass="w-full !text-xs !font-mono"
+              />
+            </div>
+            <div class="ticket-field">
+              <label class="text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ 'ticketContext.version' | translate }}</label>
+              <p-select
+                [options]="formSchema().versions"
+                [ngModel]="selectedVersionId()"
+                (ngModelChange)="onVersionChange($event)"
+                optionLabel="name"
+                optionValue="id"
+                [showClear]="true"
+                [placeholder]="'ticketDetail.noVersion' | translate"
+                [disabled]="isSaving()"
+                appendTo="body"
+                class="w-full min-w-0"
+                styleClass="w-full !text-xs"
+              />
+            </div>
+            @if (boardColumns().length > 0) {
+              <div class="ticket-field">
+                <label class="text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ 'ticketContext.column' | translate }}</label>
+                <p-select
+                  [options]="boardColumns()"
+                  [ngModel]="selectedColumnQueryId()"
+                  (ngModelChange)="onColumnChange($event)"
+                  optionLabel="name"
+                  optionValue="queryId"
+                  [disabled]="isSaving()"
+                  appendTo="body"
+                  class="w-full min-w-0"
+                  styleClass="w-full !text-xs"
+                />
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="space-y-3" aria-labelledby="ticket-estimates-heading">
+          <h3 id="ticket-estimates-heading" class="border-b border-slate-200 pb-2 text-sm font-bold uppercase text-slate-800 dark:border-zinc-700 dark:text-zinc-100">
+            {{ 'ticketDetail.estimationProgress' | translate }}
+          </h3>
+          <div class="ticket-field-grid">
+            <div class="ticket-field">
+              <label class="text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ 'ticketContext.estimatedTime' | translate }}</label>
+              <p-inputnumber
+                [ngModel]="estimatedHours()"
+                (ngModelChange)="estimatedHours.set($event)"
+                (onBlur)="saveEstimatedTime()"
+                suffix=" h"
+                [min]="0"
+                [maxFractionDigits]="2"
+                [disabled]="isSaving()"
+                styleClass="w-full"
+                inputStyleClass="w-full !text-xs !font-mono"
+              />
+            </div>
+            <div class="ticket-field">
+              <span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ 'ticketContext.spentTime' | translate }}</span>
+              <div class="flex min-w-0 items-center gap-1.5">
+                <button
+                  pButton
+                  type="button"
+                  variant="text"
+                  severity="secondary"
+                  (click)="openTimeCostReport()"
+                  [title]="'report.openTimeCostReport' | translate"
+                  class="!p-0 font-mono text-xs font-semibold text-primary-700 underline decoration-dotted underline-offset-2 dark:text-primary-300"
+                >
+                  {{ formatDuration(ticketData()?.spent_time) }}
+                </button>
+                <button
+                  pButton
+                  type="button"
+                  variant="text"
+                  severity="secondary"
+                  size="small"
+                  iconOnly
+                  rounded
+                  class="!size-7 !p-0"
+                  (click)="openLogTimeModal()"
+                  [title]="'ticketDetail.logTime' | translate"
+                  [attr.aria-label]="'ticketDetail.logTime' | translate"
+                >
+                  <ng-icon name="tablerClockPlus" size="1rem" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="space-y-3" aria-labelledby="ticket-utils-heading">
+          <h3 id="ticket-utils-heading" class="border-b border-slate-200 pb-2 text-sm font-bold uppercase text-slate-800 dark:border-zinc-700 dark:text-zinc-100">
+            {{ 'ticketDetail.pocketProjectUtils' | translate }}
+          </h3>
+          <div class="ticket-field-grid">
+            <div class="ticket-field ticket-field--wide">
+              <span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ 'ticketDetail.localPendingTotal' | translate }}</span>
+              <div class="min-w-0 space-y-1.5">
+                <span class="block font-mono text-xs font-semibold text-amber-600 dark:text-amber-400">{{ formatMinutesLabel(localPendingMinutes()) }}</span>
+                @for (activity of pendingLocalActivities(); track activity.id) {
+                  <div class="flex items-center justify-between gap-3 text-xs">
+                    <span class="min-w-0 truncate text-slate-700 dark:text-zinc-300" [title]="activity.name">
+                      <span class="font-mono text-slate-400 dark:text-zinc-500">{{ activity.date }}</span>
+                      {{ activity.name }}
+                    </span>
+                    <span class="shrink-0 font-mono text-slate-600 dark:text-zinc-400">{{ formatMinutesLabel(activity.minutes) }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <aside class="ticket-detail-activity flex min-h-[26rem] min-w-0 shrink-0 flex-col border-t border-slate-200 dark:border-zinc-800 lg:min-h-0 lg:shrink lg:border-l lg:border-t-0">
+        <p-tabs [value]="activeTab()" (valueChange)="activeTab.set($any($event))" class="flex min-h-0 flex-1 flex-col">
+          <p-tablist class="shrink-0">
+            <p-tab value="comments"><span class="text-xs font-semibold uppercase">{{ 'ticketDetail.activity' | translate }}</span></p-tab>
+            <p-tab value="attachments"><span class="text-xs font-semibold uppercase">{{ 'ticketContext.attachmentsTab' | translate }}</span></p-tab>
+            <p-tab value="relations"><span class="text-xs font-semibold uppercase">{{ 'ticketDetail.relations' | translate }}</span></p-tab>
+          </p-tablist>
+          <p-tabpanels class="ticket-detail-panels !flex !min-h-0 !flex-1 !flex-col !overflow-y-auto !px-4 !py-4 sm:!px-5">
+            <p-tabpanel value="comments" class="!p-0">
+              <div class="space-y-3">
+                <div class="flex flex-wrap items-center gap-2">
+                  <p-select
+                    [options]="activityFilterOptions"
+                    [ngModel]="activityFilter()"
+                    (ngModelChange)="setActivityFilter($event)"
+                    optionValue="value"
+                    [checkmark]="true"
+                    appendTo="body"
+                    size="small"
+                    styleClass="!text-xs"
+                  >
+                    <ng-template #selectedItem let-selected>
+                      <span class="text-xs font-semibold">{{ selected?.label | translate }}</span>
+                    </ng-template>
+                    <ng-template #item let-option>
+                      <span class="text-xs">{{ option.label | translate }}</span>
+                    </ng-template>
+                  </p-select>
+                  <p-select
+                    [options]="activityOrderOptions"
+                    [ngModel]="activityOrder()"
+                    (ngModelChange)="setActivityOrder($event)"
+                    optionValue="value"
+                    [checkmark]="true"
+                    appendTo="body"
+                    size="small"
+                    styleClass="!text-xs"
+                  >
+                    <ng-template #selectedItem let-selected>
+                      <span class="text-xs">{{ selected?.label | translate }}</span>
+                    </ng-template>
+                    <ng-template #item let-option>
+                      <span class="text-xs">{{ option.label | translate }}</span>
+                    </ng-template>
+                  </p-select>
+                </div>
+                @for (entry of visibleActivities(); track entry.comment.id) {
+                  @let comment = entry.comment;
+                  <article class="relative border-l border-slate-300 py-1 pl-4 dark:border-zinc-700">
+                    <span class="absolute -left-[0.55rem] top-2 flex size-4 items-center justify-center rounded-full border border-slate-300 bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800">
+                      <span class="size-1.5 rounded-full bg-primary-500"></span>
+                    </span>
+                    <div class="rounded-lg border border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/70">
+                      <div class="flex items-center gap-2 border-b border-slate-200 px-2.5 py-2 dark:border-zinc-800">
+                        <p-avatar
+                          [label]="getInitials(comment.userName || comment.user_name || 'U')"
+                          shape="circle"
+                          styleClass="!size-5 !text-[9px] bg-primary-100 text-primary-700 dark:bg-primary-950 dark:text-primary-300 font-bold"
+                        />
+                        <span class="min-w-0 truncate text-xs font-semibold text-slate-800 dark:text-zinc-200">{{ comment.userName || comment.user_name }}</span>
+                        <time class="ml-auto shrink-0 font-mono text-[10px] text-slate-500 dark:text-zinc-400">
+                          {{ formatDateTime(comment.createdAt || comment.created_at || '') }}
+                        </time>
+                      </div>
+                      <div class="space-y-2 p-2.5">
+                        @if (entry.showComment && commentHtml(comment); as html) {
+                          <div
+                            class="op-rich-content op-rich-content--compact text-xs leading-relaxed text-slate-700 dark:text-zinc-300"
+                            [innerHTML]="html"
+                            (click)="onRichContentClick($event)"
+                          ></div>
+                        }
+                        @if (entry.showDetails && comment.details && comment.details.length > 0) {
+                          <ul class="space-y-1 text-[11px] text-slate-500 dark:text-zinc-400">
+                            @for (detail of comment.details; track $index) {
+                              <li class="op-detail-content" [innerHTML]="sanitizeHtml(detail.html || detail.raw)"></li>
+                            }
+                          </ul>
+                        }
+                      </div>
+                    </div>
+                  </article>
+                } @empty {
+                  <p class="py-8 text-center text-xs text-slate-400 dark:text-zinc-500">{{ 'ticketContext.noComments' | translate }}</p>
+                }
+
+              </div>
+            </p-tabpanel>
+
+            <p-tabpanel value="attachments" class="!p-0">
+              <div class="space-y-2">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  @if (isUploadRequested()) {
+                    <span class="text-xs text-primary-600 dark:text-primary-400">{{ 'ticketDetail.uploadRequested' | translate }}</span>
+                  }
+                  <button
+                    pButton
+                    type="button"
+                    size="small"
+                    class="ml-auto"
+                    [variant]="isUploadRequested() ? undefined : 'outlined'"
+                    [severity]="isUploadRequested() ? 'primary' : 'secondary'"
+                    [class.ring-2]="isUploadRequested()"
+                    [class.ring-primary-500/40]="isUploadRequested()"
+                    [loading]="isUploadingAttachment()"
+                    (click)="attachmentFileInput.click()"
+                  >
+                    <ng-icon pButtonIcon name="tablerPaperclip" size="1rem" />
+                    <span pButtonLabel>{{ 'ticketDetail.uploadAttachment' | translate }}</span>
+                  </button>
+                  <input #attachmentFileInput type="file" multiple class="hidden" (change)="uploadAttachments($event)" />
+                </div>
+                @if (attachmentUploadError()) {
+                  <p class="text-[11px] text-rose-600 dark:text-rose-400">{{ 'ticketDetail.uploadFailed' | translate: { error: attachmentUploadError()! } }}</p>
+                }
+                @for (attachment of attachments(); track attachment.id) {
+                  <article class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-2.5 dark:border-zinc-800 dark:bg-zinc-900/70">
+                    <div class="flex min-w-0 items-center gap-2">
+                      <ng-icon
+                        [name]="attachment.isImage || attachment.is_image ? 'tablerPhoto' : 'tablerPaperclip'"
+                        size="1rem"
+                        class="shrink-0 text-primary-500"
+                      />
+                      <span class="truncate text-xs font-medium text-slate-800 dark:text-zinc-200">{{ attachment.fileName || attachment.file_name }}</span>
+                    </div>
+                    <div class="flex shrink-0 items-center gap-1">
+                      @if (attachmentDownloadErrors().has(attachment.id)) {
+                        <span class="text-[11px] text-rose-600 dark:text-rose-400">{{ 'ticketDetail.downloadFailed' | translate }}</span>
+                      }
+                      @if (downloadedAttachmentPaths().has(attachment.id)) {
+                        <button
+                          pButton
+                          type="button"
+                          size="small"
+                          variant="text"
+                          severity="secondary"
+                          iconOnly
+                          rounded
+                          (click)="revealDownloadedAttachment(attachment)"
+                          [title]="'ticketDetail.showInFolder' | translate"
+                          [attr.aria-label]="'ticketDetail.showInFolder' | translate"
+                        >
+                          <ng-icon pButtonIcon name="tablerFolderOpen" size="1rem" />
+                        </button>
+                      }
+                      <button
+                        pButton
+                        type="button"
+                        size="small"
+                        variant="text"
+                        severity="secondary"
+                        iconOnly
+                        rounded
+                        [loading]="downloadingAttachmentIds().has(attachment.id)"
+                        (click)="downloadAttachment(attachment)"
+                        [title]="'ticketDetail.downloadAttachment' | translate"
+                        [attr.aria-label]="'ticketDetail.downloadAttachment' | translate"
+                      >
+                        <ng-icon pButtonIcon name="tablerDownload" size="1rem" />
+                      </button>
+                    </div>
+                  </article>
+                } @empty {
+                  <p class="py-8 text-center text-xs text-slate-400 dark:text-zinc-500">{{ 'ticketContext.noAttachments' | translate }}</p>
+                }
+              </div>
+            </p-tabpanel>
+
+            <p-tabpanel value="relations" class="!p-0">
+              <div class="space-y-3">
+                <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-zinc-400">{{ 'ticketDetail.relatedProject' | translate }}</h3>
+                <div class="rounded-lg border border-slate-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900/70">
+                  <p class="text-[10px] font-semibold uppercase text-slate-400 dark:text-zinc-500">{{ 'ticketContext.project' | translate }}</p>
+                  <p class="mt-1 text-sm font-semibold text-slate-800 dark:text-zinc-200">{{ ticketData()?.project_name || '—' }}</p>
+                </div>
+                <div class="rounded-lg border border-slate-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900/70">
+                  <p class="text-[10px] font-semibold uppercase text-slate-400 dark:text-zinc-500">{{ 'ticketContext.version' | translate }}</p>
+                  <p class="mt-1 text-sm text-slate-800 dark:text-zinc-200">{{ ticketData()?.version_name || ('ticketDetail.noVersion' | translate) }}</p>
+                </div>
+                <div class="rounded-lg border border-slate-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900/70">
+                  <p class="text-[10px] font-semibold uppercase text-slate-400 dark:text-zinc-500">{{ 'ticketContext.column' | translate }}</p>
+                  <p class="mt-1 text-sm text-slate-800 dark:text-zinc-200">{{ getSelectedColumnName() }}</p>
+                </div>
+              </div>
+            </p-tabpanel>
+          </p-tabpanels>
+        </p-tabs>
+
+        @if (activeTab() === 'comments') {
+          <div class="shrink-0 border-t border-slate-200 p-3 sm:p-4 dark:border-zinc-800">
+            @if (isComposingComment()) {
+              <div class="space-y-2">
+                @if (isAiCommentDraft()) {
+                  <p class="flex items-center gap-1.5 text-xs font-medium text-primary-600 dark:text-primary-400">
+                    <ng-icon name="tablerRobot" size="0.95rem" />
+                    {{ 'ticketDetail.aiDraft' | translate }}
+                  </p>
+                }
+                <app-rich-text-editor
+                  [(value)]="newComment"
+                  [workPackageId]="ticketId()"
+                  [compact]="true"
+                  [autofocus]="true"
+                  [disabled]="isPostingComment()"
+                  [mentionUsers]="mentionUsers()"
+                  (submitShortcut)="postComment()"
+                  (cancelShortcut)="isComposingComment.set(false)"
+                />
+                <div class="flex justify-end gap-2">
+                  <button pButton type="button" size="small" severity="secondary" variant="outlined" (click)="discardComment()">
+                    <span pButtonLabel>{{ 'ticketDetail.discardComment' | translate }}</span>
+                  </button>
+                  <button
+                    pButton
+                    type="button"
+                    size="small"
+                    [disabled]="!newComment().trim() || isPostingComment()"
+                    [loading]="isPostingComment()"
+                    (click)="postComment()"
+                  >
+                    <span pButtonLabel>{{ 'ticketDetail.postComment' | translate }}</span>
+                  </button>
+                </div>
+              </div>
+            } @else {
+              <button
+                type="button"
+                (click)="isComposingComment.set(true)"
+                class="flex w-full cursor-text items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs text-slate-400 transition-colors hover:border-primary-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-500 dark:hover:border-primary-600"
+              >
+                <span class="min-w-0 flex-1 truncate">{{ (newComment().trim() ? 'ticketDetail.continueComment' : 'ticketDetail.commentPlaceholder') | translate }}</span>
+                <ng-icon name="tablerSend" size="1rem" class="shrink-0" />
+              </button>
+            }
+          </div>
+        }
+      </aside>
+    </div>
+  }
+</section>
+
+@if (!embedded()) {
+  <app-activity-form-modal [showTicketContextButton]="false" />
+}

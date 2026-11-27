@@ -8,6 +8,7 @@ import { provideRouter } from "@angular/router";
 
 import { routes } from "./app.routes";
 import { providePrimeNG } from 'primeng/config';
+import { MessageService } from 'primeng/api';
 import Aura from '@primeuix/themes/aura';
 import { definePreset, palette } from '@primeuix/themes';
 import { StorageService } from './core/services/storage.service';
@@ -30,6 +31,7 @@ export const appConfig: ApplicationConfig = {
       return storageService.loadConfig();
     }),
     provideRouter(routes),
+    MessageService,
     providePrimeNG({
       theme: {
         preset: DesignSystemPreset,

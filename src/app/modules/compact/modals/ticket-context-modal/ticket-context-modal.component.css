@@ -1,0 +1,103 @@
+:host ::ng-deep {
+  .op-comment-body,
+  .op-description-content {
+    .op-uc-p {
+      margin-top: 0.25rem;
+      margin-bottom: 0.25rem;
+      line-height: 1.5;
+    }
+    .op-uc-p:first-child {
+      margin-top: 0;
+    }
+    .op-uc-p:last-child {
+      margin-bottom: 0;
+    }
+    .user-mention {
+      font-weight: 600;
+      color: var(--p-primary-600, #2563eb);
+      background-color: var(--p-primary-50, #eff6ff);
+      padding: 0.05rem 0.35rem;
+      border-radius: 0.375rem;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 0.75rem;
+    }
+    figure.op-uc-figure {
+      margin: 0.5rem 0;
+    }
+    img,
+    img.op-uc-image,
+    figure.op-uc-figure img {
+      border-radius: 0.5rem;
+      max-width: 100%;
+      max-height: 360px;
+      object-fit: contain;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+      background-color: rgba(248, 250, 252, 0.8);
+      display: block;
+      margin: 0.5rem 0;
+    }
+    img:hover,
+    img.op-uc-image:hover,
+    figure.op-uc-figure img:hover {
+      transform: scale(1.01);
+      border-color: var(--p-primary-500, #3b82f6);
+    }
+    .op-uc-list {
+      list-style-type: disc;
+      padding-left: 1.25rem;
+      margin: 0.35rem 0;
+    }
+    .op-uc-list--item {
+      margin-bottom: 0.2rem;
+    }
+    a.op-uc-link {
+      color: var(--p-primary-600, #2563eb);
+      text-decoration: underline;
+    }
+  }
+  .op-detail-content {
+    strong {
+      font-weight: 600;
+      color: inherit;
+    }
+    i {
+      font-style: normal;
+      font-weight: 500;
+      color: var(--p-primary-600, #2563eb);
+    }
+    a.diff-details {
+      color: var(--p-primary-600, #2563eb);
+      text-decoration: underline;
+      margin-left: 0.25rem;
+    }
+  }
+  /* Dynamic Theme Scrollbar for Modal Panels */
+  .overflow-y-auto {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--p-primary-500, #3b82f6) 40%, rgba(148, 163, 184, 0.35)) transparent;
+  }
+  .overflow-y-auto::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  .overflow-y-auto::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .overflow-y-auto::-webkit-scrollbar-thumb {
+    background-color: color-mix(in srgb, var(--p-primary-500, #3b82f6) 35%, rgba(148, 163, 184, 0.4));
+    border-radius: 9999px;
+    transition: background-color 0.2s ease;
+  }
+  .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background-color: var(--p-primary-500, #3b82f6);
+  }
+  .dark .overflow-y-auto::-webkit-scrollbar-thumb {
+    background-color: color-mix(in srgb, var(--p-primary-400, #60a5fa) 30%, rgba(100, 116, 139, 0.4));
+  }
+  .dark .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background-color: var(--p-primary-400, #60a5fa);
+  }
+}

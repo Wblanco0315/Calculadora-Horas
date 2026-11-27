@@ -19,6 +19,27 @@ export interface VersionOption {
 export interface BoardOption {
   id: string;
   name: string;
+  /** OpenProject board kind: `free` (basic) or `action`. */
+  kind?: string | null;
+  /** Attribute an action board is based on (`status`, `assignee`, `version`, `subproject`). */
+  attribute?: string | null;
+  createdAt?: string | null;
+}
+
+export interface BoardWorkPackageCard {
+  id: number;
+  subject: string;
+  typeName?: string;
+  typeColor?: string;
+  statusId?: string;
+  statusName?: string;
+  statusColor?: string;
+  priorityName?: string;
+  assigneeName?: string;
+  projectName?: string;
+  startDate?: string | null;
+  dueDate?: string | null;
+  lockVersion?: number;
 }
 
 export interface BoardColumnOption {
@@ -27,8 +48,91 @@ export interface BoardColumnOption {
   widgetId: number;
   startColumn: number;
   workPackageIds: number[];
+  workPackages?: BoardWorkPackageCard[];
   statusId?: string;
   statusName?: string;
+}
+
+export interface BoardColumnDropPosition {
+  targetIndex: number;
+  targetTicketIds: number[];
+}
+
+export interface WorkPackageOptionItem {
+  id: string;
+  name: string;
+  color?: string;
+}
+
+export interface WorkPackageFormSchema {
+  statuses: WorkPackageOptionItem[];
+  priorities: WorkPackageOptionItem[];
+  assignees: WorkPackageOptionItem[];
+  responsibles: WorkPackageOptionItem[];
+  versions: WorkPackageOptionItem[];
+}
+
+export interface WorkPackageRevision {
+  id: string;
+  lockVersion: number;
+  updatedAt?: string;
+}
+
+export interface WorkPackageCostSummary {
+  laborCosts?: string | null;
+  materialCosts?: string | null;
+  overallCosts?: string | null;
+}
+
+export interface TimeCostReportFilter {
+  ticketId?: string;
+  projectId?: string;
+  userId?: string;
+  activityId?: string;
+  spentOnFrom?: string;
+  spentOnTo?: string;
+  includeDescendants?: boolean;
+}
+
+export type TimeCostReportGroup = 'none' | 'spentOn' | 'user' | 'activity' | 'project' | 'workPackage';
+
+export interface UpdateWorkPackagePayload {
+  lockVersion?: number;
+  subject?: string;
+  descriptionRaw?: string;
+  startDate?: string | null;
+  clearStartDate?: boolean;
+  dueDate?: string | null;
+  clearDueDate?: boolean;
+  estimatedTime?: string;
+  statusId?: string;
+  priorityId?: string;
+  assigneeId?: string | null;
+  clearAssignee?: boolean;
+  responsibleId?: string | null;
+  clearResponsible?: boolean;
+  versionId?: string | null;
+  clearVersion?: boolean;
+}
+
+export interface PlatformTimeEntry {
+  id: string;
+  hours: string;
+  spentOn: string;
+  startTime?: string | null;
+  comment: string;
+  userId?: string | null;
+  userName: string;
+  activityName: string;
+  activityId?: string | null;
+  projectId?: string | null;
+  projectName?: string | null;
+  workPackageId?: string | null;
+  workPackageName?: string | null;
+  registeredByName?: string | null;
+  costs?: string | number | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface BoardLocation {
@@ -70,6 +174,13 @@ export interface TicketComment {
   user_name?: string;
 }
 
+export interface UploadedAttachment {
+  id: string;
+  fileName: string;
+  contentType: string;
+  downloadUrl: string;
+}
+
 export interface TicketAttachment {
   id: string;
   fileName: string;
@@ -101,6 +212,14 @@ export interface TicketContextResult {
   success: boolean;
   ticket: string;
   subject?: string | null;
+  typeName?: string | null;
+  type_name?: string | null;
+  authorName?: string | null;
+  author_name?: string | null;
+  createdAt?: string | null;
+  created_at?: string | null;
+  updatedAt?: string | null;
+  updated_at?: string | null;
   description?: TicketDescription | null;
   comments?: TicketComment[] | null;
   attachments?: TicketAttachment[] | null;
@@ -145,4 +264,14 @@ export interface CreateTimeEntryParams {
   comment: string;
   activityTypeId?: string;
   projectId?: string;
+}
+
+/** Work package match from a typeahead search (subject or ID). */
+export interface WorkPackageSearchItem {
+  id: number;
+  subject: string;
+  projectId?: string | null;
+  projectName?: string | null;
+  typeName?: string | null;
+  statusName?: string | null;
 }

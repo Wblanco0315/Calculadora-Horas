@@ -12,6 +12,19 @@
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Semantic Color Tokens */
+  --color-canvas: var(--bg-canvas);
+  --color-surface: var(--bg-surface);
+  --color-subtle: var(--bg-subtle);
+  --color-border-default: var(--border-default);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-accent-primary: var(--accent-primary);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-accent-tint: var(--accent-tint);
+  --color-accent-border: var(--accent-border);
 }
 
 /* Base Document Styles */
@@ -57,20 +70,151 @@ html.dark {
   background-color: var(--p-primary-400, #60a5fa);
 }
 
-/* Light mode: blanco hueso con fondo ambiental ultra-suave del color de acento */
-:root:not(.dark) {
-  --color-white: #fcfbf9;      /* Blanco hueso cálido para tarjetas y paneles */
-  --p-surface-0: #fcfbf9;      /* PrimeNG modales y popups en blanco hueso */
-  --p-surface-50: color-mix(in srgb, var(--p-primary-50, #f6f6f9) 60%, #f7f6f2);
-  --p-surface-100: color-mix(in srgb, var(--p-primary-100, #edeaf3) 40%, #eeebe5);
+/* Global Accent & Dynamic Token System */
+:root {
+  --accent-primary: var(--p-primary-500, #6366F1);
+  --accent-contrast: #FFFFFF;
+  --accent-tint: color-mix(in srgb, var(--accent-primary) 10%, transparent);
+  --accent-border: color-mix(in srgb, var(--accent-primary) 30%, transparent);
 }
 
+/* --------------------------------------------------------------------------
+   Light Mode - Paleta: Cálido Papel (Optimizado para legibilidad y confort visual)
+   -------------------------------------------------------------------------- */
+:root:not(.dark),
+:root[data-light-style="warm"]:not(.dark) {
+  /* Paleta: Cálido Papel Confort */
+  --bg-canvas: #F5F4EE;         /* Lienzo suave, cálido natural anti-fatiga, sin amarilleo agresivo */
+  --bg-surface: #FCFAF6;        /* Superficie de tarjeta / panel: descanso visual sin el reflejo cegador de #FFF */
+  --bg-subtle: #EDE9DF;         /* Superficie secundaria / hover / chips */
+  --border-default: #DFD9CE;    /* Bordes nítidos y definidos con contraste equilibrado */
+  --text-primary: #191715;      /* Tinta obsidiana cálida profunda: nitidez extrema (>14:1) */
+  --text-secondary: #45403A;    /* Carbón cálido legible: alta claridad sin fatiga (>8.5:1) */
+  --text-muted: #69635A;        /* Piedra media: supera WCAG AA (>4.8:1) eliminando textos borrosos */
+
+  /* PrimeNG & Tailwind token bindings */
+  --color-white: #FCFAF6;
+  --p-surface-0: #FCFAF6;
+  --p-surface-50: #F5F4EE;
+  --p-surface-100: #EDE9DF;
+  --p-surface-200: #DFD9CE;
+  --p-surface-300: #D0C8B9;
+  --p-surface-400: #A89F8F;
+  --p-surface-500: #7E7566;
+  --p-surface-600: #69635A;
+  --p-surface-700: #45403A;
+  --p-surface-800: #2C2823;
+  --p-surface-900: #191715;
+  --p-surface-950: #100F0D;
+  --p-content-border-color: #DFD9CE;
+  --p-text-color: #191715;
+  --p-text-muted-color: #5C564E;
+}
+
+/* --------------------------------------------------------------------------
+   Dark Mode Tokens
+   -------------------------------------------------------------------------- */
+:root.dark {
+  --bg-canvas: #0C0E14;
+  --bg-surface: #141823;
+  --bg-subtle: #1E293B;
+  --border-default: #1E293B;
+  --text-primary: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+}
+
+/* --------------------------------------------------------------------------
+   Light Mode Global Adaptations (Mapeo Armónico para Anti-Fatiga y Legibilidad)
+   -------------------------------------------------------------------------- */
 :root:not(.dark) body {
-  background-color: color-mix(in srgb, var(--p-primary-50, #f6f6f9) 60%, #f7f6f2);
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+}
+
+/* Mapeo de superficies para eliminar el brillo cegador de blanco puro */
+:root:not(.dark) .bg-white {
+  background-color: var(--bg-surface);
+}
+
+:root:not(.dark) .bg-white\/80 {
+  background-color: color-mix(in srgb, var(--bg-surface) 85%, transparent);
 }
 
 :root:not(.dark) .bg-slate-50 {
-  background-color: color-mix(in srgb, var(--p-primary-50, #f6f6f9) 60%, #f7f6f2);
+  background-color: var(--bg-canvas);
+}
+
+:root:not(.dark) .bg-slate-50\/70 {
+  background-color: color-mix(in srgb, var(--bg-canvas) 70%, transparent);
+}
+
+:root:not(.dark) .bg-slate-50\/60 {
+  background-color: color-mix(in srgb, var(--bg-canvas) 60%, transparent);
+}
+
+:root:not(.dark) .bg-slate-100 {
+  background-color: var(--bg-subtle);
+}
+
+:root:not(.dark) .bg-slate-100\/30 {
+  background-color: color-mix(in srgb, var(--bg-subtle) 30%, transparent);
+}
+
+:root:not(.dark) .to-slate-100 {
+  --tw-gradient-to: var(--bg-subtle);
+}
+
+/* Mapeo armónico de bordes para evitar choques cromáticos fríos vs cálidos */
+:root:not(.dark) .border-slate-100 {
+  border-color: var(--bg-subtle);
+}
+
+:root:not(.dark) .border-slate-200,
+:root:not(.dark) .border-slate-200\/80 {
+  border-color: var(--border-default);
+}
+
+:root:not(.dark) .border-slate-300 {
+  border-color: #C8C0B2;
+}
+
+/* Mejora crítica de legibilidad y contraste tipográfico (>4.5:1 en todos los niveles) */
+:root:not(.dark) .text-slate-400 {
+  color: var(--text-muted); /* #69635A en lugar del tenue #94A3B8 */
+}
+
+:root:not(.dark) .text-slate-500 {
+  color: var(--text-secondary); /* #45403A en lugar del lavado #64748B */
+}
+
+:root:not(.dark) .text-slate-600 {
+  color: var(--text-secondary);
+}
+
+:root:not(.dark) .text-slate-700,
+:root:not(.dark) .text-slate-800,
+:root:not(.dark) .text-slate-900 {
+  color: var(--text-primary); /* #191715: tinta nítida de máxima legibilidad */
+}
+
+/* Estados hover cálidos y consistentes */
+:root:not(.dark) .hover\:bg-slate-50:hover {
+  background-color: var(--bg-canvas);
+}
+
+:root:not(.dark) .hover\:bg-slate-100:hover {
+  background-color: var(--bg-subtle);
+}
+
+:root:not(.dark) .hover\:bg-slate-200:hover {
+  background-color: color-mix(in srgb, var(--border-default) 85%, #000 15%);
+}
+
+/* Placeholders de campos de formulario nítidos sin fatiga */
+:root:not(.dark) ::placeholder {
+  color: var(--text-muted);
+  opacity: 0.85;
 }
 
 body {
@@ -142,13 +286,37 @@ router-outlet {
   will-change: opacity, transform;
 }
 
-/* PrimeNG SelectButton in stats hero: equal option widths and smooth color transition */
+/* PrimeNG SelectButton in stats hero: integrated pill design without white glare */
+.stats-format-select {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.625rem;
+  padding: 2px;
+  background: rgba(0, 0, 0, 0.18);
+  display: inline-flex;
+}
+
 .stats-format-select .p-togglebutton {
-  min-width: 64px;
+  min-width: 60px;
   justify-content: center;
-  transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-              color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  background: transparent !important;
+  border: none !important;
+  color: rgba(250, 248, 245, 0.8) !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  border-radius: 0.5rem !important;
+  padding: 0.2rem 0.5rem !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.stats-format-select .p-togglebutton:hover {
+  color: #FAF8F5 !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.stats-format-select .p-togglebutton.p-togglebutton-checked {
+  background: #FAF8F5 !important;
+  color: var(--p-primary-800, #3730A3) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
 }
 
 /* Ensure PrimeNG dialog and overlay masks never cover the desktop application header (32px / 2rem) */
@@ -167,4 +335,275 @@ router-outlet {
 .p-dialog .p-dialog-content {
   overflow-y: auto !important;
   flex: 1 1 auto !important;
+}
+
+.cdk-drag-preview {
+  box-sizing: border-box;
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 18%);
+}
+
+.cdk-drag-placeholder {
+  opacity: 0.35;
+}
+
+.cdk-drag-animating,
+.cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
+  transition: transform 180ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.ticket-detail-page {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.ticket-detail-page .ticket-detail-layout {
+  grid-template-rows: minmax(0, 1fr) minmax(14rem, 0.85fr);
+}
+
+@media (min-width: 1024px) {
+  .ticket-detail-page .ticket-detail-layout {
+    grid-template-rows: minmax(0, 1fr);
+  }
+}
+
+/* Ticket detail page rendered inside a drawer (time log view): the page brings its own header.
+   The drawer and its mask start below the custom window title bar (app-header, h-8). */
+:root {
+  --app-header-height: 2rem;
+}
+
+.ticket-detail-drawer.p-drawer {
+  top: var(--app-header-height) !important;
+  height: calc(100% - var(--app-header-height)) !important;
+}
+
+.ticket-detail-drawer .p-drawer-header {
+  display: none;
+}
+
+/* Embedded (narrow drawer): always one scrolling column, activity below the details. */
+.ticket-detail-page--embedded {
+  overflow-y: auto !important;
+}
+
+.ticket-detail-page--embedded .ticket-detail-layout {
+  display: flex !important;
+  flex-direction: column;
+  flex: none;
+}
+
+.ticket-detail-page--embedded .ticket-detail-main {
+  overflow: visible !important;
+  min-height: auto !important;
+}
+
+.ticket-detail-page--embedded .ticket-detail-activity {
+  flex-shrink: 0 !important;
+  min-height: 32rem !important;
+  border-left-width: 0 !important;
+  border-top-width: 1px !important;
+}
+
+.ticket-detail-drawer .p-drawer-content {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* ==========================================================================
+   OpenProject rich content (rendered descriptions / comments) + CKEditor 5
+   ========================================================================== */
+
+.op-rich-content,
+.app-rich-text-editor .ck-content {
+  overflow-wrap: anywhere;
+}
+
+.op-rich-content :is(p, ul, ol, blockquote, pre, table, figure),
+.app-rich-text-editor .ck-content :is(p, ul, ol, blockquote, pre, table, figure) {
+  margin-block: 0.5rem;
+}
+.op-rich-content > :first-child { margin-top: 0; }
+.op-rich-content > :last-child { margin-bottom: 0; }
+
+.op-rich-content :is(h1, h2, h3, h4, h5, h6),
+.app-rich-text-editor .ck-content :is(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.3;
+  margin-block: 0.9rem 0.4rem;
+}
+.op-rich-content h1, .app-rich-text-editor .ck-content h1 { font-size: 1.35em; }
+.op-rich-content h2, .app-rich-text-editor .ck-content h2 { font-size: 1.2em; }
+.op-rich-content h3, .app-rich-text-editor .ck-content h3 { font-size: 1.08em; }
+.op-rich-content :is(h4, h5, h6), .app-rich-text-editor .ck-content :is(h4, h5, h6) { font-size: 1em; }
+
+.op-rich-content ul, .app-rich-text-editor .ck-content ul { list-style: disc; padding-left: 1.4rem; }
+.op-rich-content ol, .app-rich-text-editor .ck-content ol { list-style: decimal; padding-left: 1.4rem; }
+.op-rich-content li { margin-block: 0.15rem; }
+.op-rich-content ul.todo-list, .op-rich-content ul.op-uc-list_task-list { list-style: none; padding-left: 0.25rem; }
+
+.op-rich-content a,
+.app-rich-text-editor .ck-content a {
+  color: var(--p-primary-600);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.dark .op-rich-content a, .dark .app-rich-text-editor .ck-content a { color: var(--p-primary-400); }
+
+.op-rich-content blockquote,
+.app-rich-text-editor .ck-content blockquote {
+  border-left: 3px solid var(--p-primary-400);
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  font-style: normal;
+  color: inherit;
+  opacity: 0.85;
+}
+
+.op-rich-content code,
+.app-rich-text-editor .ck-content code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.3rem;
+  background: rgba(148, 163, 184, 0.18);
+}
+.op-rich-content pre,
+.app-rich-text-editor .ck-content pre {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  background: rgba(148, 163, 184, 0.14);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: inherit;
+}
+.op-rich-content pre code, .app-rich-text-editor .ck-content pre code { padding: 0; background: none; }
+
+.op-rich-content table,
+.app-rich-text-editor .ck-content .table table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.85em;
+}
+.op-rich-content :is(th, td),
+.app-rich-text-editor .ck-content .table :is(th, td) {
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+.op-rich-content th { font-weight: 600; background: rgba(148, 163, 184, 0.12); }
+
+.op-rich-content hr { border: 0; border-top: 1px solid rgba(148, 163, 184, 0.4); margin-block: 1rem; }
+
+.op-rich-content img {
+  display: inline-block;
+  max-width: 100%;
+  max-height: 28rem;
+  height: auto;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  cursor: zoom-in;
+  transition: border-color 0.15s ease;
+}
+.op-rich-content img:hover { border-color: var(--p-primary-500); }
+.op-rich-content--compact img { max-height: 14rem; }
+.op-rich-content img[data-op-pending-src] {
+  min-width: 8rem;
+  min-height: 5rem;
+  background: rgba(148, 163, 184, 0.18);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+.op-rich-content img[data-op-broken] { cursor: default; opacity: 0.5; }
+.op-rich-content figure { display: block; }
+.op-rich-content figcaption { font-size: 0.75rem; opacity: 0.7; margin-top: 0.25rem; }
+.op-rich-content .user-mention,
+.op-rich-content .mention {
+  font-weight: 600;
+  color: var(--p-primary-600);
+  text-decoration: none;
+}
+
+/* CKEditor 5 theme tokens mapped to the app palette.
+   CKEditor 49 declares its derived tokens (surface, text, interactive...) on :root,
+   so they resolve there: base tokens must be overridden on :root too (html:root beats
+   the later-loaded ckeditor5.css by specificity) for the dark theme to reach every part. */
+html:root {
+  --ck-border-radius: 0.5rem;
+  --ck-font-face: var(--font-body);
+  --ck-font-size-base: 13px;
+  --ck-z-default: 1;
+  --ck-z-panel: 1102;
+  --ck-color-base-border: #e2e8f0;
+  --ck-color-base-border-light: #eef2f6;
+  --ck-color-base-action: var(--p-primary-600);
+  --ck-color-base-action-hover: var(--p-primary-700);
+  --ck-color-base-focus: var(--p-primary-500);
+  --ck-color-base-active: var(--p-primary-600);
+  --ck-color-base-active-focus: var(--p-primary-700);
+  --ck-color-base-focus-shadow: color-mix(in srgb, var(--p-primary-500) 25%, transparent);
+  --ck-color-base-focus-shadow-faded: color-mix(in srgb, var(--p-primary-500) 10%, transparent);
+  --ck-color-toolbar-background: #f8fafc;
+  --ck-color-toolbar-border: #e2e8f0;
+  --ck-color-button-on-color: var(--p-primary-600);
+  --ck-color-button-on-background: color-mix(in srgb, var(--p-primary-500) 12%, transparent);
+  --ck-color-button-on-hover-background: color-mix(in srgb, var(--p-primary-500) 18%, transparent);
+  --ck-color-link-default: var(--p-primary-600);
+  --ck-editor-editable-background: var(--ck-color-base-background);
+  --ck-content-font-color: var(--ck-color-base-text);
+  --ck-content-font-family: var(--font-body);
+}
+.app-rich-text-editor .ck-editor__editable_inline {
+  min-height: 10rem;
+  max-height: 55vh;
+  padding: 0 0.85rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.app-rich-text-editor--compact .ck-editor__editable_inline {
+  min-height: 8rem;
+  max-height: 20rem;
+  font-size: 0.8rem;
+}
+.app-rich-text-editor .ck-content img { max-height: 24rem; }
+.app-rich-text-editor .ck.ck-toolbar { padding: 0 0.25rem; }
+
+html.dark:root {
+  --ck-color-base-foreground: #18181b;
+  --ck-color-base-background: #09090b;
+  --ck-color-base-border: #3f3f46;
+  --ck-color-base-border-light: #27272a;
+  --ck-color-base-text: #e4e4e7;
+  --ck-color-base-text-light: #a1a1aa;
+  --ck-color-base-hover: #27272a;
+  --ck-color-base-hover-strong: #3f3f46;
+  --ck-color-base-selected: color-mix(in srgb, var(--p-primary-500) 22%, #18181b);
+  --ck-color-base-selected-hover: color-mix(in srgb, var(--p-primary-500) 30%, #18181b);
+  --ck-color-base-action-muted: color-mix(in srgb, var(--p-primary-500) 20%, #18181b);
+  --ck-color-base-error-shadow: #450a0a;
+  --ck-color-base-active: var(--p-primary-400);
+  --ck-color-surface-skeleton: #27272a;
+  --ck-color-surface-skeleton-highlight: #3f3f46;
+  --ck-color-interactive-disabled-surface: #27272a;
+  --ck-color-text-placeholder: #71717a;
+  --ck-editor-editable-blurred-selection-background: #3f3f46;
+  --ck-color-toolbar-background: #18181b;
+  --ck-color-toolbar-border: #3f3f46;
+  --ck-color-button-on-color: var(--p-primary-300);
+  --ck-color-link-default: var(--p-primary-400);
+}
+
+/* ng-icon inside PrimeNG buttons: render as a centered flex box so the SVG sits on the
+   button's optical center instead of the text baseline. */
+.p-button > ng-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  flex-shrink: 0;
 }

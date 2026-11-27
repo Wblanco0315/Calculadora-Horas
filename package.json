@@ -1,6 +1,6 @@
 {
   "name": "pocketproject",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -10,6 +10,7 @@
   },
   "private": true,
   "dependencies": {
+    "@angular/cdk": "^22.0.0",
     "@angular/common": "^22.0.1",
     "@angular/compiler": "^22.0.1",
     "@angular/core": "^22.0.1",
@@ -22,10 +23,13 @@
     "@primeuix/themes": "^3.1.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-autostart": "~2",
+    "@tauri-apps/plugin-dialog": "~2",
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-process": "~2",
     "@tauri-apps/plugin-updater": "~2",
-    "@tauri-apps/plugin-autostart": "~2",
+    "chart.js": "^4.6.2",
+    "ckeditor5": "^49.1.0",
     "gemini": "^7.5.2",
     "install": "^0.13.0",
     "plugin": "^0.3.3",

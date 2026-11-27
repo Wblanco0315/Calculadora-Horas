@@ -4,7 +4,7 @@ import { StorageService } from '../../../core/services/storage.service';
 import { ThemeService } from '../../../core/services/theme.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { ScheduleService } from '../../../core/services/schedule.service';
-import { WindowService } from '../../../core/services/window.service';
+import { WindowService } from '../../../core/window/window.service';
 import {
   AppConfig,
   AppLanguage,
@@ -425,7 +425,15 @@ export class SetupService {
     }
   }
 
+  /** End of onboarding: saves and opens the compact window at its default size (onboarding runs maximized). */
   async completeSetup(): Promise<void> {
+    if (await this.saveSettings()) {
+      await this.windowService.setCompactMode({ reset: true });
+    }
+  }
+
+  /** Saves the settings draft (all tabs) without changing the window mode. Returns whether it saved. */
+  async saveSettings(): Promise<boolean> {
     this.isSaving.set(true);
 
     const scheduleConfig: WorkScheduleConfig = {
@@ -456,10 +464,11 @@ export class SetupService {
       await this.storageService.saveConfig(configToSave);
       this.themeService.setTheme(configToSave.theme_mode);
       this.themeService.setPrimaryColor(configToSave.primary_color);
-      await this.windowService.setCompactMode();
+      return true;
     } catch (err) {
       console.error('Error al guardar configuración:', err);
       alert('Error guardando la configuración en la base de datos local SQLite.');
+      return false;
     } finally {
       this.isSaving.set(false);
     }

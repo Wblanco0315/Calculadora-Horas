@@ -12,25 +12,18 @@ El módulo `compact` replica fielmente la vista original de la **Calculadora de 
 ```
 src/app/modules/compact/
 ├── components/
-│   ├── stats-hero/
-│   │   └── stats-hero.component.ts           # Panel de estadísticas con SelectButton y degradado dinámico de tema
-│   └── activity-row/
-│       └── activity-row.component.ts         # Fila de actividad (ticket, tiempo, confirmación inline de borrado, sincronización)
+│   └── stats-hero/
+│       └── stats-hero.component.{ts,html}    # Panel de estadísticas con SelectButton y degradado dinámico de tema
 ├── modals/
-│   ├── activity-form-modal/
-│   │   └── activity-form-modal.component.ts  # Modal dedicado para crear/editar actividades (con p-datepicker y p-inputnumber)
-│   ├── favorites-modal/
-│   │   └── favorites-modal.component.ts      # Modal dedicado para gestión y selección rápida de tickets favoritos
-│   ├── reset-confirm-modal/
-│   │   └── reset-confirm-modal.component.ts  # Modal dedicado para confirmación de reinicio de actividades del día
-│   └── sync-confirm-modal/
-│       └── sync-confirm-modal.component.ts   # Modal dedicado para seleccionar tipo de actividad y sincronizar a OpenProject
+│   └── ticket-context-modal/
+│       └── ticket-context-modal.component.{ts,html}  # Modal de contexto extendido del ticket (solo modo compacto)
 ├── pages/
-│   ├── compact.page.html                     # Vista orquestadora limpia con saludo, popover de filtros y navegación
-│   ├── compact.page.ts                       # Smart component con filtrado reactivo y gestión de estado
-│   └── compact.page.css                      # Estilos encapsulados de la vista
-└── compact.router.ts                         # Enrutador del módulo con carga diferida
+│   └── compact/compact.page.{ts,html,css}  # Smart component con filtrado reactivo y gestión de estado
+└── compact.routes.ts                         # Enrutador del módulo con carga diferida
 ```
+
+La fila de actividad y los modales de actividad (`app-activity-row`, `app-activity-form-modal`, `app-favorites-modal`, `app-reset-confirm-modal`, `app-sync-confirm-modal`) pertenecen al dominio de registro de tiempo y viven en el módulo `time-entry` (`modules/time-entry/components` y `modules/time-entry/modals`); el modo compacto los importa desde allí.
+
 
 ---
 
@@ -41,7 +34,7 @@ src/app/modules/compact/
 - **Responsabilidad y Diseño**:
   - Altura nativa de 32px (`h-8`), coincidiendo con la barra de título original de Windows.
   - Barra de título unificada y reutilizable con arrastre programático fluido (`WindowService.startDragging`) en todo el encabezado con exclusión automática de controles interactivos, isologo oficial (`app-logo`), título de la aplicación y versión actual (`v{{ version }}`).
-  - Botón de alternancia de tema claro/oscuro (`tablerSun` / `tablerMoon`), botón de minimizar (oculta a la bandeja del sistema / iconos ocultos), botón de maximizar / restaurar y botón de cerrar que invoca el modal de confirmación `app-close-confirm-modal`.
+  - Botón de alternancia de tema claro/oscuro (`tablerSun` / `tablerMoon`): `StorageService.toggleTheme()` aplica el tema y lo guarda en la configuración (SQLite y `localStorage`), igual que el botón del dashboard, para que no se pierda al recargar la configuración (por ejemplo al abrir los ajustes). Durante el onboarding solo se aplica; el asistente lo guarda al terminar. Botón de minimizar (minimiza a la barra de tareas), botón de maximizar / restaurar y botón de cerrar, que oculta la ventana en la bandeja del sistema (iconos ocultos) sin salir de la app; se sale desde el menú del icono de la bandeja. En los ajustes del modo compacto, cerrar vuelve a `/compact`.
 
 ### 2.2. Panel de Estadísticas Hero (`app-stats-hero`)
 - **Ubicación**: `components/stats-hero/stats-hero.component.ts`
@@ -85,7 +78,7 @@ src/app/modules/compact/
     - Modo selección activo: Botón "Cancelar" y botón "Enviar (X)".
 
 ### 2.6. Lista y Fila de Actividad (`app-activity-row`)
-- **Ubicación**: `components/activity-row/activity-row.component.ts`
+- **Ubicación**: `modules/time-entry/components/activity-row/activity-row.component.ts` (+ `.html`)
 - **Responsabilidad y Comportamiento**:
   - Checkbox para selección rápida cuando el modo de selección está habilitado.
   - Barra de acento lateral reactiva: verde esmeralda (`bg-emerald-500`) para tareas sincronizadas, color primario (`bg-primary-500`) para pendientes y rojo rosa (`bg-rose-500`) al confirmar eliminación.
@@ -141,11 +134,8 @@ Cada modal se encuentra aislado en su propio componente standalone dentro de `mo
    - Totalmente desacoplado de la plantilla principal `compact.page.html`.
 4. **`app-sync-confirm-modal`**:
    - Modal dedicado para seleccionar el tipo de actividad de OpenProject y enviar tiempos individuales o masivos.
-5. **`app-close-confirm-modal`**:
-   - Modal dedicado para confirmar el cierre de la aplicación al pulsar el botón de cerrar (`X`) o mediante solicitudes de cierre del sistema.
-   - Proporciona opciones limpias para Cancelar, Minimizar a la bandeja (guardar en los iconos ocultos) o Cerrar la aplicación definitivamente.
-6. **`app-ticket-context-modal` (Modal de Contexto Extendido de Ticket)**:
-   - **Ubicación**: `src/app/shared/components/ticket-context-modal/ticket-context-modal.component.ts`.
+5. **`app-ticket-context-modal` (Modal de Contexto Extendido de Ticket)**:
+   - **Ubicación**: `src/app/modules/compact/modals/ticket-context-modal/ticket-context-modal.component.ts` (+ `.html`).
    - **Dimensiones y Responsividad**:
      - Tamaño mínimo garantizado de `min(94vw, 540px)` de ancho y `min(75vh, 480px)` de alto, con contenedor de pestañas de `min-h-[380px]`.
      - `zIndex` calibrado a 1100 para no solapar ni ocultar el `app-header` nativo.
@@ -168,19 +158,15 @@ Cada modal se encuentra aislado en su propio componente standalone dentro de `mo
 
 ## 3. Barra Inferior y Conmutación de Modo
 
-La barra de navegación inferior (`<nav>`) de 3 posiciones permite la conmutación al Modo Completo:
-1. **Botón Izquierdo (Icono de 4 cuadrados `tablerLayoutDashboard`)**:
-   - Al pulsar este botón, la ventana se redimensiona al tamaño del dashboard (~1150x780 px) y navega a `/dashboard/overview` vía `WindowService.setFullMode()`.
-2. **Botón Central (Icono de historial `tablerHistory`)**:
-   - Inactivo / deshabilitado con título "Próximamente" (tal como en la versión original).
-3. **Botón Derecho (Icono de ajustes `tablerSettings`)**:
-   - Abre la configuración del sistema en Modo Completo (`/dashboard/settings?tab=user`).
+La barra inferior (`<footer>`) tiene dos botones con icono y texto:
+1. **Modo completo** (`tablerLayoutDashboard`, `compact.fullMode`): `WindowService.setFullMode('/dashboard/overview', { maximize: true })` cambia al modo completo y navega al overview; si la ventana no estaba maximizada, la maximiza.
+2. **Configuración** (`tablerSettings`): abre `/setup?edit=true`, el mismo `SettingsPanelComponent` que usa `/dashboard/settings`, con disposición compacta. Al guardar o cerrar se vuelve a `/compact` sin cambiar el tamaño ni la posición de la ventana.
 
 ---
 
 ## 4. Estado Reactivo (Signals) e Integración de Servicios
 
-* **[`WindowService`](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/core/services/window.service.ts)**: Control de dimensiones compacta (525x800) vs completa (1150x780), minimizado a la bandeja (iconos ocultos), interceptor de cierre con confirmación (`showCloseModal`) y arrastre nativo.
+* **`WindowService`** (`core/window/window.service.ts`, ver `docs/frontend.md` § Window): cambio entre modo compacto (525x800) y completo (1150x780), minimizar, cerrar a la bandeja (iconos ocultos) y arrastre nativo.
 * **[`ActivityService`](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/core/services/activity.service.ts)**:
   - Signals: `activities`, `selectedDate`, `projects`, `favoriteTickets`, `timeFormat`, `isSelectionMode`, `showActivityForm`, `showFavoritesModal`, `showResetModal`, `showSyncModal`, `presetActivity`.
   - Computeds: `dailyActivities`, `totalMinutes`, `progressPercentage`, `unsyncedActivities`, `selectedActivities`.
@@ -197,3 +183,7 @@ La barra de navegación inferior (`<nav>`) de 3 posiciones permite la conmutaci�
 - **Modales Limpios sin Descripciones Redundantes**: Cada modal presenta un encabezado limpio y directo con solo su icono y título, omitiendo párrafos descriptivos y subtítulos innecesarios conforme a las directrices del proyecto.
 - **Soporte Completo de i18n / Bilingüe**: Todos los textos, etiquetas, placeholders, mensajes de estado y tooltips del modo compacto consumen las cadenas del diccionario a través de `TranslatePipe` (`| translate`) y `LanguageService`.
 - **Verificación**: Compilado y verificado sin errores mediante `bun run build` y `cargo check`.
+
+
+## Filtrado compartido
+- El filtrado y orden de la lista (`filteredActivities`, `hasActiveFilters`) usan `core/utils/activity-filter.util.ts`, compartido con la vista completa `/dashboard/time-entries` (módulo `time-entry`).

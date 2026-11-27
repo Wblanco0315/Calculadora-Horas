@@ -51,6 +51,10 @@ Todo agente o asistente que genere, refactorice o mantenga código en este repos
   - Usar la sintaxis de bloque integrada: `@if`, `@else if`, `@else`, `@for (item of items; track item.id)`, `@switch`, `@let`.
   - Prohibido el uso de directivas estructurales legacy como `*ngIf`, `*ngFor` y `*ngSwitch`.
   - Emplear `@defer` para carga diferida de vistas y componentes secundarios.
+- **Gestión de Carga mediante `@defer` (Evitar Signals de `isLoading` Innecesarios)**:
+  - Para vistas y componentes diferidos, **no crear estados booleanos manuales** (e.g., `isLoading = signal(true)`) ni condicionales `@if (isLoading())`.
+  - Utilizar directamente bloques `@defer` junto con `@placeholder (minimum ...)` y `@loading (after ...; minimum ...)` para mostrar los esqueletos (`<p-skeleton>`).
+  - Esto garantiza code-splitting automático nativo en chunks independientes (vía Angular CLI), carga progresiva, prefetching (`prefetch on idle`) y previene parpadeos de interfaz sin boilerplate en la clase TypeScript.
 - **Formularios**:
   - Utilizar Signal Forms o Reactive Forms estrictamente tipados.
 - **Guards y Resolvers Funcionales**:
@@ -60,9 +64,10 @@ Todo agente o asistente que genere, refactorice o mantenga código en este repos
   - Tras generar o modificar código, verificar que no existan errores ejecutando `bun run build`.
 
 ### 3.2. `angular-best-practices-primeng` (`skills/angular-best-practices-primeng/SKILL.md`)
-- **Suite de Componentes Exclusiva**: PrimeNG es la librería UI oficial del proyecto. Prohibido usar o mezclar con Angular Material, Spartan UI u otras bibliotecas de componentes.
+- **Suite de Componentes Exclusiva y Prioridad Mandatoria**: PrimeNG es la librería UI oficial del proyecto. Prohibido usar o mezclar con Angular Material, Spartan UI u otras bibliotecas de componentes.
+- **PRIORIZAR SIEMPRE LOS COMPONENTES DE PRIME NG**: En caso de existir un componente oficial de PrimeNG que cumpla con las necesidades (por ejemplo: Stepper, Table, Select, Button, InputText, InputNumber, Dialog, Tag, Tabs, Menu, etc.), **SE DEBE USAR PRIMERO ESE COMPONENTE DE PRIME NG** en lugar de construir componentes manuales o maquetaciones HTML personalizadas desde cero.
 - **Tree-Shaking Estricto**:
-  - Importar siempre los componentes de PrimeNG de forma granular y directa desde su submódulo correspondiente (e.g., `import { ButtonModule } from 'primeng/button';` o `import { TableModule } from 'primeng/table';`).
+  - Importar siempre los componentes de PrimeNG de forma granular y directa desde su submódulo correspondiente (e.g., `import { ButtonModule } from 'primeng/button';` o `import { StepperModule } from 'primeng/stepper';`).
   - No realizar importaciones monolíticas.
 - **Tablas de Alto Rendimiento (`p-table`)**:
   - Configurar las tablas con lazy loading (`[lazy]="true"`), paginación en servidor y virtual scrolling cuando corresponda para optimizar el rendimiento.
@@ -72,98 +77,153 @@ Todo agente o asistente que genere, refactorice o mantenga código en este repos
 
 ---
 
-## 4. Estructura y Gestión de Carpetas
+## 4. Estructura, Organización y Arquitectura
 
-La aplicación sigue una arquitectura modular y escalable dentro de `src/app/`, dividida en `core/`, `modules/` y `shared/`:
+El proyecto tiene dos capas de código, cada una con su propia arquitectura:
+
+| Capa | Ubicación | Arquitectura | Documento de referencia |
+|---|---|---|---|
+| Frontend (Angular) | `src/app/` | `core/` + `modules/` + `shared/` | [`docs/frontend.md`](../docs/frontend.md) |
+| Backend (Tauri / Rust) | `src-tauri/src/` | Capas `command` → `service` → `openproject` / `repository`, con `model` | [`docs/backend.md`](../docs/backend.md) |
+
+### 4.1. Árbol del Frontend
 
 ```
 src/app/
-├── core/
-│   ├── guards/         # AuthGuard, noAuthGuard, permissionGuard (all functional CanActivateFn)
-│   ├── interceptors/   # api-prefix-interceptor, auth-interceptor, error-interceptor (class-based HttpInterceptor)
-│   ├── pipes/          # clean-word, custom-currency, custom-percentage, data-type-table, field,
-│   │                   # getter-property, permission
-│   ├── services/       # HttpService, StorageService, AuthService, TokenService, ServicesAndPermissionService,
-│   │                   # AlertService, LoadingService, FormService, ImageService, DragDropService, OverlayService,
-│   │                   # RedirectService, ReloadPageService, SelectService, TableService, TitleService,
-│   │                   # SessionService, ApplicationService
-│   ├── interfaces/     # http-options, page, select, table, validator, session, application
-│   ├── state/          # session.state.ts — Angular signals (sessionExpiredAlertShown, sessionExpiredAlertShownTwo)
-│   └── utils/          # end-points.ts (EndPoints const enum), const.ts, custom-validators.ts,
-│                       # utils.class.ts, lang.ts, request-permission.ts
-├── modules/
-│   ├── module/
-│          ├── interfaces/
-│          ├── services/
-│          ├── pages/
-│          ├── modals/
-│          ├── module.router.ts
-└── shared/
-    ├── layouts/        # table, forms-filter, loading, loading-modal, delete-confirm,
-    │                   # sidebar, topbar, application-selector, progress-bar
-    ├── directives/     # click-outside, field-errors, input-mask (3 variants), input-trim,
-    │                   # only-number-dot, password, toast-message
-    ├── pipes/          # format-hour
-    ├── format/         # format.ts (currency/percentage cleanup, date helpers)
-    └── lang/es/        # permission.ts (permission key → Spanish name), field-names.ts (form field → Spanish name)
+├── app.component.ts, app.config.ts, app.routes.ts
+├── core/                         # Singletons e infraestructura (nunca importa de modules/)
+│   ├── guards/                   # Guards funcionales (CanActivateFn): config.guard.ts
+│   ├── interfaces/               # Contratos globales: activity, config, openproject
+│   ├── services/
+│   │   ├── openproject/          # Capa de API de OpenProject, un servicio por dominio
+│   │   │   ├── openproject.service.ts           # Cliente base: URL, token, cabeceras, runtime, conversores
+│   │   │   ├── work-package-api.service.ts      # Ticket info/contexto, búsqueda, revisiones, estado/versión
+│   │   │   ├── work-package-form-api.service.ts # Esquema del formulario, actualización de campos, comentarios
+│   │   │   ├── attachment-api.service.ts        # Adjuntos: descarga, contenido, imágenes inline, subida
+│   │   │   ├── project-api.service.ts           # Proyectos, estados, versiones (con caché)
+│   │   │   ├── board-api.service.ts             # Tableros, columnas, mover tickets (con caché)
+│   │   │   └── time-entry-api.service.ts        # Tipos de actividad, tiempos, reporte de costos
+│   │   ├── activity.service.ts   # Actividades locales (SQLite), navegación de día, sincronización, estado de modales
+│   │   ├── favorite.service.ts   # Tickets favoritos
+│   │   ├── notification.service.ts, breadcrumb.service.ts
+│   │   └── storage, theme, language, schedule, update, work-package-change
+│   ├── window/                   # Comportamiento de la ventana (ver docs/frontend.md § Window)
+│   │   ├── window.service.ts           # Fachada: modo compacto/completo, transición, arranque, cierre, bandeja, arrastre
+│   │   ├── window-bounds.service.ts    # Geometría nativa: maximizado, redimensionado en un paso, últimos límites
+│   │   └── window.constants.ts         # Tamaños por modo, claves de almacenamiento, tiempos
+│   └── utils/                    # Funciones puras y constantes (*.util.ts)
+├── modules/<module>/             # Un módulo por dominio o vista enrutada (singular)
+│   ├── components/<name>/        # <name>.component.{ts,html[,css]}: componentes del módulo (o que el módulo posee y otros importan)
+│   ├── modals/<name>/            # <name>.component.{ts,html[,css]}: diálogos del módulo
+│   ├── pages/<name>/             # <name>.page.{ts,html[,css]}: páginas enrutadas (smart components)
+│   ├── services/                 # Servicios exclusivos del módulo
+│   ├── interfaces/               # Tipos exclusivos del módulo
+│   └── <module>.routes.ts        # Rutas con carga diferida (export const <module>Routes: Routes)
+└── shared/                       # Reutilizable sin estado de negocio propio
+    ├── components/               # app-header, app-logo, window-transition, rich-text-editor, schedule-editor, ...
+    ├── pipes/                    # translate.pipe.ts
+    ├── format/                   # Formateadores puros (time.ts)
+    └── lang/                     # es/, en/ y primeng-locale.ts
 ```
 
-### 4.1. Directorio `core/` (Núcleo y Servicios Globales Singleton)
-Contiene elementos que existen una sola vez en toda la aplicación (servicios singleton, infraestructura, configuración y estado global). No debe depender de módulos de negocio.
+Módulos actuales: `board` (tableros, listado de tableros y detalle de ticket), `compact` (ventana compacta), `dashboard` (shell), `overview`, `project`, `report`, `setting`, `setup` y `time-entry` (registro de tiempo).
 
-- **`guards/`**:
-  - Guards de autenticación y permisos de rutas funcionales (`CanActivateFn`).
-  - Ejemplos: `auth.guard.ts`, `no-auth.guard.ts`, `permission.guard.ts`.
-  - Regla: Todos deben ser funciones puras / funcionales (`export const authGuard: CanActivateFn = ...`).
-- **`interceptors/`**:
-  - Interceptores HTTP para peticiones salientes y respuestas entrantes.
-  - Ejemplos: `api-prefix-interceptor`, `auth-interceptor`, `error-interceptor`.
-- **`pipes/`**:
-  - Pipes transversales de transformación de datos para el core.
-  - Ejemplos: `clean-word`, `custom-currency`, `custom-percentage`, `data-type-table`, `field`, `getter-property`, `permission`.
-- **`services/`**:
-  - Servicios singleton con `{ providedIn: 'root' }`.
-  - Ejemplos: `HttpService`, `StorageService`, `AuthService`, `TokenService`, `ServicesAndPermissionService`, `AlertService`, `LoadingService`, `FormService`, `ImageService`, `DragDropService`, `OverlayService`, `RedirectService`, `ReloadPageService`, `SelectService`, `TableService`, `TitleService`, `SessionService`, `ApplicationService`.
-- **`interfaces/`**:
-  - Modelos y contratos de infraestructura y API globales.
-  - Ejemplos: `http-options`, `page`, `select`, `table`, `validator`, `session`, `application`.
-- **`state/`**:
-  - Manejo de estado reactivo global utilizando exclusivamente Angular Signals.
-  - Ejemplo: `session.state.ts` con signals como `sessionExpiredAlertShown`, `sessionExpiredAlertShownTwo`.
-- **`utils/`**:
-  - Constantes, enumeraciones de endpoints y utilidades de soporte.
-  - Ejemplos: `end-points.ts` (con `EndPoints` const enum), `const.ts`, `custom-validators.ts`, `utils.class.ts`, `lang.ts`, `request-permission.ts`.
+### 4.2. Reglas de Ubicación de Archivos (Frontend)
 
-### 4.2. Directorio `modules/` (Módulos de Funcionalidad / Negocio)
-Cada funcionalidad o dominio de negocio se aísla dentro de su propio subdirectorio en singular en `modules/<module>/` con la siguiente estructura interna obligatoria:
+| Qué | Dónde |
+|---|---|
+| Servicio singleton, interfaz global, guard o utilidad pura | `core/` |
+| Componente usado por un solo módulo | `modules/<module>/components/` (o `modals/` si es un diálogo) |
+| Componente de negocio usado por varios módulos | En el módulo dueño de ese dominio; los demás lo importan desde allí (no se duplica ni se sube a `shared/`) |
+| Componente sin estado de negocio usado por varios módulos | `shared/components/` |
+| Servicio usado por un solo módulo | `modules/<module>/services/` (p. ej. `setup/services/mcp.service.ts`) |
+| Cualquier componente o página | Su propia carpeta con el mismo nombre; prohibido dejar archivos de componente sueltos en `components/`, `modals/` o `pages/` |
+| Capas de un componente | Separadas: `.ts` (lógica), `.html` (plantilla) y `.css` solo si tiene estilos propios. Excepción: un componente muy pequeño (plantilla de ~20 líneas o menos, sin estilos propios y con poca lógica) puede quedarse en un solo `.ts` con `template` inline. Las páginas siempre van separadas |
+| Rutas de un módulo | `<module>.routes.ts` en la raíz del módulo (nunca `.router.ts`) |
 
-- **`interfaces/`**: Modelos, DTOs y tipos de datos exclusivos del módulo (en singular e inglés).
-- **`services/`**: Servicios de lógica de negocio y llamadas a la API correspondientes a este módulo.
-- **`pages/`**: Componentes de página (smart components) que corresponden a las vistas enrutadas.
-- **`modals/`**: Componentes de ventana modal o diálogos pertenecientes a este módulo.
-- **`<module>.router.ts`**: Configuración de rutas del módulo mediante carga diferida (`Routes`).
+- **Dueños actuales de componentes compartidos**: `modules/time-entry/components/activity-row` y `modules/time-entry/modals/*` (los usan `compact`, `time-entry` y el detalle de ticket de `board`); `modules/board/pages/ticket-detail.page` (también embebido en el drawer de `time-entry`).
+- **Prohibido duplicar componentes** entre módulos: si dos módulos necesitan el mismo componente, se mueve al dueño del dominio o a `shared/`.
+- **Prohibido reexportar** componentes desde otra carpeta para "aparentar" que pertenecen a un módulo; se importan desde su ubicación real.
+- **`core/` no depende de `modules/`**; `shared/` no depende de `modules/`.
 
-### 4.3. Directorio `shared/` (Componentes y Utilidades Reutilizables)
-Elementos reusables entre diferentes módulos sin lógica ni estado de negocio acoplado.
+### 4.3. Capa de API de OpenProject (Frontend)
 
-- **`layouts/`**:
-  - Componentes de diseño, maquetación y estructuras UI reutilizables.
-  - Ejemplos: `table`, `forms-filter`, `loading`, `loading-modal`, `delete-confirm`, `sidebar`, `topbar`, `application-selector`, `progress-bar`.
-- **`directives/`**:
-  - Directivas para comportamiento y manipulación del DOM / inputs.
-  - Ejemplos: `click-outside`, `field-errors`, `input-mask` (3 variantes), `input-trim`, `only-number-dot`, `password`, `toast-message`.
-- **`pipes/`**:
-  - Pipes de presentación compartidos.
-  - Ejemplo: `format-hour`.
-- **`format/`**:
-  - Funciones utilitarias puras de transformación y formateo (`format.ts`: limpieza de moneda/porcentajes, formateadores de fechas).
-- **`lang/es/`**:
-  - Archivos de internacionalización y mapeo en español.
-  - Ejemplos: `permission.ts` (mapeo de clave de permiso a nombre legible en español), `field-names.ts` (mapeo de identificador de campo de formulario a nombre legible en español).
+- Prohibido volver a crear un servicio monolítico de OpenProject. Cada llamada nueva va al servicio de su dominio en `core/services/openproject/`; si no encaja en ninguno, se crea un nuevo `<domain>-api.service.ts`.
+- Todos los servicios de dominio dependen de `OpenprojectService` (cliente base) para URL, token, cabeceras (`buildAuthHeaders`), detección de Tauri (`isTauriApp`) y `resolveHref`.
+- Dirección de dependencias permitida: `WorkPackageApiService` → `ProjectApiService`; `BoardApiService` → `WorkPackageApiService`. Prohibido añadir la dirección inversa (dependencia circular de DI).
+- Los componentes inyectan solo los servicios que usan, con nombres cortos: `workPackageApi`, `workPackageFormApi`, `attachmentApi`, `projectApi`, `boardApi`, `timeEntryApi`, `openprojectService`.
+- En escritorio cada método llama a un comando Tauri (`invoke`); en web usa `fetch` contra `/api/v3`. Ambos caminos deben devolver la misma forma de datos.
+
+### 4.4. Arquitectura del Dashboard como Contenedor Principal (Shell / Layout)
+- **Rol Exclusivo de Contenedor**: El componente `DashboardPage` (`src/app/modules/dashboard/pages/dashboard/dashboard.page.ts`) actúa **única y exclusivamente como contenedor principal y layout estructural** de la aplicación.
+- **Elementos que Habitan en el Dashboard**:
+  1. **Barra Lateral (`p-sidebar`)**: Navegación agrupada (secciones PocketProject y OpenProject), buscador de la barra lateral, proyectos y perfil de usuario con avatar en el footer.
+  2. **Barra Superior (`<header>`)**: Toggle del sidebar (`pSidebarTrigger`), breadcrumb (`Proyectos > proyecto > Tableros > tablero > #ticket`), refresco, tema claro/oscuro y acceso a configuración.
+  3. **Área de Proyección de Contenido (`<main>`)**: Contenedor que aloja el `<router-outlet />` donde se renderizan las vistas hijas.
+  4. **Notificaciones**: `<p-toast>` global para `NotificationService`.
+- **Separación Obligatoria del Contenido en Componentes Separados**:
+  - **Queda estrictamente prohibido incrustar contenido de negocio, tarjetas, calendarios o paneles directamente en `dashboard.page.html`**.
+  - **Cada contenido es un componente separado e independiente** en su propio módulo (`overview`, `project`, `board`, `time-entry`, `report`, `setting`).
+  - **Enrutamiento por Vistas Hijas**: `dashboard.routes.ts` define las rutas secundarias mediante `children`, cargando cada contenido con `loadChildren` o `loadComponent`.
+  - **La lógica de dominio no vive en el shell**: búsquedas o resoluciones de datos (p. ej. qué tablero contiene un ticket) van al servicio de API correspondiente (`BoardApiService.findBoardContainingTicket`), no a `DashboardPage`.
+  - **Autonomía y Modularidad**: Cada componente de contenido administra sus propios Signals, inyección de dependencias (`inject()`), estados de carga (`p-skeleton`), acciones y subcomponentes.
+
+### 4.5. Arquitectura del Backend (Tauri / Rust)
+
+```
+src-tauri/src/
+├── main.rs            # Punto de entrada: pocketproject_lib::run()
+├── lib.rs             # Solo declaraciones `mod` y run(): plugins, setup, generate_handler!
+├── ipc.rs             # Servidor HTTP local para el MCP de PocketProject (/ping, /notify, /show)
+├── app/               # Arranque: setup.rs, tray.rs (bandeja), window.rs (eventos de ventana)
+├── command/           # #[tauri::command] delgados, un archivo por dominio
+├── service/           # Lógica de negocio por dominio (OpenProject, MCP, reportes, tableros...)
+├── openproject/       # Infraestructura HTTP: cliente, auth, URLs, parseo de esquemas y respuestas
+├── repository/        # SQLite por tabla: connection, migration, activity, config, favorite_ticket, statistic
+└── model/             # DTOs y registros (structs serde) por dominio
+```
+
+- **Dirección de capas**: `command` → `service` → `openproject` / `repository`; todas las capas usan `model`. Una capa nunca importa de una capa superior.
+- **Comandos delgados**: un comando solo recibe argumentos y delega en `service::` (o en `repository::` para operaciones locales simples de SQLite). Prohibido poner lógica, peticiones HTTP o SQL en `command/`.
+- **Contrato IPC estable**: los nombres de comandos, nombres de argumentos, campos serde (`rename_all`), formas de respuesta y textos de error son un contrato con el frontend y con el servidor MCP. No se cambian sin actualizar ambos lados.
+- **Frontera de errores**: los comandos devuelven `Result<T, String>`.
+- **Visibilidad**: `pub(crate)` por defecto; nada de reexportaciones globales (`pub use *`) que oculten dónde vive el código.
+- **Nombres**: archivos y módulos en inglés, singular y `snake_case` (`favorite_ticket.rs`, `board_move.rs`).
+- **Tamaño**: archivos por debajo de ~400 líneas; si una función crece demasiado, se extraen helpers en `service/` u `openproject/`.
+- **Nuevo comando** (pasos): 1) DTO en `model/<domain>.rs`; 2) lógica en `service/<domain>.rs` (HTTP vía `openproject/`, SQL vía `repository/`); 3) wrapper en `command/<domain>.rs`; 4) registrarlo en `generate_handler!` de `lib.rs`; 5) método en el servicio de API del frontend que corresponda.
+- **Verificación**: tras cambios en Rust ejecutar `cargo check` en `src-tauri/`.
 
 ---
 
-## 5. Resumen de Reglas Clave
+## 5. Reglas de Diseño y Sistema Visual
+
+El sistema de diseño y las reglas de interfaz se encuentran formalmente especificados en [`docs/DESIGN_RULES.md`](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/docs/DESIGN_RULES.md). Todo desarrollador o agente debe respetar:
+
+- **Prioridad Absoluta de PrimeNG**: Siempre utilizar componentes de PrimeNG (`Select`, `InputNumber`, `Button`, `DatePicker`, `Tag`, `Stepper`, `Table`, etc.) para controles de formulario y elementos interactivos en vez de etiquetas HTML nativas planas.
+- **Tokens y Paleta Dinámica**: Los colores de acento se gestionan a través de `ThemeService` mediante `updatePrimaryPalette` de `@primeuix/themes`. Tailwind CSS v4 se encuentra vinculado mediante `tailwindcss-primeui` en `styles.css`.
+- **Modo Oscuro**: Compatibilidad nativa con selector `.dark` y esquema de color sincronizado.
+- **Tipografía y Forma**: Uso de `Inter` para cuerpo, `Plus Jakarta Sans` para titulares y `JetBrains Mono` para números, horas y contadores.
+- **Modales y Diálogos Limpios (Cero Descripciones Innecesarias)**: Queda estrictamente prohibido abusar de párrafos descriptivos, subtítulos explicativos o textos secundarios en los encabezados (`#header`) o cuerpos de las ventanas modales (`p-dialog`) a menos que el usuario lo solicite explícitamente. Las modales deben ser directas, limpias y minimalistas: el encabezado contendrá únicamente el icono (si aplica) y el título directo de la acción. No explicar lo obvio ni saturar verticalmente los diálogos.
+- **Cero Descripciones en Steps, Secciones y Módulos**: Queda estrictamente prohibido colocar descripciones, subtítulos explicativos o párrafos secundarios bajo los encabezados o títulos de steps (asistentes, onboarding, steppers, pestañas de configuración), módulos, tarjetas o secciones a menos que el usuario lo indique explícitamente. Los encabezados deben contener únicamente el título directo y su icono.
+- **Prohibido el Abuso de Badges y Envoltorios de Iconos**: Queda prohibido el abuso de badges y envoltorios decorativos tipo caja/contenedor alrededor de los iconos (e.g. `w-8 h-8 rounded-xl bg-primary-100...`). Los iconos deben ubicarse de forma directa y limpia junto al texto sin cajas de fondo coloreadas innecesarias. Tampoco abusar de badges de texto o puntos pulsantes en la interfaz.
+- **Iconografía Obligatoria para Actualizaciones**: Para cualquier funcionalidad, botón, diálogo, pestaña o sección de actualizaciones de la aplicación se debe utilizar **única y exclusivamente el icono de descargar (`tablerDownload`)**. Queda prohibido usar destellos (`tablerSparkles`), estrellas o iconos ambiguos.
+
+---
+
+## 6. Documentación Obligatoria por Módulos
+
+Para garantizar la mantenibilidad y claridad del proyecto:
+- Cada módulo de negocio existente o nuevo dentro de `src/app/modules/<module>/` **DEBE contar con un archivo de documentación en formato Markdown** ubicado en `docs/modules/<module>.md`.
+- Dicho archivo debe detallar:
+  1. Propósito y responsabilidad del módulo.
+  2. Estructura de archivos y subdirectorios (páginas, componentes, servicios, interfaces).
+  3. Flujo de usuario y componentes clave.
+  4. Estado reactivo (Signals) y servicios integrados.
+- Al crear, modificar o refactorizar un módulo, es obligatorio mantener actualizada su documentación correspondiente en `docs/modules/<module>.md`.
+
+---
+
+## 7. Resumen de Reglas Clave
 
 | Aspecto | Regla Obligatoria |
 |---|---|
@@ -173,4 +233,22 @@ Elementos reusables entre diferentes módulos sin lógica ni estado de negocio a
 | **Skills** | Obligatorio consultar `angular-developer` y `angular-best-practices-primeng`. |
 | **Angular** | Standalone components, `inject()`, Signals (`signal`, `computed`, `effect`), `@if` / `@for`, `input()` / `output()`. |
 | **PrimeNG** | Imports tree-shaken por componente, tema Aura de `@primeuix/themes`. Prohibido Material / Spartan. |
-| **Verificación** | Ejecutar `bun run build` tras cualquier generación o refactorización. |
+| **Estructura Frontend** | `core/` (singletons, API de OpenProject por dominio en `core/services/openproject/`), `modules/<module>/` (components, modals, pages, services), `shared/` (sin estado de negocio). Componente compartido de negocio = en el módulo dueño. Sin duplicados ni reexportaciones. |
+| **Arquitectura Backend** | Rust por capas: `command` (delgado) → `service` → `openproject` / `repository`, con `model`. Contrato IPC estable. Ver `docs/backend.md`. |
+| **Dashboard Layout** | Contenedor exclusivo de la barra lateral (sidebar) y menú superior. Todo contenido debe ser un componente separado cargado vía `<router-outlet />`. Prohibido contenido directo en `dashboard.page.html`. |
+| **Diseño UI** | Consultar y seguir [`docs/DESIGN_RULES.md`](file:///c:/Users/wposs/Documents/Proyectos_personales/PocketProject/docs/DESIGN_RULES.md). Priorizar siempre componentes oficiales de PrimeNG. |
+| **Modales y Diálogos** | Prohibido incluir subtítulos o descripciones innecesarias en encabezados/cuerpos salvo petición explícita. Encabezado directo con solo icono y título. |
+| **Descripciones en Steps/Módulos** | Prohibido colocar párrafos o textos descriptivos bajo los títulos en steps, secciones o módulos sin petición explícita. |
+| **Uso de Badges e Iconos** | Prohibido abusar de badges y envoltorios contenedores de fondo (`bg-primary-100`) para iconos. Iconos limpios y directos. |
+| **Icono de Actualizaciones** | Obligatorio usar el icono de descargar (`tablerDownload`). Prohibido destellos/estrellas. |
+| **Documentación** | Todo módulo en `src/app/modules/<module>/` debe tener su `.md` en `docs/modules/<module>.md`; la arquitectura general vive en `docs/frontend.md` y `docs/backend.md`. |
+| **Verificación** | Ejecutar `bun run build` tras cualquier generación o refactorización, y `cargo check` tras cambios en Rust. |
+
+---
+
+## 8. Directrices Obligatorias de PocketProject Time Tracker (MCP)
+
+Todo agente que opere con el servidor MCP de PocketProject debe cumplir el system prompt oficial, que vive en **un solo lugar**: [`src-tauri/resources/mcp/system-prompt.md`](../src-tauri/resources/mcp/system-prompt.md). Incluye la interpretación de modismos, la prohibición de inventar tickets, la validación en cascada con `get_ticket_context`, la lectura progresiva de comentarios y adjuntos (con permiso), el ciclo de estados y columnas, y la confirmación obligatoria antes de cambiar estados, columnas o asignados. Desde el protocolo 2, PocketProject es el único intermediario con OpenProject (primero datos locales, luego OpenProject vía la app), la IA nunca publica comentarios (`draft_ticket_comment` los deja para que el usuario los envíe), las subidas las hace el usuario (`request_attachment_upload`) y leer o descargar adjuntos exige autorización (`user_authorized`). Ver `docs/MCP_INTEGRATION.md` §6.
+
+- **Prohibido duplicar el prompt** en el frontend, en el paquete `pocketproject-mcp`, en documentación o en reglas: se referencia ese archivo. La app lo publica en `mcp-contract.json` y el MCP lo sirve como prompt `pocketproject_rules`.
+- **Compatibilidad**: los cambios incompatibles del esquema SQLite, del IPC o de las herramientas suben `MCP_PROTOCOL_VERSION` en la app y en el MCP a la vez (ver `docs/MCP_INTEGRATION.md`, sección 5).

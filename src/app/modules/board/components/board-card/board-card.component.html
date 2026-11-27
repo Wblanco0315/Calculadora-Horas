@@ -1,0 +1,100 @@
+<div
+  (click)="cardClick.emit(card())"
+  class="group p-3 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 hover:border-primary-400 dark:hover:border-primary-500 transition-all cursor-grab active:cursor-grabbing shadow-xs hover:shadow-md space-y-2.5 select-none"
+>
+  <!-- Top Row: Status Pill Dropdown + #ID - PROJECT -->
+  <div class="flex items-center justify-between gap-2 min-w-0">
+    <div (click)="$event.stopPropagation()" class="shrink-0 max-w-[56%]">
+      <p-select
+        [options]="statuses()"
+        [ngModel]="card().statusId"
+        (ngModelChange)="onStatusSelected($event)"
+        optionLabel="name"
+        optionValue="id"
+        appendTo="body"
+        [style]="{
+          '--p-select-background': resolvedStatusColor(),
+          '--p-select-border-color': 'transparent',
+          '--p-select-hover-border-color': 'transparent',
+          '--p-select-focus-border-color': 'transparent',
+          '--p-select-color': resolvedStatusTextColor(),
+          '--p-select-dropdown-color': resolvedStatusTextColor(),
+          backgroundColor: resolvedStatusColor()
+        }"
+        styleClass="!rounded-md !py-0 !px-1.5 !h-5 !min-h-5 !text-[11px] !font-semibold !leading-none !border-0 op-card-status-select"
+      >
+        <ng-template #selectedItem let-selected>
+          <span
+            class="truncate text-[11px] font-semibold"
+            [style.color]="resolvedStatusTextColor()"
+          >
+            {{ selected?.name || card().statusName || '—' }}
+          </span>
+        </ng-template>
+        <ng-template #item let-item>
+          <div class="flex items-center gap-1.5 text-xs py-0.5">
+            <span
+              class="size-2 rounded-full shrink-0"
+              [style.backgroundColor]="item.color || '#3b82f6'"
+            ></span>
+            <span>{{ item.name }}</span>
+          </div>
+        </ng-template>
+      </p-select>
+    </div>
+
+    <span class="font-mono text-[11px] text-slate-400 dark:text-zinc-500 truncate text-right">
+      #{{ card().id }}@if (projectLabel()) { - {{ projectLabel() }}}
+    </span>
+  </div>
+
+  <!-- Middle: Type Label + Subject -->
+  <div class="text-xs sm:text-[13px] leading-snug text-slate-800 dark:text-zinc-100 break-words">
+    @if (card().typeName) {
+      <span
+        class="font-bold uppercase tracking-wide mr-1.5"
+        [style.color]="resolvedTypeColor()"
+      >
+        {{ card().typeName }}
+      </span>
+    }
+    <span class="font-medium">{{ card().subject }}</span>
+  </div>
+
+  <!-- Bottom Row: Assignee Avatar + Date Range -->
+  @if (card().assigneeName || card().startDate || card().dueDate) {
+    <div class="flex items-center justify-between gap-2 pt-1">
+      <div class="flex items-center min-w-0">
+        @if (card().assigneeName) {
+          <p-avatar
+            [label]="assigneeInitials()"
+            shape="circle"
+            [title]="card().assigneeName!"
+            [style]="{ backgroundColor: avatarBgColor(), color: '#ffffff' }"
+            styleClass="!size-6 !text-[10px] !font-bold shrink-0"
+          />
+        }
+      </div>
+
+      @if (card().startDate || card().dueDate) {
+        <div class="font-mono text-[11px] flex items-center gap-1 shrink-0">
+          @if (card().startDate) {
+            <span class="text-slate-500 dark:text-zinc-400">
+              {{ formatShortDate(card().startDate!) }}
+            </span>
+          }
+          @if (card().startDate && card().dueDate) {
+            <span class="text-slate-400 dark:text-zinc-500">-</span>
+          }
+          @if (card().dueDate) {
+            <span
+              [class]="isOverdue() ? 'text-rose-500 font-semibold' : 'text-slate-500 dark:text-zinc-400'"
+            >
+              {{ formatShortDate(card().dueDate!) }}
+            </span>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

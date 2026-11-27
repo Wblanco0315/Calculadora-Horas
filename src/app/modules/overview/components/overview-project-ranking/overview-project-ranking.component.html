@@ -1,0 +1,45 @@
+<div class="flex h-full flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-xs sm:p-6 dark:border-zinc-800 dark:bg-zinc-900">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h3 class="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-zinc-100">
+      <ng-icon name="tablerTrophy" size="1.15rem" class="text-primary-500" />
+      {{ 'overview.ranking' | translate }}
+    </h3>
+    <p-selectbutton
+      [options]="periodOptions()"
+      [ngModel]="period()"
+      (ngModelChange)="period.set($event)"
+      optionLabel="label"
+      optionValue="value"
+      [allowEmpty]="false"
+      size="small"
+    />
+  </div>
+
+  @if (rows().length) {
+    <ol class="flex flex-col gap-3">
+      @for (row of rows(); track row.key) {
+        <li class="flex items-center gap-3" [title]="(row.name || ('overview.noProject' | translate)) + ' · ' + row.time">
+          <span class="w-5 shrink-0 text-right font-mono text-xs font-bold text-slate-400 dark:text-zinc-500">{{ row.position }}</span>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-baseline justify-between gap-2">
+              <span class="truncate text-sm font-medium text-slate-800 dark:text-zinc-200">
+                {{ row.name || ('overview.noProject' | translate) }}
+              </span>
+              <span class="shrink-0 font-mono text-xs text-slate-600 dark:text-zinc-300">
+                {{ row.time }}
+                <span class="text-slate-400 dark:text-zinc-500">· {{ row.share }}%</span>
+              </span>
+            </div>
+            <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-zinc-800">
+              <div class="h-full rounded-full bg-primary-500 transition-[width] duration-300" [style.width.%]="row.width"></div>
+            </div>
+          </div>
+        </li>
+      }
+    </ol>
+  } @else {
+    <div class="flex flex-1 items-center justify-center py-10 text-center text-sm text-slate-400 dark:text-zinc-500">
+      {{ 'overview.noData' | translate }}
+    </div>
+  }
+</div>

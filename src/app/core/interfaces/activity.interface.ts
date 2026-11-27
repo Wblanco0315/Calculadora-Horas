@@ -51,6 +51,8 @@ export interface Activity {
   created_by_ai?: boolean;
   createdAt?: string;
   created_at?: string;
+  /** OpenProject time entry shown for a date older than the local retention window (not editable here). */
+  readOnly?: boolean;
 }
 
 export interface FavoriteTicket {

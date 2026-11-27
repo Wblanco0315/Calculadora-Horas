@@ -1,0 +1,92 @@
+<div class="h-dvh w-full flex flex-col bg-white dark:bg-zinc-900 transition-colors duration-200 overflow-hidden">
+  <main class="w-full h-full flex flex-col bg-white dark:bg-zinc-900 overflow-hidden">
+    <!-- Unified Top Draggable Application Header -->
+    <app-header class="shrink-0" />
+
+    @if (!storageService.isConfigured()) {
+      <!-- PrimeNG Minimal Stepper (Only on Initial Setup Onboarding) -->
+      <div
+        class="px-4 sm:px-8 pt-3 sm:pt-4 pb-2.5 sm:pb-3 border-b border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 shrink-0"
+      >
+        <div class="max-w-4xl mx-auto w-full">
+          <p-stepper [value]="setupService.activeStep()" (valueChange)="setupService.goToStep($event)">
+            <p-step-list>
+              <p-step [value]="1">
+                <span>{{ 'setup.step1' | translate }}</span>
+              </p-step>
+              <p-step [value]="2">
+                <span>{{ 'setup.step2' | translate }}</span>
+              </p-step>
+              <p-step [value]="3">
+                <span>{{ 'setup.step3' | translate }}</span>
+              </p-step>
+              <p-step [value]="4">
+                <span>{{ 'setup.step4' | translate }}</span>
+              </p-step>
+            </p-step-list>
+          </p-stepper>
+        </div>
+      </div>
+    }
+
+    @if (storageService.isConfigured()) {
+      <!-- Editing settings: same panel as the full dashboard settings -->
+      <app-settings-panel layout="compact" (closed)="closeSettings()" />
+    } @else {
+      <!-- Onboarding step content (scrollable body) -->
+      <div class="flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-8 sm:py-6">
+        <div class="max-w-4xl mx-auto w-full">
+          @switch (setupService.activeStep()) {
+            @case (1) {
+              <app-appearance-step />
+            }
+            @case (2) {
+              <app-schedule-step />
+            }
+            @case (3) {
+              <app-lunch-step />
+            }
+            @case (4) {
+              <app-openproject-step />
+            }
+          }
+        </div>
+      </div>
+
+      <!-- Step Navigation Footer (pinned at bottom of screen) -->
+        <footer
+          class="border-t border-slate-100 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xs shrink-0 px-4 py-3 sm:px-8 sm:py-4"
+        >
+          <div
+            class="max-w-4xl mx-auto w-full flex items-center"
+            [ngClass]="setupService.activeStep() > 1 ? 'justify-between' : 'justify-end'"
+          >
+            @if (setupService.activeStep() > 1) {
+              <button pButton (click)="prevStep()" variant="outlined" severity="secondary" class="flex items-center">
+                <ng-icon name="tablerArrowLeft" size="1rem" class="mr-1" />
+                <span>{{ 'common.back' | translate }}</span>
+              </button>
+            }
+
+            @if (setupService.activeStep() < 4) {
+              <button pButton (click)="nextStep()" [disabled]="isNextDisabled()" class="flex items-center">
+                <span>{{ 'common.next' | translate }}</span>
+                <ng-icon name="tablerArrowRight" size="1rem" class="ml-1" />
+              </button>
+            } @else {
+              <button
+                pButton
+                (click)="setupService.completeSetup()"
+                [disabled]="isNextDisabled()"
+                [loading]="setupService.isSaving()"
+                class="flex items-center"
+              >
+                <span>{{ 'setup.openproject.saveAndStart' | translate }}</span>
+                <ng-icon name="tablerArrowRight" size="1rem" class="ml-1" />
+              </button>
+            }
+          </div>
+        </footer>
+    }
+  </main>
+</div>

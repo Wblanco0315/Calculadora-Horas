@@ -1,0 +1,657 @@
+<p-dialog
+  [visible]="activityService.showTicketContextModal()"
+  (visibleChange)="onVisibleChange($event)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '94vw', maxWidth: '640px', minWidth: 'min(94vw, 540px)', minHeight: 'min(75vh, 480px)', maxHeight: 'calc(100dvh - 3.5rem)' }"
+  styleClass="p-dialog-rounded"
+>
+  <ng-template #header>
+    <div class="flex items-center gap-2 min-w-0 pr-2">
+      <ng-icon name="tablerFileText" size="1.25rem" class="text-primary-600 dark:text-primary-400 shrink-0" />
+      <div class="min-w-0">
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <span class="font-mono font-bold text-xs text-primary-600 dark:text-primary-400">
+            #{{ currentTicket() }}
+          </span>
+          @if (ticketData()?.status_name) {
+            <span
+              class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.2 rounded border"
+              [style.borderColor]="ticketData()?.status_color || '#3b82f6'"
+              [style.color]="ticketData()?.status_color || '#3b82f6'"
+            >
+              <span class="size-1.5 rounded-full shrink-0" [style.backgroundColor]="ticketData()?.status_color || '#3b82f6'"></span>
+              <span>{{ ticketData()?.status_name }}</span>
+            </span>
+          }
+          @if (ticketData()?.project_name) {
+            <span class="text-[10px] text-slate-400 dark:text-zinc-500 font-semibold truncate">
+              {{ ticketData()?.project_name }}
+            </span>
+          }
+        </div>
+        <h3 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-zinc-100 truncate mt-0.5" [title]="ticketData()?.subject || ''">
+          {{ ticketData()?.subject || ('ticketContext.title' | translate) }}
+        </h3>
+      </div>
+    </div>
+  </ng-template>
+
+  <!-- Body Content -->
+  <div class="space-y-3 pt-1 pb-2 min-h-[380px]">
+    @if (isLoading()) {
+      <!-- Skeleton Loading State -->
+      <div class="space-y-3 py-4 animate-pulse">
+        <div class="flex gap-2">
+          <p-skeleton width="6rem" height="1.75rem" borderRadius="0.5rem" />
+          <p-skeleton width="6rem" height="1.75rem" borderRadius="0.5rem" />
+          <p-skeleton width="6rem" height="1.75rem" borderRadius="0.5rem" />
+        </div>
+        <p-skeleton width="100%" height="8rem" borderRadius="0.75rem" />
+        <p-skeleton width="70%" height="1rem" borderRadius="0.5rem" />
+      </div>
+    } @else if (errorMessage()) {
+      <!-- Error State -->
+      <div class="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2">
+        <ng-icon name="tablerAlertCircle" size="1.25rem" class="shrink-0 text-rose-500" />
+        <div class="space-y-1">
+          <p class="font-bold">{{ 'common.error' | translate }}</p>
+          <p>{{ errorMessage() }}</p>
+        </div>
+      </div>
+    } @else if (ticketData()) {
+      <!-- PrimeNG Official p-tabs Component -->
+      <p-tabs [value]="activeTab()" (valueChange)="onTabChange($event)" class="w-full">
+        <p-tablist>
+          <!-- 1. Details Tab (First) -->
+          <p-tab value="details">
+            <div class="flex items-center gap-1.5 text-xs font-semibold py-0.5">
+              <ng-icon name="tablerTag" size="0.95rem" />
+              <span>{{ 'ticketContext.detailsTab' | translate }}</span>
+            </div>
+          </p-tab>
+
+          <!-- 2. Description Tab -->
+          <p-tab value="description">
+            <div class="flex items-center gap-1.5 text-xs font-semibold py-0.5">
+              <ng-icon name="tablerFileText" size="0.95rem" />
+              <span>{{ 'ticketContext.descriptionTab' | translate }}</span>
+            </div>
+          </p-tab>
+
+          <!-- 3. Comments Tab -->
+          <p-tab value="comments">
+            <div class="flex items-center gap-1.5 text-xs font-semibold py-0.5">
+              <ng-icon name="tablerMessages" size="0.95rem" />
+              <span>{{ 'ticketContext.commentsTab' | translate }}</span>
+              @if (commentsCount() > 0) {
+                <p-badge [value]="commentsCount()" severity="secondary" size="small" />
+              }
+            </div>
+          </p-tab>
+
+          <!-- 4. Attachments & Images Tab -->
+          <p-tab value="attachments">
+            <div class="flex items-center gap-1.5 text-xs font-semibold py-0.5">
+              <ng-icon name="tablerPaperclip" size="0.95rem" />
+              <span>{{ 'ticketContext.attachmentsTab' | translate }}</span>
+              @if (attachmentsCount() > 0) {
+                <p-badge [value]="attachmentsCount()" severity="secondary" size="small" />
+              }
+            </div>
+          </p-tab>
+        </p-tablist>
+
+        <p-tabpanels class="!p-0 !pt-3">
+          <!-- Tab 1: Details Panel (First) -->
+          <p-tabpanel value="details">
+            <div class="space-y-2">
+              <div class="flex justify-end">
+                <button
+                  pButton
+                  type="button"
+                  variant="text"
+                  severity="secondary"
+                  size="small"
+                  (click)="openInOpenProject()"
+                  class="!py-0.5 !px-2 text-xs"
+                  [title]="'ticketContext.openInBrowser' | translate"
+                >
+                  <ng-icon name="tablerExternalLink" size="0.85rem" class="mr-1" />
+                  <span>{{ 'ticketContext.openInBrowser' | translate }}</span>
+                </button>
+              </div>
+
+              <!-- Uniform Metadata Grid (All 12 fields presented consistently) -->
+              <div class="grid grid-cols-2 gap-3 text-xs p-3.5 rounded-xl bg-slate-50/80 dark:bg-zinc-900/60 border border-slate-200/70 dark:border-zinc-800">
+                <!-- 1. Proyecto -->
+                <div class="space-y-0.5 min-w-0">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                    {{ 'ticketContext.project' | translate }}
+                  </span>
+                  <p class="font-medium text-slate-800 dark:text-zinc-200 truncate py-1">
+                    {{ ticketData()?.project_name || '-' }}
+                  </p>
+                </div>
+
+                <!-- 2. Tablero (No se puede cambiar, uniforme con Proyecto) -->
+                <div class="space-y-0.5 min-w-0">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                    {{ 'ticketContext.board' | translate }}
+                  </span>
+                  <p class="font-medium text-slate-800 dark:text-zinc-200 truncate py-1">
+                    {{ boardDisplayName() }}
+                  </p>
+                </div>
+
+                <!-- 3. Estado (Selector interactivo para cambiar estado) -->
+                <div class="space-y-1 min-w-0">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                      {{ 'compact.status' | translate }}
+                    </span>
+                    @if (isUpdatingStatus()) {
+                      <ng-icon name="tablerRefresh" class="animate-spin text-primary-500" size="0.75rem" />
+                    } @else if (statusUpdateSuccess()) {
+                      <span class="text-[10px] text-emerald-500 font-semibold flex items-center gap-0.5">
+                        <ng-icon name="tablerCheck" size="0.75rem" />
+                      </span>
+                    }
+                  </div>
+                  <p-select
+                    [options]="availableStatuses()"
+                    [ngModel]="currentStatusId()"
+                    (ngModelChange)="onStatusChange($event)"
+                    optionLabel="name"
+                    optionValue="id"
+                    [loading]="isUpdatingStatus()"
+                    [disabled]="isUpdatingStatus()"
+                    class="w-full !text-xs"
+                    styleClass="w-full !text-xs !py-0.5"
+                    appendTo="body"
+                  >
+                    <ng-template #selectedItem let-selected>
+                      @if (selected) {
+                        <div class="flex items-center gap-1.5 truncate text-xs">
+                          <span class="size-2 rounded-full shrink-0" [style.backgroundColor]="selected.color || '#3b82f6'"></span>
+                          <span class="truncate">{{ selected.name }}</span>
+                        </div>
+                      }
+                    </ng-template>
+                    <ng-template #item let-item>
+                      <div class="flex items-center gap-1.5 text-xs py-0.5">
+                        <span class="size-2 rounded-full shrink-0" [style.backgroundColor]="item.color || '#3b82f6'"></span>
+                        <span>{{ item.name }}</span>
+                      </div>
+                    </ng-template>
+                  </p-select>
+                </div>
+
+                <!-- 4. Columna (Selector interactivo para mover en el tablero) -->
+                <div class="space-y-1 min-w-0">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                      {{ 'ticketContext.column' | translate }}
+                    </span>
+                    @if (isMovingColumn()) {
+                      <ng-icon name="tablerRefresh" class="animate-spin text-primary-500" size="0.75rem" />
+                    } @else if (moveSuccessMessage()) {
+                      <span class="text-[10px] text-emerald-500 font-semibold flex items-center gap-0.5">
+                        <ng-icon name="tablerCheck" size="0.75rem" />
+                      </span>
+                    }
+                  </div>
+                  <p-select
+                    [options]="columns()"
+                    [ngModel]="selectedColumnId()"
+                    (ngModelChange)="onColumnChange($event)"
+                    optionLabel="name"
+                    optionValue="queryId"
+                    [placeholder]="'ticketContext.selectColumn' | translate"
+                    [loading]="isLoadingColumns() || isLoadingBoards()"
+                    [disabled]="isMovingColumn() || !currentBoardId() || columns().length === 0"
+                    class="w-full !text-xs"
+                    styleClass="w-full !text-xs !py-0.5"
+                    appendTo="body"
+                  />
+                </div>
+
+                <!-- 5. Prioridad -->
+                <div class="space-y-0.5 min-w-0">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                    {{ 'ticketContext.priority' | translate }}
+                  </span>
+                  <p class="font-medium text-slate-800 dark:text-zinc-200 truncate py-1">
+                    {{ ticketData()?.priority_name || '-' }}
+                  </p>
+                </div>
+
+                <!-- 6. Versión -->
+                <div class="space-y-0.5 min-w-0">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                    {{ 'ticketContext.version' | translate }}
+                  </span>
+                  <p class="font-medium text-slate-800 dark:text-zinc-200 truncate py-1">
+                    {{ ticketData()?.version_name || '-' }}
+                  </p>
+                </div>
+
+                <!-- 7. Asignado a -->
+                <div class="space-y-0.5 min-w-0">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                    {{ 'ticketContext.assignedTo' | translate }}
+                  </span>
+                  <p class="font-medium text-slate-800 dark:text-zinc-200 truncate py-1">
+                    {{ ticketData()?.assignee_name || '-' }}
+                  </p>
+                </div>
+
+                <!-- 8. Responsable -->
+                <div class="space-y-0.5 min-w-0">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                    {{ 'ticketContext.responsible' | translate }}
+                  </span>
+                  <p class="font-medium text-slate-800 dark:text-zinc-200 truncate py-1">
+                    {{ ticketData()?.responsible_name || '-' }}
+                  </p>
+                </div>
+
+                <!-- 9. Fecha Inicio -->
+                <div class="space-y-0.5 min-w-0">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                    {{ 'ticketContext.startDate' | translate }}
+                  </span>
+                  <p class="font-medium text-slate-800 dark:text-zinc-200 py-1 font-mono text-[11px]">
+                    {{ ticketData()?.start_date || '-' }}
+                  </p>
+                </div>
+
+                <!-- 10. Fecha Vencimiento -->
+                <div class="space-y-0.5 min-w-0">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                    {{ 'ticketContext.dueDate' | translate }}
+                  </span>
+                  <p class="font-medium text-slate-800 dark:text-zinc-200 py-1 font-mono text-[11px]">
+                    {{ ticketData()?.due_date || '-' }}
+                  </p>
+                </div>
+
+                <!-- 11. Estimado -->
+                <div class="space-y-0.5 min-w-0">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                    {{ 'ticketContext.estimatedTime' | translate }}
+                  </span>
+                  <p class="font-medium text-slate-800 dark:text-zinc-200 py-1 font-mono text-[11px]">
+                    {{ formatDuration(ticketData()?.estimated_time) }}
+                  </p>
+                </div>
+
+                <!-- 12. Invertido -->
+                <div class="space-y-0.5 min-w-0">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                    {{ 'ticketContext.spentTime' | translate }}
+                  </span>
+                  <p class="font-medium text-slate-800 dark:text-zinc-200 py-1 font-mono text-[11px]">
+                    {{ formatDuration(ticketData()?.spent_time) }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </p-tabpanel>
+
+          <!-- Tab 2: Description Panel -->
+          <p-tabpanel value="description">
+            <div class="space-y-2">
+              @if (sanitizedDescription()) {
+                <div class="flex justify-end">
+                  <button
+                    pButton
+                    type="button"
+                    variant="text"
+                    severity="secondary"
+                    size="small"
+                    (click)="copyDescription()"
+                    class="!py-0.5 !px-2 text-xs"
+                  >
+                    @if (copiedDesc()) {
+                      <ng-icon name="tablerCheck" size="0.85rem" class="text-emerald-500 mr-1" />
+                      <span class="text-emerald-500">{{ 'ticketContext.descriptionCopied' | translate }}</span>
+                    } @else {
+                      <ng-icon name="tablerCopy" size="0.85rem" class="mr-1" />
+                      <span>{{ 'ticketContext.copyDescription' | translate }}</span>
+                    }
+                  </button>
+                </div>
+              }
+
+              @if (sanitizedDescription()) {
+                <div
+                  class="op-description-content p-3.5 rounded-xl bg-slate-50/80 dark:bg-zinc-950/60 border border-slate-200/70 dark:border-zinc-800 text-xs text-slate-800 dark:text-zinc-200 leading-relaxed max-h-72 overflow-y-auto select-text prose prose-sm dark:prose-invert max-w-none font-sans"
+                  (click)="onDescriptionContentClick($event)"
+                  [innerHTML]="sanitizedDescription()"
+                ></div>
+              } @else {
+                <div class="py-8 text-center text-slate-400 dark:text-zinc-500 text-xs">
+                  <ng-icon name="tablerFileText" size="1.75rem" class="mx-auto mb-1.5 opacity-40" />
+                  <p>{{ 'ticketContext.noDescription' | translate }}</p>
+                </div>
+              }
+            </div>
+          </p-tabpanel>
+
+          <!-- Tab 3: Comments Panel -->
+          <p-tabpanel value="comments">
+            <div class="space-y-2.5">
+              @if (processedComments().length === 0) {
+                <div class="py-8 text-center text-slate-400 dark:text-zinc-500 text-xs">
+                  <ng-icon name="tablerMessages" size="1.75rem" class="mx-auto mb-1.5 opacity-40" />
+                  <p>{{ 'ticketContext.noComments' | translate }}</p>
+                </div>
+              } @else {
+                <!-- Filter and Sort Controls (Fixed at the top, outside scrollbar) -->
+                <div class="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-zinc-800/80 flex-wrap">
+                  <div class="flex items-center gap-1 flex-wrap">
+                    <!-- All -->
+                    <button
+                      pButton
+                      type="button"
+                      size="small"
+                      [severity]="commentFilter() === 'all' ? 'primary' : 'secondary'"
+                      [variant]="commentFilter() === 'all' ? undefined : 'text'"
+                      (click)="commentFilter.set('all')"
+                      class="!py-0.5 !px-2 text-xs"
+                    >
+                      <span>{{ 'ticketContext.filterAll' | translate }}</span>
+                      <p-badge [value]="processedComments().length" [severity]="commentFilter() === 'all' ? 'contrast' : 'secondary'" size="small" class="ml-1" />
+                    </button>
+                    <!-- Only Comments -->
+                    @if (onlyCommentsCount() > 0) {
+                      <button
+                        pButton
+                        type="button"
+                        size="small"
+                        [severity]="commentFilter() === 'comments' ? 'primary' : 'secondary'"
+                        [variant]="commentFilter() === 'comments' ? undefined : 'text'"
+                        (click)="commentFilter.set('comments')"
+                        class="!py-0.5 !px-2 text-xs"
+                      >
+                        <span>{{ 'ticketContext.filterComments' | translate }}</span>
+                        <p-badge [value]="onlyCommentsCount()" [severity]="commentFilter() === 'comments' ? 'contrast' : 'secondary'" size="small" class="ml-1" />
+                      </button>
+                    }
+                    <!-- Only Changes -->
+                    @if (onlyChangesCount() > 0) {
+                      <button
+                        pButton
+                        type="button"
+                        size="small"
+                        [severity]="commentFilter() === 'changes' ? 'primary' : 'secondary'"
+                        [variant]="commentFilter() === 'changes' ? undefined : 'text'"
+                        (click)="commentFilter.set('changes')"
+                        class="!py-0.5 !px-2 text-xs"
+                      >
+                        <span>{{ 'ticketContext.filterChanges' | translate }}</span>
+                        <p-badge [value]="onlyChangesCount()" [severity]="commentFilter() === 'changes' ? 'contrast' : 'secondary'" size="small" class="ml-1" />
+                      </button>
+                    }
+                  </div>
+
+                  <!-- Sort order toggle -->
+                  <button
+                    pButton
+                    type="button"
+                    size="small"
+                    variant="text"
+                    severity="secondary"
+                    (click)="toggleCommentSort()"
+                    class="!py-0.5 !px-2 text-xs shrink-0"
+                    [title]="(commentSort() === 'desc' ? 'ticketContext.sortNewest' : 'ticketContext.sortOldest') | translate"
+                  >
+                    <ng-icon name="tablerArrowsSort" size="0.85rem" class="mr-1" />
+                    <span>{{ (commentSort() === 'desc' ? 'ticketContext.sortNewest' : 'ticketContext.sortOldest') | translate }}</span>
+                  </button>
+                </div>
+
+                <!-- Items list (Only this scrolls!) -->
+                <div class="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                  @if (filteredComments().length === 0) {
+                    <div class="py-6 text-center text-slate-400 dark:text-zinc-500 text-xs">
+                      <p>{{ 'ticketContext.noComments' | translate }}</p>
+                    </div>
+                  } @else {
+                    @for (comment of filteredComments(); track comment.id) {
+                      <div
+                        class="p-3 rounded-xl bg-slate-50/80 dark:bg-zinc-900/60 border border-slate-200/70 dark:border-zinc-800 space-y-2"
+                      >
+                        <!-- User & Time Header -->
+                        <div class="flex items-center justify-between text-[11px] gap-2">
+                          <div class="flex items-center gap-1.5 font-bold text-slate-800 dark:text-zinc-200 truncate">
+                            <p-avatar
+                              [label]="getUserInitials(getCommentUserName(comment))"
+                              shape="circle"
+                              class="!size-5 !text-[9px] font-bold shrink-0 bg-primary-100 dark:bg-primary-950/60 text-primary-700 dark:text-primary-300"
+                            />
+                            <span class="truncate">{{ getCommentUserName(comment) }}</span>
+                          </div>
+                          @if (getCommentDate(comment)) {
+                            <span class="text-[10px] text-slate-400 dark:text-zinc-500 shrink-0 font-medium">
+                              {{ formatDate(getCommentDate(comment)) }}
+                            </span>
+                          }
+                        </div>
+
+                        <!-- Comment Note Text (Rich formatting, handles inline images) -->
+                        @if (getCommentHtml(comment).trim()) {
+                          <div
+                            class="op-comment-body prose prose-sm dark:prose-invert max-w-none text-xs text-slate-700 dark:text-zinc-300 leading-relaxed break-words select-text font-normal font-sans"
+                            (click)="onCommentContentClick($event)"
+                            [innerHTML]="sanitizeHtml(getCommentHtml(comment))"
+                          ></div>
+                        }
+
+                        <!-- Detail changes list (if any) -->
+                        @if (getCommentDetails(comment).length > 0) {
+                          <div
+                            class="rounded-lg bg-slate-100/70 dark:bg-zinc-950/40 p-2 space-y-1 border border-slate-200/50 dark:border-zinc-800/50"
+                          >
+                            @for (detail of getCommentDetails(comment); track $index) {
+                              <div class="text-[11px] text-slate-600 dark:text-zinc-400 flex items-start gap-1.5 leading-snug">
+                                <span class="text-primary-500 shrink-0 mt-0.5">•</span>
+                                <span class="op-detail-content" [innerHTML]="sanitizeHtml(detail.html || detail.raw)"></span>
+                              </div>
+                            }
+                          </div>
+                        }
+                      </div>
+                    }
+                  }
+                </div>
+              }
+            </div>
+          </p-tabpanel>
+
+          <!-- Tab 4: Attachments Panel -->
+          <p-tabpanel value="attachments">
+            <div class="space-y-3 max-h-80 overflow-y-auto pr-1">
+              @if (allAttachments().length === 0) {
+                <div class="py-8 text-center text-slate-400 dark:text-zinc-500 text-xs">
+                  <ng-icon name="tablerPaperclip" size="1.75rem" class="mx-auto mb-1.5 opacity-40" />
+                  <p>{{ 'ticketContext.noAttachments' | translate }}</p>
+                </div>
+              } @else {
+                <!-- Image Attachments Grid -->
+                @if (imageAttachments().length > 0) {
+                  <div class="space-y-1.5">
+                    <div class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                      <ng-icon name="tablerPhoto" size="0.8rem" />
+                      <span>{{ 'ticketContext.images' | translate }} ({{ imageAttachments().length }})</span>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      @for (img of imageAttachments(); track img.id) {
+                        <div
+                          class="group relative rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950 overflow-hidden cursor-pointer aspect-video flex flex-col justify-end"
+                          (click)="openImagePreview(img)"
+                        >
+                          @if (img.dataUrl) {
+                            <img
+                              [src]="img.dataUrl"
+                              [alt]="img.fileName"
+                              class="absolute inset-0 size-full object-cover transition-transform duration-200 group-hover:scale-105"
+                            />
+                          } @else {
+                            <div class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 gap-1 bg-slate-100/50 dark:bg-zinc-900/50">
+                              @if (img.isLoading) {
+                                <ng-icon name="tablerRefresh" class="animate-spin text-primary-500" size="1.25rem" />
+                                <span class="text-[9px] text-slate-400">Cargando...</span>
+                              } @else {
+                                <ng-icon name="tablerPhoto" size="1.5rem" />
+                              }
+                            </div>
+                          }
+
+                          <div class="relative z-10 p-1.5 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white text-[10px] truncate font-medium flex items-center justify-between">
+                            <span class="truncate">{{ img.fileName }}</span>
+                            <button
+                              type="button"
+                              (click)="$event.stopPropagation(); openAttachment(img)"
+                              class="text-white/80 hover:text-white shrink-0 ml-1 cursor-pointer"
+                              [title]="'ticketContext.openInBrowser' | translate"
+                            >
+                              <ng-icon name="tablerExternalLink" size="0.75rem" />
+                            </button>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+
+                <!-- Other File Attachments List (Direct web-like redirection links) -->
+                @if (fileAttachments().length > 0) {
+                  <div class="space-y-1.5">
+                    <div class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                      <ng-icon name="tablerPaperclip" size="0.8rem" />
+                      <span>{{ 'ticketContext.files' | translate }} ({{ fileAttachments().length }})</span>
+                    </div>
+                    <div class="divide-y divide-slate-100 dark:divide-zinc-800/80 rounded-xl border border-slate-200/70 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 overflow-hidden">
+                      @for (file of fileAttachments(); track file.id) {
+                        <div
+                          class="p-2.5 flex items-center justify-between gap-2 hover:bg-slate-100/70 dark:hover:bg-zinc-800/50 transition-colors group"
+                        >
+                          <a
+                            href="javascript:void(0)"
+                            (click)="openAttachment(file)"
+                            class="flex items-center gap-2 min-w-0 flex-1 text-slate-700 dark:text-zinc-200 hover:text-primary-600 dark:hover:text-primary-400 no-underline cursor-pointer group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors"
+                          >
+                            <ng-icon name="tablerPaperclip" size="1.05rem" class="text-primary-500 shrink-0" />
+                            <span class="text-xs font-medium truncate underline underline-offset-2 decoration-slate-300 dark:decoration-zinc-700 group-hover:decoration-primary-500">
+                              {{ file.fileName }}
+                            </span>
+                            <span class="text-[10px] text-slate-400 dark:text-zinc-500 font-mono shrink-0 ml-1">
+                              ({{ formatFileSize(file.fileSize) }})
+                            </span>
+                          </a>
+
+                          <button
+                            pButton
+                            type="button"
+                            variant="text"
+                            severity="secondary"
+                            size="small"
+                            (click)="openAttachment(file)"
+                            class="!py-0.5 !px-1.5 text-xs text-slate-400 hover:text-primary-600 shrink-0"
+                            [title]="'ticketContext.openInBrowser' | translate"
+                          >
+                            <ng-icon name="tablerExternalLink" size="0.9rem" />
+                          </button>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+          </p-tabpanel>
+        </p-tabpanels>
+      </p-tabs>
+    }
+  </div>
+
+  <!-- Footer Buttons -->
+  <ng-template #footer>
+    <div class="flex items-center justify-between gap-2 pt-2">
+      @if (ticketData()) {
+        <button
+          pButton
+          type="button"
+          severity="primary"
+          size="small"
+          (click)="logTimeForTicket()"
+          class="!py-1.5 !px-3 text-xs font-semibold"
+        >
+          <ng-icon name="tablerPlus" size="0.9rem" class="mr-1" />
+          <span>{{ 'ticketContext.logTimeForTicket' | translate }}</span>
+        </button>
+      } @else {
+        <div></div>
+      }
+
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        variant="text"
+        size="small"
+        (click)="activityService.closeTicketContextModal()"
+        class="text-xs"
+      >
+        {{ 'common.close' | translate }}
+      </button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Expanded Image Lightbox Dialog -->
+<p-dialog
+  [visible]="!!previewImage()"
+  (visibleChange)="onPreviewVisibleChange($event)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '92vw', maxWidth: '800px', minWidth: 'min(92vw, 380px)' }"
+  styleClass="p-dialog-rounded"
+>
+  <ng-template #header>
+    <div class="flex items-center justify-between w-full pr-4">
+      <div class="flex items-center gap-2 min-w-0">
+        <ng-icon name="tablerPhoto" size="1.1rem" class="text-primary-500 shrink-0" />
+        <h4 class="text-sm font-bold text-slate-900 dark:text-zinc-100 truncate">
+          {{ selectedAttachmentName() }}
+        </h4>
+      </div>
+      @if (selectedAttachment()) {
+        <button
+          pButton
+          type="button"
+          variant="text"
+          severity="secondary"
+          size="small"
+          (click)="openAttachment(selectedAttachment()!)"
+          class="!py-0.5 !px-2 text-xs shrink-0"
+          [title]="'ticketContext.openInBrowser' | translate"
+        >
+          <ng-icon name="tablerExternalLink" size="0.85rem" class="mr-1" />
+          <span>{{ 'ticketContext.openInBrowser' | translate }}</span>
+        </button>
+      }
+    </div>
+  </ng-template>
+  <div class="flex items-center justify-center p-2 bg-slate-950 rounded-xl overflow-hidden min-h-[200px]">
+    @if (previewImage()) {
+      <img [src]="previewImage()" [alt]="selectedAttachmentName()" class="max-h-[70vh] object-contain rounded" />
+    } @else {
+      <ng-icon name="tablerRefresh" class="animate-spin text-white" size="2rem" />
+    }
+  </div>
+</p-dialog>
