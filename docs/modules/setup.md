@@ -17,14 +17,13 @@ src/app/modules/setup/
 │   ├── lunch-step/           # Paso 3: Tiempo de Almuerzo / Descanso
 │   ├── openproject-step/     # Paso 4: Conexión con la API de OpenProject
 │   ├── settings-panel/       # Panel de configuración compartido (modo edición del setup y /dashboard/settings)
-│   ├── mcp-section/          # Integración MCP (usa `McpService`); el prompt viene de `get_mcp_contract`
-│   └── mcp-status/           # Panel de compatibilidad MCP (también en Configuración → Sistema)
+│   ├── mcp-section/          # Paso 5 (opcional) e integración MCP (usa `McpService`); el prompt viene de `get_mcp_contract`
+│   └── mcp-status/           # Panel de compatibilidad MCP (estado de `core/services/mcp-compatibility.service.ts`)
 ├── interfaces/
-│   ├── mcp.interface.ts      # Contrato y estado de compatibilidad MCP
 │   └── setup.interface.ts    # Modelos y contratos de UI del wizard
 ├── services/
 │   ├── setup.service.ts      # Estado centralizado del wizard (Signals)
-│   └── mcp.service.ts        # MCP: base local, estadísticas IA, instalación en clientes, reglas IA, contrato y estado de compatibilidad
+│   └── mcp.service.ts        # MCP: base local, estadísticas IA, instalación en clientes, reglas IA y contrato
 ├── pages/
 │   └── setup/setup.page.{ts,html,css}  # Smart component controlador del flujo
 └── setup.routes.ts           # Configuración de rutas lazy-loaded
@@ -37,7 +36,12 @@ src/app/modules/setup/
 El asistente utiliza un componente `<p-stepper>` de PrimeNG y un switcher de contenido reactivo basado en el signal `setupService.activeStep()`:
 
 ```
-[1. Apariencia] ──> [2. Horario] ──> [3. Almuerzo] ──> [4. OpenProject] ──> [Finalizar]
+[1. Apariencia] ──> [2. Horario] ──> [3. Almuerzo] ──> [4. OpenProject] ──> [5. MCP & IA (opcional)] ──> [Finalizar]
+```
+
+Los pasos usan los mismos números que las pestañas del panel de configuración (`ONBOARDING_STEPS = [1, 2, 3, 4, 6]`; la 5, Actualizaciones, solo existe en Configuración), así que el paso MCP es el valor `6` del stepper y muestra `<app-mcp-section />`. Es opcional: el botón **Guardar y Comenzar** está en ese último paso.
+
+```
 ```
 
 ### Paso 1: Apariencia e Idioma (`AppearanceStepComponent`)
@@ -69,8 +73,8 @@ El asistente utiliza un componente `<p-stepper>` de PrimeNG y un switcher de con
 
 La navegación del asistente está centralizada en el componente contenedor [`setup.page.html`](file:///C:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/modules/setup/pages/setup/setup.page.html):
 - **Botón Atrás**: Se renderiza automáticamente a partir del paso 2 (`activeStep > 1`) y navega al paso anterior (`prevStep()`).
-- **Botón Siguiente**: Avanza al siguiente paso (`nextStep()`) en los pasos 1 a 3. Se desactiva reactivamente mediante `isNextDisabled` si el paso actual no cumple sus requisitos de validación (por ejemplo, si no hay grupos de horario configurados en el paso 2).
-- **Botón Guardar y Empezar**: En el paso 4, el botón se transforma en el disparador de finalización (`completeSetup()`) con indicador de carga (`loading`).
+- **Botón Siguiente**: Avanza al siguiente paso (`nextStep()`) en los pasos anteriores al último. Se desactiva reactivamente mediante `isNextDisabled` si el paso actual no cumple sus requisitos de validación (por ejemplo, si no hay grupos de horario configurados en el paso 2).
+- **Botón Guardar y Empezar**: En el último paso (MCP & IA), el botón se transforma en el disparador de finalización (`completeSetup()`) con indicador de carga (`loading`).
 
 ---
 

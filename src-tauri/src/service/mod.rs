@@ -7,6 +7,7 @@ pub(crate) mod connection;
 pub(crate) mod mcp;
 pub(crate) mod mcp_api;
 pub(crate) mod mcp_contract;
+pub(crate) mod my_ticket;
 pub(crate) mod project;
 pub(crate) mod report;
 pub(crate) mod statistic;

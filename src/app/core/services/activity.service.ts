@@ -879,6 +879,28 @@ export class ActivityService {
     this.showSyncModal.set(true);
   }
 
+  /**
+   * Opens the send confirmation for activities of one date (MCP `sync_time_entries`): one activity
+   * shows its detail; several are selected so the bulk send covers exactly them. Nothing is sent
+   * until the user presses Send in the modal.
+   */
+  async openSyncConfirmation(date: string, ids: string[]): Promise<void> {
+    this.selectedDate.set(date);
+    await this.loadActivities(date);
+    const wanted = this.dailyActivities().filter((a) => ids.includes(a.id) && !a.synced && !!a.ticket);
+    if (wanted.length === 0) return;
+    if (wanted.length === 1) {
+      this.openSyncModal(wanted[0]);
+      return;
+    }
+    for (const act of this.activities()) {
+      const selected = wanted.some((w) => w.id === act.id);
+      if (Boolean(act.selected) !== selected) await this.updateActivity(act.id, { selected });
+    }
+    this.isSelectionMode.set(true);
+    this.openSyncModal();
+  }
+
   closeSyncModal(): void {
     this.showSyncModal.set(false);
     this.singleSyncActivity.set(null);
