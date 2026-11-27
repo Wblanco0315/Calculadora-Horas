@@ -1,0 +1,226 @@
+<section class="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
+  <header class="flex shrink-0 flex-wrap items-center justify-between gap-3">
+    <div class="flex min-w-0 items-center gap-2.5">
+      <ng-icon name="tablerClockHour4" size="1.4rem" class="shrink-0 text-primary-600 dark:text-primary-400" />
+      <h1 class="truncate text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100 sm:text-2xl">
+        {{ formattedDateLabel() }}
+      </h1>
+      @if (activityService.isToday()) {
+        <span class="shrink-0 rounded-md bg-primary-50 px-1.5 py-0.5 text-[11px] font-semibold text-primary-700 dark:bg-primary-950/50 dark:text-primary-300">
+          {{ 'compact.today' | translate }}
+        </span>
+      }
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <div class="flex items-center gap-1">
+        @if (!activityService.isToday()) {
+          <button pButton type="button" size="small" variant="text" (click)="activityService.setToday()">
+            <ng-icon pButtonIcon name="tablerCalendarEvent" size="1rem" />
+            <span pButtonLabel>{{ 'compact.today' | translate }}</span>
+          </button>
+        }
+        <button
+          pButton
+          type="button"
+          iconOnly
+          size="small"
+          variant="outlined"
+          severity="secondary"
+          (click)="activityService.setPreviousDay()"
+          [title]="'compact.prevDay' | translate"
+          [attr.aria-label]="'compact.prevDay' | translate"
+        >
+          <ng-icon pButtonIcon name="tablerChevronLeft" size="1rem" />
+        </button>
+        <p-datepicker
+          [ngModel]="selectedDateObj()"
+          (ngModelChange)="onDatePicked($event)"
+          dateFormat="yy-mm-dd"
+          [showIcon]="true"
+          iconDisplay="input"
+          size="small"
+          appendTo="body"
+          inputStyleClass="!w-32 !text-xs !font-mono text-center"
+        />
+        <button
+          pButton
+          type="button"
+          iconOnly
+          size="small"
+          variant="outlined"
+          severity="secondary"
+          [disabled]="activityService.isToday()"
+          (click)="activityService.setNextDay()"
+          [title]="'compact.nextDay' | translate"
+          [attr.aria-label]="'compact.nextDay' | translate"
+        >
+          <ng-icon pButtonIcon name="tablerChevronRight" size="1rem" />
+        </button>
+      </div>
+
+      <span class="hidden h-6 w-px bg-slate-200 dark:bg-zinc-700 sm:block"></span>
+
+      <button pButton type="button" size="small" variant="outlined" severity="secondary" (click)="activityService.openFavoritesModal()">
+        <ng-icon pButtonIcon name="tablerStar" size="1rem" class="text-yellow-500" />
+        <span pButtonLabel>{{ 'compact.favorites' | translate }}</span>
+      </button>
+      <button pButton type="button" size="small" (click)="activityService.openAddModal()">
+        <ng-icon pButtonIcon name="tablerPlus" size="1rem" />
+        <span pButtonLabel>{{ 'compact.add' | translate }}</span>
+      </button>
+    </div>
+  </header>
+
+  <app-time-entry-summary class="shrink-0" />
+
+  <div class="flex min-h-[20rem] min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+    <div class="flex shrink-0 flex-wrap items-center gap-2 border-b border-slate-200 p-3 dark:border-zinc-800">
+      <p-iconfield class="min-w-[12rem] flex-1">
+        <p-inputicon>
+          <ng-icon name="tablerSearch" size="0.95rem" />
+        </p-inputicon>
+        <input
+          pInputText
+          type="text"
+          pSize="small"
+          class="w-full text-xs"
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)"
+          [placeholder]="'compact.searchPlaceholder' | translate"
+        />
+      </p-iconfield>
+      <p-select
+        [options]="projectFilterOptions()"
+        [ngModel]="filterProject()"
+        (ngModelChange)="filterProject.set($event)"
+        optionLabel="label"
+        optionValue="value"
+        [filter]="true"
+        size="small"
+        appendTo="body"
+        class="w-44"
+        styleClass="!text-xs"
+      />
+      <p-select
+        [options]="sortOptions()"
+        [ngModel]="sortBy()"
+        (ngModelChange)="sortBy.set($event)"
+        optionLabel="label"
+        optionValue="value"
+        size="small"
+        appendTo="body"
+        class="w-44"
+        styleClass="!text-xs"
+      />
+      <p-select
+        [options]="statusFilterOptions()"
+        [ngModel]="filterStatus()"
+        (ngModelChange)="filterStatus.set($event)"
+        optionLabel="label"
+        optionValue="value"
+        size="small"
+        appendTo="body"
+        class="w-40"
+        styleClass="!text-xs"
+      />
+      @if (hasActiveFilters()) {
+        <button
+          pButton
+          type="button"
+          iconOnly
+          size="small"
+          variant="text"
+          severity="secondary"
+          (click)="clearFilters()"
+          [title]="'compact.clear' | translate"
+          [attr.aria-label]="'compact.clear' | translate"
+        >
+          <ng-icon pButtonIcon name="tablerFilterOff" size="1rem" />
+        </button>
+      }
+
+      @if (activityService.unsyncedActivities().length > 0 && hasToken()) {
+        <div class="ml-auto flex shrink-0 items-center gap-2">
+          @if (!activityService.isSelectionMode()) {
+            <button
+              pButton
+              type="button"
+              size="small"
+              variant="outlined"
+              severity="secondary"
+              (click)="activityService.toggleSelectionMode()"
+              [title]="'compact.selectionModeTitle' | translate"
+            >
+              <ng-icon pButtonIcon name="tablerSelect" size="1rem" />
+              <span pButtonLabel>{{ 'compact.select' | translate }}</span>
+            </button>
+          } @else {
+            <button pButton type="button" size="small" variant="text" severity="secondary" (click)="activityService.cancelSelection()">
+              <span pButtonLabel>{{ 'compact.cancel' | translate }}</span>
+            </button>
+            <button
+              pButton
+              type="button"
+              size="small"
+              [loading]="isSyncing()"
+              [disabled]="activityService.selectedActivities().length === 0 || isSyncing()"
+              (click)="syncPending()"
+            >
+              <ng-icon pButtonIcon name="tablerCloudUpload" size="1rem" />
+              <span pButtonLabel>{{ 'compact.sendCount' | translate: { count: activityService.selectedActivities().length } }}</span>
+            </button>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="min-h-0 flex-1 overflow-y-auto">
+      @if (filteredActivities().length === 0) {
+        <div class="flex h-full min-h-[14rem] flex-col items-center justify-center gap-3 p-8 text-center">
+          <ng-icon name="tablerClock" size="1.75rem" class="text-slate-300 dark:text-zinc-600" />
+          <p class="max-w-xs whitespace-pre-line text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+            {{ (activityService.isToday() ? 'compact.noMoreRecordsToday' : 'compact.noMoreRecordsDate') | translate }}
+          </p>
+          <button pButton type="button" size="small" variant="outlined" (click)="activityService.openAddModal()">
+            <ng-icon pButtonIcon name="tablerPlus" size="1rem" />
+            <span pButtonLabel>{{ 'compact.add' | translate }}</span>
+          </button>
+        </div>
+      } @else {
+        <div class="divide-y divide-slate-100 dark:divide-zinc-800/80">
+          @for (activity of filteredActivities(); track activity.id) {
+            <app-activity-row
+              [activity]="activity"
+              (editClicked)="activityService.openEditModal($event)"
+              (deleteClicked)="onDeleteActivity($event)"
+              (syncClicked)="onSingleSync($event)"
+            />
+          }
+        </div>
+      }
+    </div>
+  </div>
+</section>
+
+<app-activity-form-modal />
+<app-favorites-modal />
+<app-sync-confirm-modal />
+<app-reset-confirm-modal />
+<p-drawer
+  [visible]="activityService.showTicketContextModal()"
+  (visibleChange)="!$event && activityService.closeTicketContextModal()"
+  position="right"
+  [modal]="true"
+  [showCloseIcon]="false"
+  [maskStyle]="{ top: 'var(--app-header-height)' }"
+  styleClass="ticket-detail-drawer !w-full md:!w-[44rem]"
+>
+  @if (contextTicketId(); as ticketId) {
+    <app-ticket-detail-page
+      [ticket]="ticketId"
+      [embedded]="true"
+      (closeRequested)="activityService.closeTicketContextModal()"
+    />
+  }
+</p-drawer>

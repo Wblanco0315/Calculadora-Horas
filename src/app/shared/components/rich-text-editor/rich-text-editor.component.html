@@ -1,0 +1,22 @@
+@if (!isReady() && !loadError()) {
+  <p-skeleton width="100%" [height]="compact() ? '6rem' : '12rem'" />
+}
+@if (loadError()) {
+  <div class="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300">
+    <ng-icon name="tablerAlertCircle" size="1rem" class="shrink-0" />
+    <span>{{ loadError() }}</span>
+  </div>
+}
+<div
+  class="app-rich-text-editor"
+  [class.app-rich-text-editor--compact]="compact()"
+  [class.hidden]="!isReady()"
+>
+  <div #editorHost></div>
+</div>
+@if (uploadError()) {
+  <p role="alert" class="mt-1 flex items-center gap-1.5 text-[11px] text-rose-600 dark:text-rose-400">
+    <ng-icon name="tablerAlertCircle" size="0.85rem" class="shrink-0" />
+    <span class="truncate">{{ uploadError() }}</span>
+  </p>
+}

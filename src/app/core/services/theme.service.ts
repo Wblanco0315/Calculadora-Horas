@@ -50,22 +50,7 @@ export function getInitialStoredTheme(): ThemeMode {
 }
 
 export function getInitialStoredLightStyle(): LightStyle {
-  if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-    try {
-      const stored = localStorage.getItem(LIGHT_STYLE_STORAGE_KEY) as LightStyle | null;
-      if (stored === 'neutral' || stored === 'warm') {
-        return stored;
-      }
-      const rawConfig = localStorage.getItem('pocketproject_config_storage');
-      if (rawConfig) {
-        const parsed = JSON.parse(rawConfig);
-        if (parsed.light_style === 'neutral' || parsed.light_style === 'warm') {
-          return parsed.light_style;
-        }
-      }
-    } catch {}
-  }
-  return 'neutral';
+  return 'warm';
 }
 
 export function getInitialStoredColor(): PrimaryColor {
@@ -162,22 +147,17 @@ export class ThemeService {
     this.applyTheme(mode);
   }
 
-  setLightStyle(style: LightStyle): void {
-    this.lightStyle.set(style);
+  setLightStyle(style: LightStyle = 'warm'): void {
+    this.lightStyle.set('warm');
     if (typeof window !== 'undefined') {
-      localStorage.setItem(LIGHT_STYLE_STORAGE_KEY, style);
+      localStorage.setItem(LIGHT_STYLE_STORAGE_KEY, 'warm');
     }
-    this.applyLightStyle(style);
+    this.applyLightStyle('warm');
   }
 
-  applyLightStyle(style: LightStyle): void {
+  applyLightStyle(style: LightStyle = 'warm'): void {
     if (typeof document === 'undefined') return;
-    document.documentElement.setAttribute('data-light-style', style);
-  }
-
-  toggleTheme(): void {
-    const isDark = this.isDark();
-    this.setTheme(isDark ? 'light' : 'dark');
+    document.documentElement.setAttribute('data-light-style', 'warm');
   }
 
   setPrimaryColor(color: PrimaryColor, force: boolean = false): void {

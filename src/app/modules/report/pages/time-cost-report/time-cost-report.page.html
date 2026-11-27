@@ -1,0 +1,290 @@
+<section class="flex min-h-0 min-w-0 flex-1 flex-col gap-5">
+  <header class="flex shrink-0 items-center justify-between gap-4">
+    <div class="flex min-w-0 items-center gap-3">
+      @if (cameFromTicket()) {
+        <button
+          pButton
+          type="button"
+          iconOnly
+          rounded
+          severity="secondary"
+          (click)="goBack()"
+          [title]="'common.back' | translate"
+          class="shrink-0"
+        >
+          <ng-icon name="tablerArrowLeft" size="1.1rem" />
+        </button>
+      }
+      <ng-icon name="tablerReportAnalytics" size="1.5rem" class="shrink-0 text-primary-600 dark:text-primary-400" />
+      <h1 class="truncate text-xl font-bold text-slate-900 dark:text-zinc-100 sm:text-2xl">
+        {{ 'report.title' | translate }}
+      </h1>
+    </div>
+    <button pButton type="button" severity="secondary" variant="outlined" [loading]="isLoading()" (click)="runQuery()">
+      <ng-icon name="tablerRefresh" size="1rem" class="mr-1.5" />
+      {{ 'report.refresh' | translate }}
+    </button>
+  </header>
+
+  <section class="shrink-0 rounded-2xl border border-slate-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900/70 sm:p-5">
+    <div class="report-filter-grid">
+      <div class="report-field">
+        <label for="report-ticket" class="report-label text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ 'report.workPackage' | translate }}</label>
+        <input
+          id="report-ticket"
+          pInputText
+          [ngModel]="ticketId()"
+          (ngModelChange)="ticketId.set($event)"
+          [placeholder]="'report.workPackagePlaceholder' | translate"
+          class="w-full text-sm"
+        />
+      </div>
+
+      <div class="report-field">
+        <label class="report-label text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ 'report.project' | translate }}</label>
+        <p-select
+          [options]="projectOption()"
+          [ngModel]="projectId()"
+          (ngModelChange)="onProjectChange($event)"
+          optionLabel="name"
+          optionValue="id"
+          [filter]="true"
+          [showClear]="true"
+          [placeholder]="'report.allProjects' | translate"
+          appendTo="body"
+          [fluid]="true" class="w-full" styleClass="!text-sm"
+        />
+      </div>
+
+      <div class="report-field">
+        <label for="report-user" class="report-label text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ 'report.userId' | translate }}</label>
+        <input
+          id="report-user"
+          pInputText
+          [ngModel]="userId()"
+          (ngModelChange)="userId.set($event)"
+          [placeholder]="'report.userIdPlaceholder' | translate"
+          class="w-full text-sm"
+        />
+      </div>
+
+      <div class="report-field">
+        <label class="report-label text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ 'report.activity' | translate }}</label>
+        <p-select
+          [options]="activityOption()"
+          [ngModel]="activityId()"
+          (ngModelChange)="activityId.set($event)"
+          optionLabel="name"
+          optionValue="id"
+          [showClear]="true"
+          [placeholder]="'report.allActivities' | translate"
+          appendTo="body"
+          [fluid]="true" class="w-full" styleClass="!text-sm"
+        />
+      </div>
+
+      <div class="report-field">
+        <label class="report-label text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ 'report.spentOnFrom' | translate }}</label>
+        <p-datepicker
+          [ngModel]="spentOnFrom()"
+          (ngModelChange)="spentOnFrom.set($event)"
+          dateFormat="yy-mm-dd"
+          [showClear]="true"
+          appendTo="body"
+          [fluid]="true"
+          class="w-full"
+          inputStyleClass="!text-sm !font-mono"
+        />
+      </div>
+
+      <div class="report-field">
+        <label class="report-label text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ 'report.spentOnTo' | translate }}</label>
+        <p-datepicker
+          [ngModel]="spentOnTo()"
+          (ngModelChange)="spentOnTo.set($event)"
+          dateFormat="yy-mm-dd"
+          [showClear]="true"
+          appendTo="body"
+          [fluid]="true"
+          class="w-full"
+          inputStyleClass="!text-sm !font-mono"
+        />
+      </div>
+
+      <div class="report-field">
+        <label class="report-label text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ 'report.groupBy' | translate }}</label>
+        <p-select
+          [options]="groupOption"
+          [ngModel]="groupBy()"
+          (ngModelChange)="groupBy.set($event)"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+          [fluid]="true" class="w-full" styleClass="!text-sm"
+        >
+          <ng-template #item let-item>
+            <span>{{ item.label | translate }}</span>
+          </ng-template>
+          <ng-template #selectedItem let-item>
+            <span>{{ item?.label | translate }}</span>
+          </ng-template>
+        </p-select>
+      </div>
+
+      <div class="report-field report-field--action">
+        <label class="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-zinc-400">
+          <p-checkbox
+            [binary]="true"
+            [ngModel]="includeDescendants()"
+            (ngModelChange)="includeDescendants.set($event)"
+          />
+          <span>{{ 'report.includeDescendants' | translate }}</span>
+        </label>
+        <button pButton type="button" (click)="runQuery()" [loading]="isLoading()" class="shrink-0">
+          <ng-icon name="tablerSearch" size="1rem" class="mr-1.5" />
+          {{ 'report.run' | translate }}
+        </button>
+      </div>
+    </div>
+  </section>
+
+  @if (errorMessage()) {
+    <div role="alert" class="shrink-0 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300">
+      {{ (errorMessage() ?? '') | translate }}
+    </div>
+  }
+
+  <section class="flex min-h-0 min-w-0 flex-1 flex-col rounded-2xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/70">
+    <div class="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-slate-200 px-4 py-3 dark:border-zinc-800 sm:px-5">
+      <div class="flex flex-wrap items-baseline gap-x-6 gap-y-2">
+        <div class="report-metric">
+          <span class="text-slate-500 dark:text-zinc-400">{{ 'report.entryCount' | translate }}</span>
+          <span class="font-mono font-semibold text-slate-800 dark:text-zinc-200">{{ timeEntry().length }}</span>
+        </div>
+        <div class="report-metric">
+          <span class="text-slate-500 dark:text-zinc-400">{{ 'report.totalHours' | translate }}</span>
+          <span class="font-mono font-semibold text-primary-700 dark:text-primary-300">{{ totalHoursLabel() }}</span>
+        </div>
+        @if (hasCostSummary()) {
+          <div class="report-metric">
+            <span class="text-slate-500 dark:text-zinc-400">{{ 'ticketDetail.laborCost' | translate }}</span>
+            <span class="font-mono font-semibold text-slate-800 dark:text-zinc-200">{{ costSummary()?.laborCosts || '—' }}</span>
+          </div>
+          <div class="report-metric">
+            <span class="text-slate-500 dark:text-zinc-400">{{ 'ticketDetail.materialCost' | translate }}</span>
+            <span class="font-mono font-semibold text-slate-800 dark:text-zinc-200">{{ costSummary()?.materialCosts || '—' }}</span>
+          </div>
+          <div class="report-metric">
+            <span class="text-slate-500 dark:text-zinc-400">{{ 'ticketDetail.totalCost' | translate }}</span>
+            <span class="font-mono font-bold text-emerald-700 dark:text-emerald-300">{{ costSummary()?.overallCosts || '—' }}</span>
+          </div>
+        }
+      </div>
+      @if (ticketId()) {
+        <button pButton type="button" variant="outlined" severity="secondary" size="small" (click)="openCostReport()" class="flex items-center gap-1.5">
+          <ng-icon name="tablerExternalLink" size="0.95rem" />
+          {{ 'report.openOpenProjectReport' | translate }}
+        </button>
+      }
+    </div>
+
+    @if (editingTimeEntryId()) {
+      <div class="report-edit-grid shrink-0 border-b border-primary-200 bg-primary-50/60 p-4 dark:border-primary-900/60 dark:bg-primary-950/20">
+        <div class="report-field">
+          <label class="report-label text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ 'ticketDetail.timeEntryDate' | translate }}</label>
+          <p-datepicker [ngModel]="editingDate()" (ngModelChange)="editingDate.set($event)" dateFormat="yy-mm-dd" appendTo="body" [fluid]="true" class="w-full" inputStyleClass="!text-xs !font-mono" />
+        </div>
+        <div class="report-field">
+          <label class="report-label text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ 'ticketDetail.timeEntryHours' | translate }}</label>
+          <p-inputnumber [ngModel]="editingHours()" (ngModelChange)="editingHours.set($event)" suffix=" h" [min]="0.01" [maxFractionDigits]="2" [fluid]="true" class="w-full" inputStyleClass="!text-xs !font-mono" />
+        </div>
+        <div class="report-field">
+          <label class="report-label text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ 'ticketDetail.timeEntryActivity' | translate }}</label>
+          <p-select [options]="activityOption()" [ngModel]="editingActivityId()" (ngModelChange)="editingActivityId.set($event)" optionLabel="name" optionValue="id" appendTo="body" [fluid]="true" class="w-full" styleClass="!text-xs" />
+        </div>
+        <div class="report-field">
+          <label class="report-label text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ 'ticketDetail.timeEntryComment' | translate }}</label>
+          <textarea pTextarea [ngModel]="editingComment()" (ngModelChange)="editingComment.set($event)" rows="1" class="w-full resize-y text-xs"></textarea>
+        </div>
+        <div class="flex items-center justify-end gap-2">
+          <button pButton type="button" severity="secondary" variant="outlined" size="small" (click)="cancelEditing()">{{ 'common.cancel' | translate }}</button>
+          <button pButton type="button" size="small" [loading]="isSavingEntry()" (click)="saveTimeEntry()">{{ 'common.save' | translate }}</button>
+        </div>
+        @if (editError()) {
+          <p role="alert" class="text-xs text-rose-600 md:col-span-full">{{ editError() }}</p>
+        }
+      </div>
+    }
+
+    @if (groupBy() === 'none') {
+      <p-table
+        [value]="reportRow()"
+        [scrollable]="true"
+        scrollHeight="flex"
+        [paginator]="reportRow().length > 25"
+        [rows]="25"
+        [rowsPerPageOptions]="[10, 25, 50, 100]"
+        sortField="spentOn"
+        [sortOrder]="-1"
+        [tableStyle]="{ 'min-width': '100%' }"
+        styleClass="p-datatable-sm h-full report-table"
+      >
+        <ng-template #header>
+          <tr>
+            <th pSortableColumn="spentOn"><span class="report-th">{{ 'ticketDetail.timeEntryDate' | translate }}<p-sort-icon field="spentOn" /></span></th>
+            <th pSortableColumn="startTimeSort"><span class="report-th">{{ 'ticketDetail.timeEntryTime' | translate }}<p-sort-icon field="startTimeSort" /></span></th>
+            <th pSortableColumn="userName"><span class="report-th">{{ 'ticketDetail.timeEntryUser' | translate }}<p-sort-icon field="userName" /></span></th>
+            <th pSortableColumn="activityName"><span class="report-th">{{ 'ticketDetail.timeEntryActivity' | translate }}<p-sort-icon field="activityName" /></span></th>
+            <th pSortableColumn="workPackageName"><span class="report-th">{{ 'ticketDetail.timeEntryWorkPackage' | translate }}<p-sort-icon field="workPackageName" /></span></th>
+            <th pSortableColumn="comment"><span class="report-th">{{ 'ticketDetail.timeEntryComment' | translate }}<p-sort-icon field="comment" /></span></th>
+            <th pSortableColumn="projectName"><span class="report-th">{{ 'ticketDetail.timeEntryProject' | translate }}<p-sort-icon field="projectName" /></span></th>
+            <th pSortableColumn="hoursSort"><span class="report-th">{{ 'ticketDetail.timeEntryUnits' | translate }}<p-sort-icon field="hoursSort" /></span></th>
+            <th>{{ 'ticketDetail.timeEntryActions' | translate }}</th>
+          </tr>
+        </ng-template>
+        <ng-template #body let-entry>
+          <tr>
+            <td class="whitespace-nowrap">{{ formatDate(entry.spentOn) }}</td>
+            <td class="whitespace-nowrap font-mono">{{ formatTime(entry.startTime) }}</td>
+            <td [title]="entry.userName"><span class="report-cell-text">{{ entry.userName }}</span></td>
+            <td [title]="entry.activityName"><span class="report-cell-text">{{ entry.activityName || '—' }}</span></td>
+            <td [title]="entry.workPackageName"><span class="report-cell-text">{{ entry.workPackageName || '—' }}</span></td>
+            <td [title]="entry.comment"><span class="report-cell-text">{{ entry.comment || '—' }}</span></td>
+            <td [title]="entry.projectName"><span class="report-cell-text">{{ entry.projectName || '—' }}</span></td>
+            <td class="whitespace-nowrap text-right font-mono font-semibold">{{ formatDuration(entry.hours) }}</td>
+            <td class="whitespace-nowrap">
+              @if (canEditTimeEntry(entry)) {
+                <button pButton type="button" size="small" severity="secondary" variant="outlined" (click)="startEditingTimeEntry(entry)">{{ 'common.edit' | translate }}</button>
+              } @else {
+                <span class="text-xs text-slate-400">—</span>
+              }
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+          <tr><td colspan="9" class="py-10 text-center text-sm text-slate-500">{{ 'report.noEntries' | translate }}</td></tr>
+        </ng-template>
+      </p-table>
+    } @else {
+      <p-table [value]="groupRow()" [scrollable]="true" scrollHeight="flex" styleClass="p-datatable-sm h-full report-table">
+        <ng-template #header>
+          <tr>
+            <th pSortableColumn="label"><span class="report-th">{{ 'report.groupValue' | translate }}<p-sort-icon field="label" /></span></th>
+            <th pSortableColumn="entryCount"><span class="report-th">{{ 'report.entryCount' | translate }}<p-sort-icon field="entryCount" /></span></th>
+            <th pSortableColumn="totalMinutes"><span class="report-th">{{ 'report.totalHours' | translate }}<p-sort-icon field="totalMinutes" /></span></th>
+          </tr>
+        </ng-template>
+        <ng-template #body let-row>
+          <tr>
+            <td [title]="row.label"><span class="report-cell-text">{{ row.label }}</span></td>
+            <td class="text-right font-mono">{{ row.entryCount }}</td>
+            <td class="text-right font-mono font-semibold">{{ formatMinutesLabel(row.totalMinutes) }}</td>
+          </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+          <tr><td colspan="3" class="py-10 text-center text-sm text-slate-500">{{ 'report.noEntries' | translate }}</td></tr>
+        </ng-template>
+      </p-table>
+    }
+  </section>
+</section>

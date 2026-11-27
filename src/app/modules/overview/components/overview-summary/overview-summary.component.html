@@ -1,0 +1,60 @@
+<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  @for (tile of tiles(); track tile.key) {
+    @let summary = tile.summary;
+    @let change = trend(summary);
+    <div class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+      <h3 class="flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-zinc-300">
+        <ng-icon [name]="tile.icon" size="1.1rem" class="text-primary-500" />
+        {{ tile.label | translate }}
+      </h3>
+
+      <div class="flex items-baseline justify-between gap-2">
+        <span class="font-mono text-2xl font-bold text-slate-900 dark:text-zinc-100">{{ format(summary.minutes) }}</span>
+        <span class="font-mono text-xs text-slate-500 dark:text-zinc-400">
+          @if (summary.targetMinutes > 0) {
+            {{ 'overview.ofTarget' | translate: { target: format(summary.targetMinutes) } }}
+          } @else {
+            {{ 'overview.noTarget' | translate }}
+          }
+        </span>
+      </div>
+
+      <p-progressbar [value]="progress(summary)" [showValue]="false" styleClass="h-1.5 rounded-full" />
+
+      <div class="flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-zinc-400">
+        <span>{{ tile.detail.key | translate: tile.detail.params }}</span>
+        @if (change !== null) {
+          <span
+            class="inline-flex items-center gap-0.5 font-medium"
+            [class]="change >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'"
+            [title]="tile.comparisonLabel | translate"
+          >
+            <ng-icon [name]="change >= 0 ? 'tablerArrowUpRight' : 'tablerArrowDownRight'" size="0.9rem" />
+            {{ change >= 0 ? '+' : '' }}{{ change }}% {{ tile.comparisonLabel | translate }}
+          </span>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Local activities not uploaded to OpenProject yet -->
+  <div class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+    <h3 class="flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-zinc-300">
+      <ng-icon name="tablerCloudUpload" size="1.1rem" class="text-primary-500" />
+      {{ 'overview.unsynced' | translate }}
+    </h3>
+
+    <span class="font-mono text-2xl font-bold text-slate-900 dark:text-zinc-100">{{ format(unsynced().minutes) }}</span>
+
+    <div class="mt-auto flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-zinc-400">
+      <span>
+        @if (unsynced().entryCount === 0) {
+          {{ 'overview.allSynced' | translate }}
+        } @else {
+          {{ 'overview.entries' | translate: { count: unsynced().entryCount } }}
+        }
+      </span>
+      <span class="font-medium text-slate-600 dark:text-zinc-300">{{ 'overview.streak' | translate: { days: streak() } }}</span>
+    </div>
+  </div>
+</div>

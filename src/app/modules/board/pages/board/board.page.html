@@ -1,0 +1,124 @@
+@defer (when isLoaded(); prefetch on idle) {
+  <div class="animate-fadeIn flex flex-1 min-h-0 min-w-0 flex-col w-full space-y-4">
+    <!-- Top Board Toolbar -->
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 shrink-0 min-w-0">
+      <div class="flex flex-wrap sm:flex-nowrap items-center gap-2.5 min-w-0">
+        <button
+          pButton
+          type="button"
+          iconOnly
+          rounded
+          severity="secondary"
+          (click)="goBackToBoardList()"
+          [title]="'common.back' | translate"
+          class="shrink-0"
+        >
+          <ng-icon name="tablerArrowLeft" size="1.15rem" />
+        </button>
+
+        <ng-icon
+          name="tablerLayoutKanban"
+          size="1.35rem"
+          class="text-primary-600 dark:text-primary-400 shrink-0"
+        />
+        <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-zinc-100 truncate min-w-0">
+          {{ selectedBoardName() }}
+        </h1>
+
+      </div>
+
+      <div class="flex flex-col sm:flex-row sm:items-center gap-2 w-full lg:w-auto min-w-0">
+        <p-iconfield class="w-full sm:w-56">
+          <p-inputicon>
+            <ng-icon name="tablerSearch" size="1rem" />
+          </p-inputicon>
+          <input
+            pInputText
+            type="text"
+            [ngModel]="searchQuery()"
+            (ngModelChange)="searchQuery.set($event)"
+            [placeholder]="'board.searchPlaceholder' | translate"
+            class="w-full text-xs sm:text-sm"
+          />
+        </p-iconfield>
+
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          @if (assigneeOptions().length > 0) {
+            <p-select
+              [options]="assigneeOptions()"
+              [ngModel]="selectedAssigneeFilter()"
+              (ngModelChange)="selectedAssigneeFilter.set($event)"
+              optionLabel="label"
+              optionValue="value"
+              [showClear]="true"
+              [placeholder]="'board.filterAssignee' | translate"
+              styleClass="!text-xs sm:!text-sm flex-1 sm:flex-none sm:w-44"
+            />
+          }
+
+          <button
+            pButton
+            type="button"
+            iconOnly
+            rounded
+            severity="secondary"
+            [disabled]="isRefreshing()"
+            (click)="refreshBoard()"
+            [title]="'dashboard.refresh' | translate"
+            class="shrink-0"
+          >
+            <ng-icon name="tablerRefresh" size="1.15rem" [class.animate-spin]="isRefreshing()" />
+          </button>
+        </div>
+      </div>
+    </div>
+
+    @if (moveError()) {
+      <div role="alert" class="shrink-0 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300">
+        {{ moveError() }}
+      </div>
+    }
+
+    <!-- Kanban Columns Area -->
+    @if (boards().length === 0) {
+      <div class="p-10 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex flex-col items-center justify-center gap-3 text-center">
+        <ng-icon name="tablerFilterOff" size="2rem" class="text-slate-400 dark:text-zinc-500" />
+        <p class="text-sm font-medium text-slate-600 dark:text-zinc-400">
+          {{ 'board.noBoards' | translate }}
+        </p>
+      </div>
+    } @else {
+      <div class="flex-1 min-h-0 min-w-0 w-full flex gap-3 sm:gap-4 overflow-x-auto pb-3 items-stretch">
+        @for (item of filteredColumns(); track item.column.queryId) {
+          <app-board-column
+            [column]="item.column"
+            [cards]="item.cards"
+            [statuses]="statuses()"
+            [projectName]="projectName()"
+            [connectedColumnIds]="dropListIds()"
+            (cardClick)="openTicketDetail($event, item.column.queryId)"
+            (cardDrop)="onCardDrop($event)"
+            (statusChange)="onCardStatusChange($event)"
+          />
+        }
+      </div>
+    }
+  </div>
+
+} @placeholder (minimum 300ms) {
+  <div class="flex flex-col h-full space-y-4 animate-pulse">
+    <div class="flex items-center justify-between gap-3">
+      <p-skeleton width="16rem" height="2rem" borderRadius="0.5rem" />
+      <p-skeleton width="14rem" height="2.25rem" borderRadius="0.75rem" />
+    </div>
+    <div class="flex gap-4 overflow-x-auto flex-1">
+      @for (col of [1, 2, 3, 4]; track col) {
+        <div class="w-72 shrink-0 p-3 rounded-2xl bg-slate-100/80 dark:bg-zinc-900/60 border border-slate-200 dark:border-zinc-800 space-y-3">
+          <p-skeleton width="60%" height="1.25rem" />
+          <p-skeleton width="100%" height="6.5rem" borderRadius="0.75rem" />
+          <p-skeleton width="100%" height="6.5rem" borderRadius="0.75rem" />
+        </div>
+      }
+    </div>
+  </div>
+}

@@ -1,0 +1,92 @@
+@if (status(); as s) {
+  <div class="space-y-3">
+    <div class="flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <ng-icon name="tablerPlugConnected" size="1.1rem" class="shrink-0 text-primary-600 dark:text-primary-400" />
+        <h3 class="text-sm font-bold text-slate-900 dark:text-zinc-100">{{ 'mcpStatus.title' | translate }}</h3>
+      </div>
+      <div class="flex items-center gap-1">
+        @if (hasOutdated()) {
+          <button pButton type="button" size="small" [loading]="isUpdating()" (click)="updateOutdated()">
+            <ng-icon pButtonIcon name="tablerDownload" size="1rem" />
+            <span pButtonLabel>{{ 'mcpStatus.updateAll' | translate }}</span>
+          </button>
+        }
+        <button
+          pButton
+          type="button"
+          size="small"
+          variant="text"
+          severity="secondary"
+          iconOnly
+          [loading]="isLoading()"
+          (click)="refresh()"
+          [title]="'mcpStatus.refresh' | translate"
+          [attr.aria-label]="'mcpStatus.refresh' | translate"
+        >
+          <ng-icon pButtonIcon name="tablerRefresh" size="1rem" />
+        </button>
+      </div>
+    </div>
+
+    <dl class="grid grid-cols-1 gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
+      <div class="flex items-center justify-between gap-2">
+        <dt class="text-slate-500 dark:text-zinc-400">{{ 'mcpStatus.app' | translate }}</dt>
+        <dd class="font-mono text-slate-800 dark:text-zinc-200">
+          v{{ s.contract.appVersion }} · {{ 'mcpStatus.protocol' | translate: { version: s.contract.protocolVersion } }}
+        </dd>
+      </div>
+      <div class="flex items-center justify-between gap-2">
+        <dt class="text-slate-500 dark:text-zinc-400">{{ 'mcpStatus.required' | translate }}</dt>
+        <dd class="font-mono text-slate-800 dark:text-zinc-200">≥ {{ s.contract.minMcpVersion }} ({{ s.contract.packageSpec }})</dd>
+      </div>
+      <div class="flex items-center justify-between gap-2">
+        <dt class="text-slate-500 dark:text-zinc-400">{{ 'mcpStatus.lastMcp' | translate }}</dt>
+        <dd class="flex items-center gap-2">
+          @if (s.connection; as connection) {
+            <span class="font-mono text-slate-800 dark:text-zinc-200">v{{ connection.runtime.mcpVersion }}</span>
+          }
+          <p-tag [value]="connectionTag().key | translate" [severity]="connectionTag().severity" />
+        </dd>
+      </div>
+      <div class="flex items-center justify-between gap-2">
+        <dt class="text-slate-500 dark:text-zinc-400">{{ 'mcpStatus.rules' | translate }}</dt>
+        <dd class="flex items-center gap-2">
+          <span class="font-mono text-slate-800 dark:text-zinc-200">{{ s.contract.rulesVersion }}</span>
+          <p-tag [value]="rulesTag().key | translate" [severity]="rulesTag().severity" />
+        </dd>
+      </div>
+    </dl>
+
+    @if (rulesFiles().length > 0) {
+      <ul class="divide-y divide-slate-100 rounded-xl border border-slate-200 text-xs dark:divide-zinc-800 dark:border-zinc-800">
+        @for (rules of rulesFiles(); track rules.path) {
+          <li class="flex items-center justify-between gap-2 px-3 py-2">
+            <span class="min-w-0 truncate font-mono text-slate-600 dark:text-zinc-400" [title]="rules.path">{{ rules.path }}</span>
+            <p-tag
+              [value]="(rules.upToDate ? 'mcpStatus.upToDate' : 'mcpStatus.outdated') | translate"
+              [severity]="rules.upToDate ? 'success' : 'warn'"
+            />
+          </li>
+        }
+      </ul>
+    }
+
+    @if (configuredClients().length > 0) {
+      <ul class="divide-y divide-slate-100 rounded-xl border border-slate-200 text-xs dark:divide-zinc-800 dark:border-zinc-800">
+        @for (client of configuredClients(); track client.client) {
+          <li class="flex items-center justify-between gap-2 px-3 py-2">
+            <span class="min-w-0 truncate text-slate-700 dark:text-zinc-300" [title]="client.path">
+              {{ clientLabelKey(client.client) | translate }}
+              <span class="font-mono text-slate-400 dark:text-zinc-500">{{ client.packageSpec }}</span>
+            </span>
+            <p-tag
+              [value]="(client.upToDate ? 'mcpStatus.upToDate' : 'mcpStatus.outdated') | translate"
+              [severity]="client.upToDate ? 'success' : 'warn'"
+            />
+          </li>
+        }
+      </ul>
+    }
+  </div>
+}

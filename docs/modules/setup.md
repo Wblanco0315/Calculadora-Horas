@@ -7,7 +7,7 @@ El módulo `setup` gestiona el flujo del asistente (wizard) de bienvenida y conf
 ## 1. Ubicación y Estructura
 
 - **Ruta del Módulo**: `src/app/modules/setup/`
-- **Ruta de Navegación**: `/setup` (definida en `setup.router.ts`)
+- **Ruta de Navegación**: `/setup` (definida en `setup.routes.ts`)
 
 ```
 src/app/modules/setup/
@@ -15,18 +15,19 @@ src/app/modules/setup/
 │   ├── appearance-step/      # Paso 1: Apariencia, Tema y Color de Acento
 │   ├── schedule-step/        # Paso 2: Configuración de Jornada y Horario
 │   ├── lunch-step/           # Paso 3: Tiempo de Almuerzo / Descanso
-│   └── openproject-step/     # Paso 4: Conexión con la API de OpenProject
+│   ├── openproject-step/     # Paso 4: Conexión con la API de OpenProject
+│   ├── settings-panel/       # Panel de configuración compartido (modo edición del setup y /dashboard/settings)
+│   ├── mcp-section/          # Integración MCP (usa `McpService`); el prompt viene de `get_mcp_contract`
+│   └── mcp-status/           # Panel de compatibilidad MCP (también en Configuración → Sistema)
 ├── interfaces/
+│   ├── mcp.interface.ts      # Contrato y estado de compatibilidad MCP
 │   └── setup.interface.ts    # Modelos y contratos de UI del wizard
-├── modals/
-│   └── close-confirm-modal/  # Diálogo de confirmación al cerrar la aplicación
-├── pages/
-│   ├── setup.page.html       # Estructura del Stepper y navegación compartida
-│   ├── setup.page.ts         # Smart component controlador del flujo
-│   └── setup.page.css        # Estilos específicos de la página
 ├── services/
-│   └── setup.service.ts      # Estado centralizado del wizard (Signals)
-└── setup.router.ts           # Configuración de rutas lazy-loaded
+│   ├── setup.service.ts      # Estado centralizado del wizard (Signals)
+│   └── mcp.service.ts        # MCP: base local, estadísticas IA, instalación en clientes, reglas IA, contrato y estado de compatibilidad
+├── pages/
+│   └── setup/setup.page.{ts,html,css}  # Smart component controlador del flujo
+└── setup.routes.ts           # Configuración de rutas lazy-loaded
 ```
 
 ---
@@ -66,7 +67,7 @@ El asistente utiliza un componente `<p-stepper>` de PrimeNG y un switcher de con
 
 ## 3. Navegación y Footer Centralizado
 
-La navegación del asistente está centralizada en el componente contenedor [`setup.page.html`](file:///C:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/modules/setup/pages/setup.page.html):
+La navegación del asistente está centralizada en el componente contenedor [`setup.page.html`](file:///C:/Users/wposs/Documents/Proyectos_personales/PocketProject/src/app/modules/setup/pages/setup/setup.page.html):
 - **Botón Atrás**: Se renderiza automáticamente a partir del paso 2 (`activeStep > 1`) y navega al paso anterior (`prevStep()`).
 - **Botón Siguiente**: Avanza al siguiente paso (`nextStep()`) en los pasos 1 a 3. Se desactiva reactivamente mediante `isNextDisabled` si el paso actual no cumple sus requisitos de validación (por ejemplo, si no hay grupos de horario configurados en el paso 2).
 - **Botón Guardar y Empezar**: En el paso 4, el botón se transforma en el disparador de finalización (`completeSetup()`) con indicador de carga (`loading`).
@@ -89,4 +90,4 @@ El asistente solo se muestra cuando es la primera vez que se ejecuta la aplicaci
    - **Modo Pantalla Completa en Onboarding Inicial**: Para permitir completar los formularios de horario, almuerzo y OpenProject de manera cómoda y sin restricciones de espacio, la aplicación maximiza automáticamente la ventana nativa de Tauri al iniciar el setup inicial (`!is_configured`).
    - **Contenedor Principal de Ancho Completo**: Ocupa el 100% de la ventana (`h-dvh w-full overflow-hidden`) con el encabezado y el stepper fijados en la parte superior, el contenido central centrado en un ancho ergonómico (`max-w-4xl mx-auto w-full`) con scroll vertical independiente, y el pie de navegación inferior fijo.
    - **Barra de Acciones Superior Unificada (`<app-header>`)**: Componente transversal reutilizable con arrastre suave de ventana (`startDragging`), doble clic para maximizar/restaurar, y controles nativos de Windows (Minimizar, Maximizar / Restaurar y Cerrar con modal de confirmación en setup inicial).
-   - **Retorno a Modo Compacto**: Al completar exitosamente la configuración (`completeSetup()`) o al cerrar los ajustes, la aplicación desmaximiza y reajusta la ventana al tamaño compacto original (525x800) centrado en pantalla.
+   - **Retorno a Modo Compacto**: al terminar el onboarding (`completeSetup()` → `setCompactMode({ reset: true })`) la ventana se desmaximiza y vuelve al tamaño compacto por defecto (525x800) centrada. Al guardar o cerrar los ajustes de la ventana compacta (`/setup?edit=true`) solo se navega a `/compact` (`returnToCompact()`): la ventana conserva su tamaño, posición y maximizado.

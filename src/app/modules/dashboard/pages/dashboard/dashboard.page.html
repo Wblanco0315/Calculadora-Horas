@@ -1,0 +1,278 @@
+<div class="h-screen w-full flex flex-col overflow-hidden bg-slate-50 dark:bg-zinc-950 transition-colors duration-200">
+  <app-header class="shrink-0" />
+
+  <div class="flex-1 min-h-0 flex overflow-hidden">
+    <p-sidebar-layout class="min-h-full! w-full relative!">
+      @if (isMobile() && open()) {
+      <p-sidebar-backdrop class="absolute!" />
+      }
+
+    <!-- Collapsible PrimeNG Sidebar -->
+    <p-sidebar id="preview" [collapsible]="isMobile() ? 'offcanvas' : 'icon'" [overlay]="isMobile()" [(open)]="open">
+      <p-sidebar-spacer />
+      <p-sidebar-aside>
+        <p-sidebar-panel class="bg-white dark:bg-zinc-900 border-r border-slate-200 dark:border-zinc-800">
+          <!-- Sidebar Header -->
+          <p-sidebar-header class="border-b border-slate-100 dark:border-zinc-800">
+            <p-sidebar-menu class="gap-3!">
+              <p-sidebar-menu-item>
+                <button pSidebarMenuButton class="p-1! cursor-pointer" (click)="navigateTo('/dashboard/overview')">
+                  <app-logo [variant]="'isologo'" [size]="'md'" class="shrink-0 drop-shadow-xs" />
+                  
+                </button>
+              </p-sidebar-menu-item>
+              @if (open() || isMobile()) {
+              <p-sidebar-menu-item class="pb-1">
+                <p-iconfield class="w-full">
+                  <p-inputicon>
+                    <ng-icon name="tablerSearch" size="0.9rem" />
+                  </p-inputicon>
+                  <input #sidebarSearch pInputText type="search" pSize="small" class="w-full text-xs"
+                    [value]="sidebarQuery()" (input)="onSidebarQueryChange(sidebarSearch.value)"
+                    (keydown.enter)="onSidebarSearchSubmit()" (keydown.escape)="onSidebarQueryChange('')"
+                    [placeholder]="'dashboard.sidebarSearch' | translate"
+                    [attr.aria-label]="'dashboard.sidebarSearch' | translate" />
+                </p-iconfield>
+              </p-sidebar-menu-item>
+              } @else {
+              <p-sidebar-menu-item>
+                <button pSidebarMenuButton class="cursor-pointer" (click)="open.set(true)"
+                  [title]="'dashboard.sidebarSearch' | translate">
+                  <ng-icon name="tablerSearch" size="1.1rem" class="shrink-0" />
+                  <span class="text-xs sm:text-sm">{{ 'dashboard.sidebarSearch' | translate }}</span>
+                </button>
+              </p-sidebar-menu-item>
+              }
+            </p-sidebar-menu>
+          </p-sidebar-header>
+
+          <!-- Sidebar Content Navigation -->
+          <p-sidebar-content>
+            @if (sidebarQuery().trim()) {
+            <p-sidebar-group>
+              <p-sidebar-group-label>{{ 'dashboard.ticketMatches' | translate }}</p-sidebar-group-label>
+              <p-sidebar-group-content>
+                <p-sidebar-menu>
+                  @if (showGoToTicket() && searchTicketId(); as ticketId) {
+                  <p-sidebar-menu-item>
+                    <button pSidebarMenuButton
+                      class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800"
+                      [disabled]="openingTicketId() !== null" (click)="openTicket(ticketId)">
+                      <ng-icon [name]="openingTicketId() === ticketId ? 'tablerLoader2' : 'tablerTicket'" size="1.1rem"
+                        class="shrink-0 text-primary-600 dark:text-primary-400" [class.animate-spin]="openingTicketId() === ticketId" />
+                      <span class="text-xs sm:text-sm">{{ 'dashboard.goToTicket' | translate: { id: ticketId } }}</span>
+                    </button>
+                  </p-sidebar-menu-item>
+                  }
+                  @for (ticket of ticketMatches(); track ticket.id) {
+                  <p-sidebar-menu-item>
+                    <button pSidebarMenuButton
+                      class="w-full flex items-start gap-2.5 px-3 py-1.5 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800 h-auto!"
+                      [disabled]="openingTicketId() !== null" (click)="openTicket(ticket.id)"
+                      [title]="'#' + ticket.id + ' ' + ticket.subject">
+                      <ng-icon [name]="openingTicketId() === ticket.id ? 'tablerLoader2' : 'tablerTicket'" size="1rem"
+                        class="mt-0.5 shrink-0 text-primary-600 dark:text-primary-400" [class.animate-spin]="openingTicketId() === ticket.id" />
+                      <span class="min-w-0 flex-1 text-left">
+                        <span class="block truncate text-xs">
+                          <span class="font-mono text-slate-500 dark:text-zinc-400">#{{ ticket.id }}</span> {{ ticket.subject }}
+                        </span>
+                        <span class="block truncate text-[10px] text-slate-400 dark:text-zinc-500">
+                          {{ ticket.projectName }}@if (ticket.statusName) { · {{ ticket.statusName }} }
+                        </span>
+                      </span>
+                    </button>
+                  </p-sidebar-menu-item>
+                  } @empty {
+                    @if (isSearchingTickets()) {
+                      @for (i of [1, 2]; track i) {
+                      <p-sidebar-menu-item>
+                        <p-skeleton width="85%" height="1.75rem" styleClass="my-1 ml-3" />
+                      </p-sidebar-menu-item>
+                      }
+                    } @else if (!showGoToTicket()) {
+                      <p-sidebar-menu-item>
+                        <span class="block px-3 py-1.5 text-[11px] text-slate-400 dark:text-zinc-500">{{ 'dashboard.noTicketMatches' | translate }}</span>
+                      </p-sidebar-menu-item>
+                    }
+                  }
+                </p-sidebar-menu>
+              </p-sidebar-group-content>
+            </p-sidebar-group>
+            }
+            @for (group of visibleNavGroups(); track group.label) {
+            <p-sidebar-group>
+              <p-sidebar-group-label>{{ group.label }}</p-sidebar-group-label>
+              <p-sidebar-group-content>
+                <p-sidebar-menu>
+                  @for (item of group.items; track item.label) {
+                  @if (item.id === 'projects') {
+                  <!-- OpenProject projects: each entry opens the project's board list -->
+                  <p-sidebar-menu-item collapsible [open]="projectsMenuOpen() || !!sidebarQuery().trim()" (openChange)="onProjectsMenuOpenChange($event)">
+                    <button pSidebarMenuButton [isActive]="!!item.isActive" [class.font-semibold]="item.isActive"
+                      class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800"
+                      [attr.aria-expanded]="projectsMenuOpen()">
+                      <ng-icon [name]="item.icon" size="1.1rem" class="shrink-0"
+                        [class.text-primary-600]="item.isActive" [class.dark:text-primary-400]="item.isActive" />
+                      <span class="flex-1 text-left text-xs sm:text-sm">{{ item.label }}</span>
+                      <ng-icon name="tablerChevronRight" size="0.85rem"
+                        class="shrink-0 text-slate-400 transition-transform duration-200"
+                        [class.rotate-90]="projectsMenuOpen()" />
+                    </button>
+                    <p-sidebar-menu-sub>
+                      @if (isLoadingProjects() && !sidebarProjects()) {
+                        @for (i of [1, 2, 3]; track i) {
+                        <p-sidebar-menu-sub-item>
+                          <p-skeleton width="80%" height="1.1rem" styleClass="my-1.5 ml-2" />
+                        </p-sidebar-menu-sub-item>
+                        }
+                      }
+                      @for (project of filteredSidebarProjects(); track project.id) {
+                      <p-sidebar-menu-sub-item>
+                        <button pSidebarMenuSubButton size="sm" [isActive]="isProjectActive(project.id)"
+                          class="cursor-pointer" [title]="project.name" (click)="openProject(project)">
+                          <span class="truncate">{{ project.name }}</span>
+                        </button>
+                      </p-sidebar-menu-sub-item>
+                      }
+                    </p-sidebar-menu-sub>
+                  </p-sidebar-menu-item>
+                  } @else {
+                  <p-sidebar-menu-item>
+                    <button pSidebarMenuButton [isActive]="!!item.isActive" [class.bg-primary-50]="item.isActive"
+                      [class.text-primary-700]="item.isActive" [class.dark:bg-primary-950/60]="item.isActive"
+                      [class.dark:text-primary-300]="item.isActive" [class.font-semibold]="item.isActive"
+                      class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800"
+                      (click)="item.action ? item.action() : null">
+                      <ng-icon [name]="item.icon" size="1.1rem" class="shrink-0"
+                        [class.text-primary-600]="item.isActive" [class.dark:text-primary-400]="item.isActive" />
+                      <span class="text-xs sm:text-sm">{{ item.label }}</span>
+                    </button>
+                    @if (item.badge) {
+                    <p-sidebar-menu-badge>{{ item.badge }}</p-sidebar-menu-badge>
+                    }
+                  </p-sidebar-menu-item>
+                  }
+                  }
+                </p-sidebar-menu>
+              </p-sidebar-group-content>
+            </p-sidebar-group>
+            }
+          </p-sidebar-content>
+
+          <p-sidebar-footer class="border-t border-slate-100 dark:border-zinc-800">
+            <p-sidebar-menu>
+              <p-sidebar-menu-item>
+                <button pSidebarMenuButton class="p-1! cursor-pointer" (click)="accountMenu.toggle($event)"
+                  aria-haspopup="menu">
+                  <p-avatar [label]="userInitials()" shape="circle"
+                    class="size-7 shrink-0 text-xs bg-primary-100 text-primary-700 dark:bg-primary-950 dark:text-primary-300 font-bold" />
+                  <span class="min-w-0 flex-1 truncate text-left text-xs font-semibold text-slate-800 dark:text-zinc-200">
+                    {{ userName() }}
+                  </span>
+                  <ng-icon name="tablerSelector" size="0.9rem" class="shrink-0 text-slate-400" />
+                </button>
+              </p-sidebar-menu-item>
+            </p-sidebar-menu>
+            <p-menu #accountMenu [model]="accountMenuItems()" [popup]="true" appendTo="body">
+              <ng-template #item let-item>
+                <a class="p-menu-item-link">
+                  <ng-icon [name]="item.icon" size="1rem" class="p-menu-item-icon" />
+                  <span class="p-menu-item-label">{{ item.label }}</span>
+                </a>
+              </ng-template>
+            </p-menu>
+          </p-sidebar-footer>
+          <button pSidebarRail></button>
+        </p-sidebar-panel>
+      </p-sidebar-aside>
+    </p-sidebar>
+
+    <!-- Main Shell Area -->
+    <p-sidebar-main class="flex-1 min-w-0 flex flex-col h-full">
+      <!-- Sticky Top Header with Breadcrumb and Action Buttons -->
+      <header
+        class="flex h-16 sm:sticky sm:top-0 sm:z-50 sm:backdrop-blur-sm items-center justify-between border-b border-slate-200 dark:border-zinc-800 px-4 py-1.5 sm:px-6 bg-white/80 dark:bg-zinc-900/80">
+        <!-- Left: Sidebar Toggle + Breadcrumb -->
+        <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+          <button pButton pSidebarTrigger target="preview" iconOnly rounded severity="secondary">
+            <ng-icon name="tablerLayoutSidebar" size="1.25rem" />
+          </button>
+
+          <!-- PrimeNG Breadcrumb Component -->
+          <p-breadcrumb [model]="breadcrumbItems()" [home]="breadcrumbHome()"
+            styleClass="bg-transparent! border-none! p-0! text-xs sm:text-sm">
+            <ng-template #item let-item>
+              @if (item.icon) {
+              <a [routerLink]="item.routerLink"
+                class="flex items-center text-slate-500 hover:text-primary-600 dark:text-zinc-400 dark:hover:text-primary-400 transition-colors">
+                <ng-icon [name]="item.icon" size="1.1rem" />
+              </a>
+              } @else if (item.routerLink) {
+              <a [routerLink]="item.routerLink" [queryParams]="item.queryParams"
+                class="font-medium text-slate-500 hover:text-primary-600 dark:text-zinc-400 dark:hover:text-primary-400 transition-colors">
+                {{ item.label }}
+              </a>
+              } @else {
+              <span class="block max-w-[28rem] truncate font-bold text-slate-900 dark:text-zinc-100" [title]="item.label">
+                {{ item.label }}
+              </span>
+              }
+            </ng-template>
+
+            <ng-template #separator>
+              <ng-icon name="tablerChevronRight" size="0.875rem" class="text-slate-400 dark:text-zinc-500 shrink-0" />
+            </ng-template>
+          </p-breadcrumb>
+        </div>
+
+        <!-- Right: Actions -->
+        <div class="flex items-center gap-2 shrink-0 xs:hidden">
+          @if (updateService.updateAvailable()) {
+            <button
+              pButton
+              (click)="updateService.openModal()"
+              size="small"
+              severity="secondary"
+              variant="outlined"
+              class="flex items-center gap-1.5 text-xs font-semibold"
+              [title]="'updater.newVersionFound' | translate: { version: updateService.availableVersion() }"
+            >
+              <ng-icon name="tablerDownload" size="1rem" class="text-primary-600 dark:text-primary-400" />
+              <span>v{{ updateService.availableVersion() }}</span>
+            </button>
+          }
+
+          <!-- Refresh with Skeleton reload -->
+          <button pButton (click)="reloadWithSkeleton()" iconOnly rounded severity="secondary"
+            [title]="'dashboard.refresh' | translate">
+            <ng-icon name="tablerRefresh" size="1.15rem" [class.animate-spin]="isLoading()" />
+          </button>
+
+          <!-- Quick Theme Toggle -->
+          <button pButton (click)="toggleTheme()" iconOnly rounded severity="secondary"
+            [title]="'dashboard.themeMode' | translate: { mode: config().theme_mode }">
+            <ng-icon [name]="themeService.isDark() ? 'tablerSun' : 'tablerMoon'" size="1.15rem" />
+          </button>
+
+          <!-- Compact Mode Button -->
+          <button pButton (click)="windowService.setCompactMode()" iconOnly rounded severity="secondary"
+            [title]="'dashboard.compactMode' | translate">
+            <ng-icon name="tablerAppWindow" size="1.15rem" />
+          </button>
+
+        </div>
+      </header>
+
+      <!-- Main Content Container for Child Views -->
+      <main
+        [class.ticket-detail-shell]="isTicketDetail()"
+        class="flex w-full min-w-0 flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-8 flex flex-col"
+      >
+        <router-outlet />
+      </main>
+    </p-sidebar-main>
+  </p-sidebar-layout>
+  </div>
+
+  <p-toast position="bottom-right" />
+</div>

@@ -1,0 +1,328 @@
+<p-dialog
+  [visible]="activityService.showActivityForm()"
+  (visibleChange)="onVisibleChange($event)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '92vw', maxWidth: '440px' }"
+  styleClass="p-dialog-rounded"
+>
+  <ng-template #header>
+    <div class="flex items-center gap-2.5">
+      @if(isEditing()){
+        <ng-icon name="tablerEdit" size="1.15rem" />
+      }@else{
+        <ng-icon name="tablerPlus" size="1.15rem" />
+      }
+
+      <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-zinc-100">
+        {{ (isEditing() ? 'compact.modal.editActivity' : 'compact.modal.newActivity') | translate }}
+      </h3>
+    </div>
+  </ng-template>
+
+  <div class="space-y-3 py-1">
+
+          <!-- Ticket Title (Editable input, auto-locked when found in OpenProject) -->
+    <div>
+      <div class="flex items-center justify-between mb-1">
+        <label class="text-xs font-semibold text-slate-700 dark:text-zinc-300">
+          {{ 'compact.modal.ticketTitleLabel' | translate }}
+        </label>
+        @if (isTicketFound()) {
+          <span class="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+            <ng-icon name="tablerCheck" size="0.8rem" />
+            {{ 'compact.modal.ticketFoundAuto' | translate }}
+          </span>
+        }
+      </div>
+      <input
+        pInputText
+        [(ngModel)]="ticketTitle"
+        [disabled]="isTicketFound()"
+        [placeholder]="'compact.modal.ticketTitlePlaceholder' | translate"
+        class="w-full text-xs font-medium"
+        [class.opacity-70]="isTicketFound()"
+      />
+    </div>
+
+    <!-- Project Select -->
+    <div class="w-full block">
+      <label class="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+        {{ 'compact.modal.projectLabel' | translate }}
+      </label>
+      <p-select
+        [(ngModel)]="selectedProjectId"
+        [options]="projectOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [placeholder]="'compact.modal.projectLabel' | translate"
+        class="w-full text-xs"
+        appendTo="body"
+        [disabled]="isTicketFound()"
+      />
+    </div>
+
+    <!-- Ticket # Input with auto-lookup and favorite toggle -->
+    <div>
+      <label class="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+        {{ 'compact.modal.ticketLabel' | translate }}
+      </label>
+      <div class="flex gap-2 items-center">
+        <div class="relative flex-1">
+          <input
+            pInputText
+            [(ngModel)]="ticketNumber"
+            (ngModelChange)="onTicketNumberChange($event)"
+            (blur)="onTicketBlur()"
+            (keyup.enter)="onTicketBlur()"
+            [placeholder]="'compact.modal.ticketPlaceholder' | translate"
+            class="w-full text-xs font-mono font-bold"
+          />
+          @if (isSearchingTicket()) {
+            <div class="absolute right-2.5 top-2 text-primary-500 animate-spin">
+              <ng-icon name="tablerRefresh" size="0.95rem" />
+            </div>
+          }
+        </div>
+
+        <!-- View Context Button -->
+        @if (showTicketContextButton() && ticketNumber.trim()) {
+          <button
+            type="button"
+            (click)="activityService.openTicketContextModal(ticketNumber)"
+            class="cursor-pointer size-8 rounded-lg border border-slate-200 dark:border-zinc-700 hover:border-primary-500 text-slate-500 hover:text-primary-600 dark:text-zinc-400 dark:hover:text-primary-400 flex items-center justify-center transition-colors shrink-0"
+            [title]="'ticketContext.title' | translate"
+          >
+            <ng-icon name="tablerFileText" size="1rem" />
+          </button>
+        }
+
+        <!-- Toggle Favorite Button -->
+        @if (ticketNumber.trim()) {
+          <button
+            type="button"
+            (click)="toggleFavorite()"
+            class="cursor-pointer size-8 rounded-lg border border-slate-200 dark:border-zinc-700 flex items-center justify-center transition-colors shrink-0"
+            [class.text-amber-500]="isTicketFavorite()"
+            [class.text-slate-400]="!isTicketFavorite()"
+            [title]="'compact.modal.favoriteMark' | translate"
+          >
+            <ng-icon name="tablerStar" size="1rem" />
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- OpenProject Activity Type (Tipo de Actividad OpenProject) -->
+    @if (hasToken() || activityTypeOptions().length > 0) {
+      <div class="w-full block">
+        <div class="flex items-center justify-between mb-1">
+          <label class="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
+            {{ 'compact.syncModal.activityTypeLabel' | translate }}
+            <span class="text-rose-500">*</span>
+          </label>
+          @if (isLoadingTypes()) {
+            <span class="text-[10px] text-slate-400 flex items-center gap-1">
+              <ng-icon name="tablerRefresh" class="animate-spin" size="0.75rem" />
+              {{ 'setup.testingConnection' | translate }}
+            </span>
+          }
+        </div>
+        <p-select
+          [(ngModel)]="selectedActivityTypeId"
+          [options]="activityTypeOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [placeholder]="'compact.syncModal.selectTypePlaceholder' | translate"
+          class="w-full text-xs"
+          appendTo="body"
+          [loading]="isLoadingTypes()"
+        />
+      </div>
+    }
+
+    <!-- Hours & Minutes Inputs with PrimeNG InputNumber & DatePicker -->
+    <div class="grid grid-cols-3 gap-2">
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+          {{ 'compact.modal.hours' | translate }}
+        </label>
+        <p-inputnumber
+          [(ngModel)]="hours"
+          [min]="0"
+          [max]="24"
+          [showButtons]="true"
+          [inputStyle]="{ width: '100%', textAlign: 'center' }"
+          buttonLayout="horizontal"
+          size="small"
+          class="w-full"
+        >
+          <ng-template #incrementbuttonicon>
+            <ng-icon name="tablerPlus" />
+          </ng-template>
+          <ng-template #decrementbuttonicon>
+            <ng-icon name="tablerMinus" />
+          </ng-template>
+        </p-inputnumber>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+          {{ 'compact.modal.minutes' | translate }}
+        </label>
+        <p-inputnumber
+          [(ngModel)]="minutes"
+          [min]="0"
+          [max]="59"
+          [step]="5"
+          [showButtons]="true"
+          [inputStyle]="{ width: '100%', textAlign: 'center' }"
+          buttonLayout="horizontal"
+          size="small"
+          class="w-full"
+        >
+          <ng-template #incrementbuttonicon>
+            <ng-icon name="tablerPlus" />
+          </ng-template>
+          <ng-template #decrementbuttonicon>
+            <ng-icon name="tablerMinus" />
+          </ng-template>
+        </p-inputnumber>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+          {{ 'compact.modal.dateLabel' | translate }}
+        </label>
+        <p-datepicker
+          [(ngModel)]="dateValue"
+          (ngModelChange)="onDateChange($event)"
+          [showIcon]="true"
+          dateFormat="yy-mm-dd"
+          styleClass="w-full text-xs"
+          appendTo="body"
+          size="small"
+        />
+      </div>
+    </div>
+
+    <!-- Description Textarea at the end (optional) -->
+    <div>
+      <label class="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+        {{ 'compact.modal.descriptionLabel' | translate }}
+      </label>
+      <textarea
+        pTextarea
+        [(ngModel)]="activityName"
+        [placeholder]="'compact.modal.descriptionPlaceholder' | translate"
+        rows="4"
+        class="w-full text-xs resize-none"
+      ></textarea>
+    </div>
+
+  </div>
+
+  <ng-template #footer>
+    <div class="flex items-center justify-between gap-2 pt-2 w-full">
+      <!-- Left: Direct Start Stopwatch Button (Only in create mode) -->
+      <div>
+        @if (!isEditing()) {
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            variant="outlined"
+            size="small"
+            (click)="startWithStopwatch()"
+            [disabled]="!canSave()"
+            class="text-xs font-semibold"
+            [title]="'compact.modal.startWithStopwatch' | translate"
+          >
+            <ng-icon name="tablerClockPlay" size="0.95rem" class="mr-1 text-primary-500" />
+            <span>{{ 'compact.modal.stopwatch' | translate }}</span>
+          </button>
+        }
+      </div>
+
+      <!-- Right: Cancel & Save Buttons -->
+      <div class="flex items-center gap-2">
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          variant="text"
+          size="small"
+          (click)="activityService.closeActivityModal()"
+          class="text-xs"
+        >
+          {{ 'compact.modal.cancel' | translate }}
+        </button>
+        <button
+          pButton
+          type="button"
+          severity="primary"
+          size="small"
+          (click)="saveActivity()"
+          [disabled]="!canSave()"
+          class="text-xs font-semibold"
+        >
+          {{ (isEditing() ? 'compact.modal.update' : 'compact.modal.save') | translate }}
+        </button>
+      </div>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Stopwatch Confirmation Dialog when submitting with 0h 0m -->
+<p-dialog
+  [visible]="showStopwatchConfirm()"
+  (visibleChange)="showStopwatchConfirm.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '90vw', maxWidth: '380px' }"
+  styleClass="p-dialog-rounded"
+>
+  <ng-template #header>
+    <div class="flex items-center gap-2">
+      <div class="size-8 rounded-xl bg-primary-100 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400 flex items-center justify-center">
+        <ng-icon name="tablerClockPlay" size="1.1rem" />
+      </div>
+      <h3 class="text-sm font-bold text-slate-900 dark:text-zinc-100">
+        {{ 'compact.modal.stopwatchPromptTitle' | translate }}
+      </h3>
+    </div>
+  </ng-template>
+
+  <p class="text-xs text-slate-600 dark:text-zinc-300 py-2 leading-relaxed">
+    {{ 'compact.modal.stopwatchPromptMessage' | translate }}
+  </p>
+
+  <ng-template #footer>
+    <div class="flex items-center justify-end gap-2 pt-2">
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        variant="text"
+        size="small"
+        (click)="onCancelStopwatchPrompt()"
+        class="text-xs"
+      >
+        {{ 'compact.modal.fillManually' | translate }}
+      </button>
+      <button
+        pButton
+        type="button"
+        severity="primary"
+        size="small"
+        (click)="confirmStopwatchMode()"
+        class="text-xs font-semibold"
+      >
+        <ng-icon name="tablerClockPlay" size="0.95rem" class="mr-1" />
+        {{ 'compact.modal.useStopwatch' | translate }}
+      </button>
+    </div>
+  </ng-template>
+</p-dialog>

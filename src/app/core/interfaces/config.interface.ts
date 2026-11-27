@@ -122,7 +122,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   openproject_url: 'https://openproject.wposs.com/openproject',
   openproject_token: '',
   theme_mode: 'system',
-  light_style: 'neutral',
+  light_style: 'warm',
   primary_color: 'violet',
   is_configured: false,
   language: 'es',

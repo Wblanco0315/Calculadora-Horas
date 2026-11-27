@@ -1,0 +1,75 @@
+<section class="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
+  <header class="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 pb-3 dark:border-zinc-800">
+    <div class="flex min-w-0 items-center gap-2.5">
+      <ng-icon name="tablerLayoutKanban" size="1.35rem" class="shrink-0 text-primary-600 dark:text-primary-400" />
+      <h1 class="truncate text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100 sm:text-2xl">
+        {{ 'dashboard.boards' | translate }}
+      </h1>
+    </div>
+    <button
+      pButton
+      type="button"
+      iconOnly
+      rounded
+      severity="secondary"
+      [disabled]="isLoading()"
+      (click)="refresh()"
+      [title]="'dashboard.refresh' | translate"
+      [attr.aria-label]="'dashboard.refresh' | translate"
+    >
+      <ng-icon pButtonIcon name="tablerRefresh" size="1.1rem" [class.animate-spin]="isLoading()" />
+    </button>
+  </header>
+
+  @if (isLoading() && boards().length === 0) {
+    <div class="space-y-2">
+      @for (i of [1, 2, 3]; track i) {
+        <p-skeleton height="2.25rem" />
+      }
+    </div>
+  } @else {
+    <p-table
+      [value]="rows()"
+      [paginator]="true"
+      [rows]="20"
+      [rowsPerPageOptions]="[20, 100]"
+      sortField="name"
+      [sortOrder]="1"
+      styleClass="p-datatable-sm"
+    >
+      <ng-template #header>
+        <tr>
+          <th pSortableColumn="name" class="w-full">
+            <span class="board-list-th">{{ 'board.listName' | translate }}<p-sort-icon field="name" /></span>
+          </th>
+          <th pSortableColumn="typeLabel">
+            <span class="board-list-th">{{ 'board.listType' | translate }}<p-sort-icon field="typeLabel" /></span>
+          </th>
+          <th pSortableColumn="createdAtSort">
+            <span class="board-list-th">{{ 'board.listCreatedAt' | translate }}<p-sort-icon field="createdAtSort" /></span>
+          </th>
+        </tr>
+      </ng-template>
+      <ng-template #body let-board>
+        <tr>
+          <td>
+            <a
+              [routerLink]="['/dashboard/boards', projectId(), board.id]"
+              [queryParams]="boardQueryParams()"
+              class="font-medium text-primary-700 hover:underline dark:text-primary-300"
+            >
+              {{ board.name }}
+            </a>
+          </td>
+          <td>{{ board.typeLabel }}</td>
+          <td class="font-mono">{{ formatDate(board.createdAt) }}</td>
+        </tr>
+      </ng-template>
+      <ng-template #emptymessage>
+        <tr>
+          <td colspan="3" class="py-10 text-center text-slate-500 dark:text-zinc-400">{{ 'board.noBoards' | translate }}</td>
+        </tr>
+      </ng-template>
+    </p-table>
+  }
+</section>

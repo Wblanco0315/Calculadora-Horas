@@ -1,0 +1,10 @@
+:host {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+:host svg:not([data-custom-size]) {
+  width: var(--app-logo-w) !important;
+  height: var(--app-logo-h) !important;
+  flex-shrink: 0;
+}

@@ -11,19 +11,19 @@ export const routes: Routes = [
     path: 'compact',
     canActivate: [configGuard],
     loadChildren: () =>
-      import('./modules/compact/compact.router').then((m) => m.compactRoutes),
+      import('./modules/compact/compact.routes').then((m) => m.compactRoutes),
   },
   {
     path: 'setup',
     canActivate: [setupGuard],
     loadChildren: () =>
-      import('./modules/setup/setup.router').then((m) => m.setupRoutes),
+      import('./modules/setup/setup.routes').then((m) => m.setupRoutes),
   },
   {
     path: 'dashboard',
     canActivate: [configGuard],
     loadChildren: () =>
-      import('./modules/dashboard/dashboard.router').then((m) => m.dashboardRoutes),
+      import('./modules/dashboard/dashboard.routes').then((m) => m.dashboardRoutes),
   },
   {
     path: '**',
