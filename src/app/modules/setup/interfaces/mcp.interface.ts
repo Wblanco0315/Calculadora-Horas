@@ -3,7 +3,7 @@ export interface McpContract {
   appVersion: string;
   protocolVersion: number;
   minMcpVersion: string;
-  /** npm spec written into AI client configs, e.g. `pocketproject-mcp@1`. */
+  /** npm spec written into AI client configs, e.g. `pocketproject-mcp@2`. */
   packageSpec: string;
   /** Hash of the system prompt; changes whenever the prompt changes. */
   rulesVersion: string;

@@ -65,7 +65,7 @@ export class McpSectionComponent implements OnInit {
 
   /** Single AI system prompt and npm spec, both from the app's MCP contract. */
   readonly rules = signal<string>('');
-  readonly packageSpec = signal<string>('pocketproject-mcp@1');
+  readonly packageSpec = signal<string>('pocketproject-mcp@2');
 
   async ngOnInit(): Promise<void> {
     const path = await this.mcpService.getDatabasePath();
