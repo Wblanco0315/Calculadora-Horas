@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { invoke } from '@tauri-apps/api/core';
+import { Subject } from 'rxjs';
 import {
   StatusOption,
   TicketInfoResult,
@@ -19,6 +20,10 @@ import { ProjectApiService } from './project-api.service';
 export class WorkPackageApiService {
   private readonly openprojectService = inject(OpenprojectService);
   private readonly projectApi = inject(ProjectApiService);
+
+  private readonly statusChangedSubject = new Subject<{ ticket: string; statusId: string }>();
+  /** Emits after any successful status change made from the app (status picker, board move…). */
+  readonly statusChanged$ = this.statusChangedSubject.asObservable();
 
   /**
    * Fetches ticket metadata including subject, project, status, color, version and available statuses
@@ -560,6 +565,7 @@ export class WorkPackageApiService {
           statusId,
           lockVersion: lockVersion || null,
         });
+        this.statusChangedSubject.next({ ticket: rawTicket, statusId });
         return { ok: true };
       } catch (err: unknown) {
         return { ok: false, error: err instanceof Error ? err.message : String(err) };
@@ -593,6 +599,7 @@ export class WorkPackageApiService {
         return { ok: false, error: errJson?.message || `HTTP ${patchRes.status}` };
       }
 
+      this.statusChangedSubject.next({ ticket: rawTicket, statusId });
       return { ok: true };
     } catch (err: unknown) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
