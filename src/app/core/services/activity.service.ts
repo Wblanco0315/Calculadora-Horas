@@ -23,6 +23,8 @@ import { OpenprojectService } from './openproject/openproject.service';
 const TIME_FORMAT_KEY = 'pocketproject_time_format';
 const LOCAL_ACTIVITIES_KEY = 'pocketproject_local_activities';
 const MIGRATION_ACTIVITIES_KEY = 'pocketproject_activities_migrated';
+/** Minimum time between two OpenProject reads of the same ticket when reloading entries. */
+const TICKET_REFRESH_TTL_MS = 60_000;
 
 export function getTodayDateString(): string {
   const now = new Date();
@@ -75,6 +77,9 @@ export class ActivityService {
   readonly showTicketContextModal = signal<boolean>(false);
   readonly contextTicket = signal<string | null>(null);
   readonly activeMenuId = signal<string | null>(null);
+
+  /** When each ticket's metadata was last read from OpenProject (ms). */
+  private readonly ticketRefreshedAt = new Map<string, number>();
 
   openMenu(id: string): void {
     this.activeMenuId.set(id);
@@ -158,6 +163,11 @@ export class ActivityService {
         });
       }
     }
+
+    // Any status change made from the app (status picker, board move…) updates the matching entries.
+    this.workPackageApi.statusChanged$.subscribe(({ ticket, statusId }) => {
+      this.applyTicketStatus(ticket, statusId).catch(() => {});
+    });
 
     effect(() => {
       if (this.storageService.isLoggedIn()) {
@@ -265,7 +275,7 @@ export class ActivityService {
       }
 
       this.activities.set(resultList);
-      this.backfillMissingTitles(resultList.filter((a) => !a.readOnly)).catch(() => {});
+      this.refreshTicketMetadata(resultList.filter((a) => !a.readOnly)).catch(() => {});
     } catch (err) {
       console.error('Error loading activities:', err);
     } finally {
@@ -369,29 +379,67 @@ export class ActivityService {
     };
   }
 
-  private async backfillMissingTitles(activities: Activity[]): Promise<void> {
+  /**
+   * Refreshes title, project and status of the entries' tickets from OpenProject, so a status
+   * changed elsewhere (OpenProject web, MCP, another view) is reflected. Each ticket is queried
+   * once, and again only after `TICKET_REFRESH_TTL_MS` unless its entries lack title or status.
+   */
+  private async refreshTicketMetadata(activities: Activity[]): Promise<void> {
     if (!this.storageService.isLoggedIn()) return;
-    const toBackfill = activities.filter((a) => a.ticket && (!a.ticketTitle || !a.statusName));
-    if (toBackfill.length === 0) return;
-
-    for (const act of toBackfill) {
+    const now = Date.now();
+    const tickets = new Set<string>();
+    for (const act of activities) {
       if (!act.ticket) continue;
+      const incomplete = !act.ticketTitle || !act.statusName;
+      const lastRefresh = this.ticketRefreshedAt.get(act.ticket) ?? 0;
+      if (incomplete || now - lastRefresh >= TICKET_REFRESH_TTL_MS) tickets.add(act.ticket);
+    }
+
+    for (const ticket of tickets) {
+      this.ticketRefreshedAt.set(ticket, now);
       try {
-        const info = await this.fetchTicketSubject(act.ticket);
-        if (info.success) {
-          await this.updateActivity(act.id, {
-            ticketTitle: info.subject || act.ticketTitle,
-            projectId: act.projectId || info.project_id || undefined,
-            projectName: act.projectName || info.project_name || undefined,
-            statusId: act.statusId || info.status_id || undefined,
-            statusName: act.statusName || info.status_name || undefined,
-            statusColor: act.statusColor || info.status_color || undefined,
-          });
+        const info = await this.fetchTicketSubject(ticket);
+        if (!info.success) continue;
+        const related = this.activities().filter((a) => a.ticket === ticket && !a.readOnly);
+        for (const act of related) {
+          const updates: Partial<Activity> = {};
+          if (info.subject && info.subject !== act.ticketTitle) updates.ticketTitle = info.subject;
+          if (!act.projectId && info.project_id) updates.projectId = info.project_id;
+          if (!act.projectName && info.project_name) updates.projectName = info.project_name;
+          if (info.status_id && (info.status_id !== act.statusId || !act.statusName)) {
+            updates.statusId = info.status_id;
+            updates.statusName = info.status_name || act.statusName;
+            updates.statusColor = info.status_color || act.statusColor;
+          }
+          if (Object.keys(updates).length > 0) await this.updateActivity(act.id, updates);
         }
       } catch {
         // Silently continue
       }
     }
+  }
+
+  /** Sets the new status on every local entry of the ticket. */
+  private async applyTicketStatus(ticket: string, statusId: string): Promise<void> {
+    const clean = ticket.trim().replace(/^#/, '');
+    const status = this.statuses().find((s) => s.id === statusId);
+    if (!status) {
+      // Unknown status locally: read name and color from OpenProject.
+      this.ticketRefreshedAt.delete(clean);
+      await this.refreshTicketMetadata(this.activities().filter((a) => a.ticket === clean && !a.readOnly));
+      return;
+    }
+    const related = this.activities().filter(
+      (a) => a.ticket === clean && !a.readOnly && (a.statusId !== statusId || a.statusName !== status.name)
+    );
+    for (const act of related) {
+      await this.updateActivity(act.id, {
+        statusId,
+        statusName: status.name,
+        statusColor: status.color || act.statusColor,
+      });
+    }
+    this.ticketRefreshedAt.set(clean, Date.now());
   }
 
   private async migrateLegacyActivities(): Promise<Activity[]> {
